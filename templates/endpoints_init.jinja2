@@ -1,0 +1,16 @@
+from courtlistener.models.endpoint import Endpoint
+{% for endpoint in endpoints %}
+from courtlistener.models.endpoints.{{ endpoint.attr_name }} import {{ endpoint.class_name }}
+{% endfor %}
+
+__all__ = [
+{% for endpoint in endpoints %}
+    "{{ endpoint.class_name }}",
+{% endfor %}
+]
+
+ENDPOINTS: dict[str, type[Endpoint]] = {
+{% for endpoint in endpoints %}
+    "{{ endpoint.attr_name }}": {{ endpoint.class_name }},
+{% endfor %}
+}

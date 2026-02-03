@@ -1,0 +1,157 @@
+from typing import Any, ClassVar, Annotated
+from datetime import datetime, date
+
+from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+
+from courtlistener.utils import (
+    choice_validator,
+    multiple_choice_validator,
+    related_validator,
+    in_pre_validator,
+    try_coerce_ints,
+    in_post_validator,
+)
+from courtlistener.models.endpoint import Endpoint
+{% for field in endpoint.fields.values() %}
+{% if field.filter_class %}
+from courtlistener.models.filters import {{ field.filter_class }}
+{% endif %}
+{% endfor %}
+
+
+class {{ endpoint.class_name }}(Endpoint):
+    """{{ endpoint.description }}"""
+
+    endpoint: ClassVar[str] = "{{ endpoint.endpoint }}"
+    endpoint_id: ClassVar[str] = "{{ endpoint.id }}"
+    endpoint_name: ClassVar[str] = "{{ endpoint.name }}"
+
+{% for field in endpoint.fields.values() %}
+{% if field.types %}
+    {{ field.id }}: Annotated[
+        None | {{ field.types_str }}{% if field.filter_class %} | {{ field.filter_class }}{% endif %}{% if field.related_id_types_str %} | {{ field.related_id_types_str }}{% endif %},
+        Field(
+            None,
+            {% if field.description %}
+            description={{ field.description | tojson }},
+            {% endif %}
+            {% if field.choices or field.related_class_name %}
+            json_schema_extra={
+                {% if field.choices %}
+                "choices": {{ field.choices }},
+                {% endif %}
+                {% if field.related_class_name %}
+                "related_class_name": "{{ field.related_class_name }}",
+                {% endif %}
+            },
+            {% endif %}
+        ),
+        {% for validator in field.validators %}
+        {{ validator }},
+        {% endfor %}
+    ]
+{% endif %}
+{% endfor %}
+
+
+{% if 0 %}
+{% if field.filter_type == "NumberInFilter" %}
+    @field_validator("{{ field.id }}", mode="before")
+    @classmethod
+    def check_{{ field.id }}(cls, value: int | list[int] | str | list[str] | dict[str, Any] | {{ field.class_name }}) -> int | dict[str, str]:
+        choices = CHOICES.get("{{ field.id }}")
+        if choices is None:
+            raise NotImplementedError(f"{{ field.id }} has no choices")
+
+        # Handle single value
+        if isinstance(value, int | str):
+            valid_value = get_valid_choice(value, choices)
+            if isinstance(valid_value, int):
+                return valid_value
+            else:
+                raise ValueError(f"{{ field.id }} must be in {choices}")
+
+        # If using the "in" filter, extract it
+        if isinstance(value, list):
+            values = value
+        else:
+            if isinstance(value, {{ field.class_name }}):
+                value = value.model_dump(by_alias=True)
+            if isinstance(value, dict) and isinstance(value.get("in"), str | list[str] | list[int]):
+                values = value["in"]
+            else:
+                raise ValueError(f"Value {value} is not valid.")
+
+        # If comma-separated list, split it
+        if isinstance(values, str):
+            values = values.split(',')
+
+        # Validate each value, first try to coerce as int, then fallback to display name
+        valid_values = []
+        for v in values:
+            try:
+                v = int(v)
+            except ValueError:
+                pass
+            valid_value = get_valid_choice(v, choices)
+            if not isinstance(valid_value, int):
+                raise ValueError(f"{{ field.id }} must be in {choices}")
+            valid_values.append(valid_value)
+        # Convert back to dict with "in" and comma-separated str
+        return {"in": ",".join([str(v) for v in valid_values])}
+
+{% elif field.filter_type == "CharInFilter" %}
+    @field_validator("{{ field.id }}", mode="before")
+    @classmethod
+    def check_{{ field.id }}(cls, value: str | list[str] | dict[str, Any] | {{ field.class_name }}) -> str | dict[str, str]:
+        choices = CHOICES.get("{{ field.id }}")
+
+        # Handle single value
+        if isinstance(value, str):
+            if choices is None:
+                return value
+            valid_value = get_valid_choice(value, CHOICES["{{ field.id }}"])
+            if isinstance(valid_value, str):
+                return valid_value
+            else:
+                raise ValueError(f"{{ field.id }} must be in {CHOICES['{{ field.id }}']}")
+
+        # If using the "in" filter, extract it
+        if isinstance(value, list):
+            values = value
+        else:
+            if isinstance(value, {{ field.class_name }}):
+                value = value.model_dump(by_alias=True)
+            if isinstance(value, dict) and isinstance(value.get("in"), str | list[str]):
+                values = value["in"]
+            else:
+                raise ValueError(f"Value {value} is not valid.")
+
+        # If comma-separated list, split it
+        if isinstance(values, str):
+            values = values.split(',')
+
+        # Validate each value
+        valid_values = []
+        for v in values:
+            valid_value = get_valid_choice(v, CHOICES["{{ field.id }}"])
+            if not isinstance(valid_value, str):
+                raise ValueError(f"{{ field.id }} must be in {CHOICES['{{ field.id }}']}")
+            valid_values.append(valid_value)
+        # Convert back to dict with "in" and comma-separated str
+        return {"in": ",".join([str(v) for v in valid_values])}
+
+{% elif field.related_type and field.filter_type == "RelatedFilter" %}
+    @field_validator("{{ field.id }}", mode="before")
+    @classmethod
+    def check_{{ field.id }}(cls, value: {{ field.related_type }} | dict[str, Any]) -> {{ field.related_type }} | dict[str, Any]:
+        from courtlistener.models.{{ field.related_attr_name }} import {{ field.related_class_name }}
+
+        if isinstance(value, dict):
+            value = {{ field.related_class_name }}(**value).model_dump(by_alias=True)
+        elif isinstance(value, {{ field.related_class_name }}):
+            value = value.model_dump(by_alias=True)
+        return value
+
+{% endif %}
+{% endif %}
