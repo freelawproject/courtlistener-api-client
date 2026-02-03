@@ -1,17 +1,11 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
-from courtlistener.utils import (
-    choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
-)
 from courtlistener.models.endpoint import Endpoint
+from courtlistener.utils import (
+    related_validator,
+)
 
 
 class OpinionsCitedEndpoint(Endpoint):
@@ -47,5 +41,3 @@ class OpinionsCitedEndpoint(Endpoint):
         ),
         BeforeValidator(related_validator),
     ]
-
-

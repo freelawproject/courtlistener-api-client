@@ -1,25 +1,16 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Annotated, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import AfterValidator, BeforeValidator, Field
 
-from courtlistener.utils import (
-    choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
-)
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
+from courtlistener.models.filters import Filter4, Filter7, Filter8
+from courtlistener.utils import (
+    in_post_validator,
+    in_pre_validator,
+    multiple_choice_validator,
+    try_coerce_ints,
+)
 
 
 class FjcIntegratedDatabaseEndpoint(Endpoint):
@@ -35,7 +26,48 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="IDB has several source datafiles. This field helps keep track of where a row came from originally.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Civil cases filed and terminated from SY 1970 through SY 1987'}, {'value': 2, 'display_name': 'Civil cases filed, terminated, and pending from SY 1988 to present (2017)'}, {'value': 8, 'display_name': 'Civil cases filed, terminated, and pending from SY 1988 to present (2020)'}, {'value': 9, 'display_name': 'Civil cases filed, terminated, and pending from SY 1988 to present (September 2021)'}, {'value': 10, 'display_name': 'Civil cases filed, terminated, and pending from SY 1988 to present (March 2022)'}, {'value': 3, 'display_name': 'Criminal defendants filed and terminated from SY 1970 through FY 1995'}, {'value': 4, 'display_name': 'Criminal defendants filed, terminated, and pending from FY 1996 to present (2017)'}, {'value': 5, 'display_name': 'Appellate cases filed and terminated from SY 1971 through FY 2007'}, {'value': 6, 'display_name': 'Appellate cases filed, terminated, and pending from FY 2008 to present (2017)'}, {'value': 7, 'display_name': 'Bankruptcy cases filed, terminated, and pending from FY 2008 to present (2017)'}],
+                "choices": [
+                    {
+                        "value": 1,
+                        "display_name": "Civil cases filed and terminated from SY 1970 through SY 1987",
+                    },
+                    {
+                        "value": 2,
+                        "display_name": "Civil cases filed, terminated, and pending from SY 1988 to present (2017)",
+                    },
+                    {
+                        "value": 8,
+                        "display_name": "Civil cases filed, terminated, and pending from SY 1988 to present (2020)",
+                    },
+                    {
+                        "value": 9,
+                        "display_name": "Civil cases filed, terminated, and pending from SY 1988 to present (September 2021)",
+                    },
+                    {
+                        "value": 10,
+                        "display_name": "Civil cases filed, terminated, and pending from SY 1988 to present (March 2022)",
+                    },
+                    {
+                        "value": 3,
+                        "display_name": "Criminal defendants filed and terminated from SY 1970 through FY 1995",
+                    },
+                    {
+                        "value": 4,
+                        "display_name": "Criminal defendants filed, terminated, and pending from FY 1996 to present (2017)",
+                    },
+                    {
+                        "value": 5,
+                        "display_name": "Appellate cases filed and terminated from SY 1971 through FY 2007",
+                    },
+                    {
+                        "value": 6,
+                        "display_name": "Appellate cases filed, terminated, and pending from FY 2008 to present (2017)",
+                    },
+                    {
+                        "value": 7,
+                        "display_name": "Bankruptcy cases filed, terminated, and pending from FY 2008 to present (2017)",
+                    },
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -77,7 +109,42 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="A single digit code describing the manner in which the case was filed in the district.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Original Proceeding'}, {'value': 2, 'display_name': 'Removed  (began in the state court, removed to the district court)'}, {'value': 3, 'display_name': 'Remanded for further action (removal from court of appeals)'}, {'value': 4, 'display_name': 'Reinstated/reopened (previously opened and closed, reopened for additional action)'}, {'value': 5, 'display_name': 'Transferred from another district(pursuant to 28 USC 1404)'}, {'value': 6, 'display_name': 'Multi district litigation (cases transferred to this district by an order entered by Judicial Panel on Multi District Litigation pursuant to 28 USC 1407)'}, {'value': 7, 'display_name': "Appeal to a district judge of a magistrate judge's decision"}, {'value': 8, 'display_name': 'Second reopen'}, {'value': 9, 'display_name': 'Third reopen'}, {'value': 10, 'display_name': 'Fourth reopen'}, {'value': 11, 'display_name': 'Fifth reopen'}, {'value': 12, 'display_name': 'Sixth reopen'}, {'value': 13, 'display_name': 'Multi district litigation originating in the district (valid beginning July 1, 2016)'}],
+                "choices": [
+                    {"value": 1, "display_name": "Original Proceeding"},
+                    {
+                        "value": 2,
+                        "display_name": "Removed  (began in the state court, removed to the district court)",
+                    },
+                    {
+                        "value": 3,
+                        "display_name": "Remanded for further action (removal from court of appeals)",
+                    },
+                    {
+                        "value": 4,
+                        "display_name": "Reinstated/reopened (previously opened and closed, reopened for additional action)",
+                    },
+                    {
+                        "value": 5,
+                        "display_name": "Transferred from another district(pursuant to 28 USC 1404)",
+                    },
+                    {
+                        "value": 6,
+                        "display_name": "Multi district litigation (cases transferred to this district by an order entered by Judicial Panel on Multi District Litigation pursuant to 28 USC 1407)",
+                    },
+                    {
+                        "value": 7,
+                        "display_name": "Appeal to a district judge of a magistrate judge's decision",
+                    },
+                    {"value": 8, "display_name": "Second reopen"},
+                    {"value": 9, "display_name": "Third reopen"},
+                    {"value": 10, "display_name": "Fourth reopen"},
+                    {"value": 11, "display_name": "Fifth reopen"},
+                    {"value": 12, "display_name": "Sixth reopen"},
+                    {
+                        "value": 13,
+                        "display_name": "Multi district litigation originating in the district (valid beginning July 1, 2016)",
+                    },
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -98,7 +165,13 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="The code which provides the basis for the U.S. district court jurisdiction in the case. This code is used in conjunction with appropriate nature of suit code.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Government plaintiff'}, {'value': 2, 'display_name': 'Government defendant'}, {'value': 3, 'display_name': 'Federal question'}, {'value': 4, 'display_name': 'Diversity of citizenship'}, {'value': 5, 'display_name': 'Local question'}],
+                "choices": [
+                    {"value": 1, "display_name": "Government plaintiff"},
+                    {"value": 2, "display_name": "Government defendant"},
+                    {"value": 3, "display_name": "Federal question"},
+                    {"value": 4, "display_name": "Diversity of citizenship"},
+                    {"value": 5, "display_name": "Local question"},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -133,7 +206,12 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="This field is used only by the courts  participating in the Formal Arbitration Program.  It is not used for any other purpose.",
             json_schema_extra={
-                "choices": [{'value': 'M', 'display_name': 'Mandatory'}, {'value': 'V', 'display_name': 'Voluntary'}, {'value': 'E', 'display_name': 'Exempt'}, {'value': 'Y', 'display_name': 'Yes, but type unknown'}],
+                "choices": [
+                    {"value": "M", "display_name": "Mandatory"},
+                    {"value": "V", "display_name": "Voluntary"},
+                    {"value": "E", "display_name": "Exempt"},
+                    {"value": "Y", "display_name": "Yes, but type unknown"},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -146,7 +224,12 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="Termination arbitration code.",
             json_schema_extra={
-                "choices": [{'value': 'M', 'display_name': 'Mandatory'}, {'value': 'V', 'display_name': 'Voluntary'}, {'value': 'E', 'display_name': 'Exempt'}, {'value': 'Y', 'display_name': 'Yes, but type unknown'}],
+                "choices": [
+                    {"value": "M", "display_name": "Mandatory"},
+                    {"value": "V", "display_name": "Voluntary"},
+                    {"value": "E", "display_name": "Exempt"},
+                    {"value": "Y", "display_name": "Yes, but type unknown"},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -173,7 +256,10 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="A code that indicates a case involving allegations of class action.",
             json_schema_extra={
-                "choices": [{'value': 2, 'display_name': 'Denied'}, {'value': 3, 'display_name': 'Granted'}],
+                "choices": [
+                    {"value": 2, "display_name": "Denied"},
+                    {"value": 3, "display_name": "Granted"},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -187,7 +273,30 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="The point to which the case had progressed when it was disposed of. See notes in codebook.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'No court action (before issue joined)'}, {'value': 2, 'display_name': 'Order entered'}, {'value': 11, 'display_name': 'Hearing held'}, {'value': 12, 'display_name': 'Order decided'}, {'value': 3, 'display_name': 'No court action (after issue joined)'}, {'value': 4, 'display_name': 'Judgment on motion'}, {'value': 5, 'display_name': 'Pretrial conference held'}, {'value': 6, 'display_name': 'During court trial'}, {'value': 7, 'display_name': 'During jury trial'}, {'value': 8, 'display_name': 'After court trial'}, {'value': 9, 'display_name': 'After jury trial'}, {'value': 10, 'display_name': 'Other'}, {'value': 13, 'display_name': 'Request for trial de novo after arbitration'}],
+                "choices": [
+                    {
+                        "value": 1,
+                        "display_name": "No court action (before issue joined)",
+                    },
+                    {"value": 2, "display_name": "Order entered"},
+                    {"value": 11, "display_name": "Hearing held"},
+                    {"value": 12, "display_name": "Order decided"},
+                    {
+                        "value": 3,
+                        "display_name": "No court action (after issue joined)",
+                    },
+                    {"value": 4, "display_name": "Judgment on motion"},
+                    {"value": 5, "display_name": "Pretrial conference held"},
+                    {"value": 6, "display_name": "During court trial"},
+                    {"value": 7, "display_name": "During jury trial"},
+                    {"value": 8, "display_name": "After court trial"},
+                    {"value": 9, "display_name": "After jury trial"},
+                    {"value": 10, "display_name": "Other"},
+                    {
+                        "value": 13,
+                        "display_name": "Request for trial de novo after arbitration",
+                    },
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -201,7 +310,41 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="The manner in which the case was disposed of.",
             json_schema_extra={
-                "choices": [{'value': 0, 'display_name': 'Transfer to another district'}, {'value': 1, 'display_name': 'Remanded to state court'}, {'value': 10, 'display_name': 'Multi-district litigation transfer'}, {'value': 11, 'display_name': 'Remanded to U.S. agency'}, {'value': 2, 'display_name': 'Want of prosecution'}, {'value': 3, 'display_name': 'Lack of jurisdiction'}, {'value': 12, 'display_name': 'Voluntarily dismissed'}, {'value': 13, 'display_name': 'Settled'}, {'value': 14, 'display_name': 'Other'}, {'value': 4, 'display_name': 'Default'}, {'value': 5, 'display_name': 'Consent'}, {'value': 6, 'display_name': 'Motion before trial'}, {'value': 7, 'display_name': 'Jury verdict'}, {'value': 8, 'display_name': 'Directed verdict'}, {'value': 9, 'display_name': 'Court trial'}, {'value': 15, 'display_name': 'Award of arbitrator'}, {'value': 16, 'display_name': 'Stayed pending bankruptcy'}, {'value': 17, 'display_name': 'Other'}, {'value': 18, 'display_name': 'Statistical closing'}, {'value': 19, 'display_name': 'Appeal affirmed (magistrate judge)'}, {'value': 20, 'display_name': 'Appeal denied (magistrate judge'}],
+                "choices": [
+                    {
+                        "value": 0,
+                        "display_name": "Transfer to another district",
+                    },
+                    {"value": 1, "display_name": "Remanded to state court"},
+                    {
+                        "value": 10,
+                        "display_name": "Multi-district litigation transfer",
+                    },
+                    {"value": 11, "display_name": "Remanded to U.S. agency"},
+                    {"value": 2, "display_name": "Want of prosecution"},
+                    {"value": 3, "display_name": "Lack of jurisdiction"},
+                    {"value": 12, "display_name": "Voluntarily dismissed"},
+                    {"value": 13, "display_name": "Settled"},
+                    {"value": 14, "display_name": "Other"},
+                    {"value": 4, "display_name": "Default"},
+                    {"value": 5, "display_name": "Consent"},
+                    {"value": 6, "display_name": "Motion before trial"},
+                    {"value": 7, "display_name": "Jury verdict"},
+                    {"value": 8, "display_name": "Directed verdict"},
+                    {"value": 9, "display_name": "Court trial"},
+                    {"value": 15, "display_name": "Award of arbitrator"},
+                    {"value": 16, "display_name": "Stayed pending bankruptcy"},
+                    {"value": 17, "display_name": "Other"},
+                    {"value": 18, "display_name": "Statistical closing"},
+                    {
+                        "value": 19,
+                        "display_name": "Appeal affirmed (magistrate judge)",
+                    },
+                    {
+                        "value": 20,
+                        "display_name": "Appeal denied (magistrate judge",
+                    },
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -215,7 +358,15 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="Which party the cases was disposed in favor of.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Plaintiff'}, {'value': 2, 'display_name': 'Defendant'}, {'value': 3, 'display_name': 'Both plaintiff and defendant'}, {'value': 4, 'display_name': 'Unknown'}],
+                "choices": [
+                    {"value": 1, "display_name": "Plaintiff"},
+                    {"value": 2, "display_name": "Defendant"},
+                    {
+                        "value": 3,
+                        "display_name": "Both plaintiff and defendant",
+                    },
+                    {"value": 4, "display_name": "Unknown"},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -229,7 +380,24 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
             None,
             description="Which parties filed pro se? (See codebook for more details.)",
             json_schema_extra={
-                "choices": [{'value': 0, 'display_name': 'No pro se plaintiffs or defendants'}, {'value': 1, 'display_name': 'Pro se plaintiffs, but no pro se defendants'}, {'value': 2, 'display_name': 'Pro se defendants, but no pro se plaintiffs'}, {'value': 3, 'display_name': 'Both pro se plaintiffs & defendants'}],
+                "choices": [
+                    {
+                        "value": 0,
+                        "display_name": "No pro se plaintiffs or defendants",
+                    },
+                    {
+                        "value": 1,
+                        "display_name": "Pro se plaintiffs, but no pro se defendants",
+                    },
+                    {
+                        "value": 2,
+                        "display_name": "Pro se defendants, but no pro se plaintiffs",
+                    },
+                    {
+                        "value": 3,
+                        "display_name": "Both pro se plaintiffs & defendants",
+                    },
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -237,5 +405,3 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
         BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
-
-

@@ -1,20 +1,13 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
-from courtlistener.utils import (
-    choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
-)
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter6
+from courtlistener.models.filters import Filter6, Filter8
+from courtlistener.utils import (
+    related_validator,
+)
 
 
 class AttorneysEndpoint(Endpoint):
@@ -77,5 +70,3 @@ class AttorneysEndpoint(Endpoint):
             None,
         ),
     ]
-
-

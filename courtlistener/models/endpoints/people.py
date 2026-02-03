@@ -1,29 +1,15 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter4, Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
     multiple_choice_validator,
     related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
 
 
 class PeopleEndpoint(Endpoint):
@@ -149,7 +135,11 @@ class PeopleEndpoint(Endpoint):
             None,
             description="The person\u0027s gender",
             json_schema_extra={
-                "choices": [{'value': 'm', 'display_name': 'Male'}, {'value': 'f', 'display_name': 'Female'}, {'value': 'o', 'display_name': 'Other'}],
+                "choices": [
+                    {"value": "m", "display_name": "Male"},
+                    {"value": "f", "display_name": "Female"},
+                    {"value": "o", "display_name": "Other"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -249,10 +239,29 @@ class PeopleEndpoint(Endpoint):
         Field(
             None,
             json_schema_extra={
-                "choices": [{'value': 'w', 'display_name': 'White'}, {'value': 'b', 'display_name': 'Black or African American'}, {'value': 'i', 'display_name': 'American Indian or Alaska Native'}, {'value': 'a', 'display_name': 'Asian'}, {'value': 'p', 'display_name': 'Native Hawaiian or Other Pacific Islander'}, {'value': 'mena', 'display_name': 'Middle Eastern/North African'}, {'value': 'h', 'display_name': 'Hispanic/Latino'}, {'value': 'o', 'display_name': 'Other'}],
+                "choices": [
+                    {"value": "w", "display_name": "White"},
+                    {
+                        "value": "b",
+                        "display_name": "Black or African American",
+                    },
+                    {
+                        "value": "i",
+                        "display_name": "American Indian or Alaska Native",
+                    },
+                    {"value": "a", "display_name": "Asian"},
+                    {
+                        "value": "p",
+                        "display_name": "Native Hawaiian or Other Pacific Islander",
+                    },
+                    {
+                        "value": "mena",
+                        "display_name": "Middle Eastern/North African",
+                    },
+                    {"value": "h", "display_name": "Hispanic/Latino"},
+                    {"value": "o", "display_name": "Other"},
+                ],
             },
         ),
         BeforeValidator(multiple_choice_validator),
     ]
-
-

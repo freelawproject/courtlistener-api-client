@@ -1,21 +1,16 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import AfterValidator, BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter2, Filter8
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
     in_post_validator,
+    in_pre_validator,
+    related_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter2
 
 
 class RecapDocumentsEndpoint(Endpoint):
@@ -58,7 +53,10 @@ class RecapDocumentsEndpoint(Endpoint):
             None,
             description="Whether this is a regular document or an attachment.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'PACER Document'}, {'value': 2, 'display_name': 'Attachment'}],
+                "choices": [
+                    {"value": 1, "display_name": "PACER Document"},
+                    {"value": 2, "display_name": "Attachment"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -127,5 +125,3 @@ class RecapDocumentsEndpoint(Endpoint):
         ),
         BeforeValidator(related_validator),
     ]
-
-

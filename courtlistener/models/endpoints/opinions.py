@@ -1,19 +1,14 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
-from courtlistener.utils import (
-    choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
-)
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
+from courtlistener.utils import (
+    multiple_choice_validator,
+    related_validator,
+)
 
 
 class OpinionsEndpoint(Endpoint):
@@ -99,10 +94,46 @@ class OpinionsEndpoint(Endpoint):
         Field(
             None,
             json_schema_extra={
-                "choices": [{'value': '010combined', 'display_name': 'Combined Opinion'}, {'value': '015unamimous', 'display_name': 'Unanimous Opinion'}, {'value': '020lead', 'display_name': 'Lead Opinion'}, {'value': '025plurality', 'display_name': 'Plurality Opinion'}, {'value': '030concurrence', 'display_name': 'Concurrence Opinion'}, {'value': '035concurrenceinpart', 'display_name': 'In Part Opinion'}, {'value': '040dissent', 'display_name': 'Dissent'}, {'value': '050addendum', 'display_name': 'Addendum'}, {'value': '060remittitur', 'display_name': 'Remittitur'}, {'value': '070rehearing', 'display_name': 'Rehearing'}, {'value': '080onthemerits', 'display_name': 'On the Merits'}, {'value': '090onmotiontostrike', 'display_name': 'On Motion to Strike Cost Bill'}, {'value': '100trialcourt', 'display_name': 'Trial Court Document'}],
+                "choices": [
+                    {
+                        "value": "010combined",
+                        "display_name": "Combined Opinion",
+                    },
+                    {
+                        "value": "015unamimous",
+                        "display_name": "Unanimous Opinion",
+                    },
+                    {"value": "020lead", "display_name": "Lead Opinion"},
+                    {
+                        "value": "025plurality",
+                        "display_name": "Plurality Opinion",
+                    },
+                    {
+                        "value": "030concurrence",
+                        "display_name": "Concurrence Opinion",
+                    },
+                    {
+                        "value": "035concurrenceinpart",
+                        "display_name": "In Part Opinion",
+                    },
+                    {"value": "040dissent", "display_name": "Dissent"},
+                    {"value": "050addendum", "display_name": "Addendum"},
+                    {"value": "060remittitur", "display_name": "Remittitur"},
+                    {"value": "070rehearing", "display_name": "Rehearing"},
+                    {
+                        "value": "080onthemerits",
+                        "display_name": "On the Merits",
+                    },
+                    {
+                        "value": "090onmotiontostrike",
+                        "display_name": "On Motion to Strike Cost Bill",
+                    },
+                    {
+                        "value": "100trialcourt",
+                        "display_name": "Trial Court Document",
+                    },
+                ],
             },
         ),
         BeforeValidator(multiple_choice_validator),
     ]
-
-

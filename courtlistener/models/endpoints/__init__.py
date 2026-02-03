@@ -1,47 +1,75 @@
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.endpoints.search import SearchEndpoint
-from courtlistener.models.endpoints.dockets import DocketsEndpoint
-from courtlistener.models.endpoints.bankruptcy_information import BankruptcyInformationEndpoint
-from courtlistener.models.endpoints.originating_court_information import OriginatingCourtInformationEndpoint
-from courtlistener.models.endpoints.docket_entries import DocketEntriesEndpoint
-from courtlistener.models.endpoints.recap_documents import RecapDocumentsEndpoint
-from courtlistener.models.endpoints.courts import CourtsEndpoint
+from courtlistener.models.endpoints.aba_ratings import AbaRatingsEndpoint
+from courtlistener.models.endpoints.agreements import AgreementsEndpoint
+from courtlistener.models.endpoints.alerts import AlertsEndpoint
+from courtlistener.models.endpoints.attorneys import AttorneysEndpoint
 from courtlistener.models.endpoints.audio import AudioEndpoint
+from courtlistener.models.endpoints.bankruptcy_information import (
+    BankruptcyInformationEndpoint,
+)
 from courtlistener.models.endpoints.clusters import ClustersEndpoint
+from courtlistener.models.endpoints.courts import CourtsEndpoint
+from courtlistener.models.endpoints.debts import DebtsEndpoint
+from courtlistener.models.endpoints.disclosure_positions import (
+    DisclosurePositionsEndpoint,
+)
+from courtlistener.models.endpoints.disclosure_typeahead import (
+    DisclosureTypeaheadEndpoint,
+)
+from courtlistener.models.endpoints.docket_alerts import DocketAlertsEndpoint
+from courtlistener.models.endpoints.docket_entries import DocketEntriesEndpoint
+from courtlistener.models.endpoints.docket_tags import DocketTagsEndpoint
+from courtlistener.models.endpoints.dockets import DocketsEndpoint
+from courtlistener.models.endpoints.educations import EducationsEndpoint
+from courtlistener.models.endpoints.financial_disclosures import (
+    FinancialDisclosuresEndpoint,
+)
+from courtlistener.models.endpoints.fjc_integrated_database import (
+    FjcIntegratedDatabaseEndpoint,
+)
+from courtlistener.models.endpoints.gifts import GiftsEndpoint
+from courtlistener.models.endpoints.increment_event import (
+    IncrementEventEndpoint,
+)
+from courtlistener.models.endpoints.investments import InvestmentsEndpoint
+from courtlistener.models.endpoints.non_investment_incomes import (
+    NonInvestmentIncomesEndpoint,
+)
 from courtlistener.models.endpoints.opinions import OpinionsEndpoint
 from courtlistener.models.endpoints.opinions_cited import OpinionsCitedEndpoint
-from courtlistener.models.endpoints.tag import TagEndpoint
-from courtlistener.models.endpoints.people import PeopleEndpoint
-from courtlistener.models.endpoints.disclosure_typeahead import DisclosureTypeaheadEndpoint
-from courtlistener.models.endpoints.positions import PositionsEndpoint
-from courtlistener.models.endpoints.retention_events import RetentionEventsEndpoint
-from courtlistener.models.endpoints.educations import EducationsEndpoint
-from courtlistener.models.endpoints.schools import SchoolsEndpoint
-from courtlistener.models.endpoints.political_affiliations import PoliticalAffiliationsEndpoint
-from courtlistener.models.endpoints.sources import SourcesEndpoint
-from courtlistener.models.endpoints.aba_ratings import AbaRatingsEndpoint
+from courtlistener.models.endpoints.originating_court_information import (
+    OriginatingCourtInformationEndpoint,
+)
 from courtlistener.models.endpoints.parties import PartiesEndpoint
-from courtlistener.models.endpoints.attorneys import AttorneysEndpoint
+from courtlistener.models.endpoints.people import PeopleEndpoint
+from courtlistener.models.endpoints.political_affiliations import (
+    PoliticalAffiliationsEndpoint,
+)
+from courtlistener.models.endpoints.positions import PositionsEndpoint
+from courtlistener.models.endpoints.prayers import PrayersEndpoint
+from courtlistener.models.endpoints.recap_documents import (
+    RecapDocumentsEndpoint,
+)
 from courtlistener.models.endpoints.recap_fetch import RecapFetchEndpoint
 from courtlistener.models.endpoints.recap_query import RecapQueryEndpoint
-from courtlistener.models.endpoints.fjc_integrated_database import FjcIntegratedDatabaseEndpoint
-from courtlistener.models.endpoints.tags import TagsEndpoint
-from courtlistener.models.endpoints.docket_tags import DocketTagsEndpoint
-from courtlistener.models.endpoints.prayers import PrayersEndpoint
-from courtlistener.models.endpoints.increment_event import IncrementEventEndpoint
-from courtlistener.models.endpoints.visualizations_json import VisualizationsJsonEndpoint
-from courtlistener.models.endpoints.visualizations import VisualizationsEndpoint
-from courtlistener.models.endpoints.agreements import AgreementsEndpoint
-from courtlistener.models.endpoints.debts import DebtsEndpoint
-from courtlistener.models.endpoints.financial_disclosures import FinancialDisclosuresEndpoint
-from courtlistener.models.endpoints.gifts import GiftsEndpoint
-from courtlistener.models.endpoints.investments import InvestmentsEndpoint
-from courtlistener.models.endpoints.non_investment_incomes import NonInvestmentIncomesEndpoint
-from courtlistener.models.endpoints.disclosure_positions import DisclosurePositionsEndpoint
-from courtlistener.models.endpoints.reimbursements import ReimbursementsEndpoint
+from courtlistener.models.endpoints.reimbursements import (
+    ReimbursementsEndpoint,
+)
+from courtlistener.models.endpoints.retention_events import (
+    RetentionEventsEndpoint,
+)
+from courtlistener.models.endpoints.schools import SchoolsEndpoint
+from courtlistener.models.endpoints.search import SearchEndpoint
+from courtlistener.models.endpoints.sources import SourcesEndpoint
 from courtlistener.models.endpoints.spouse_incomes import SpouseIncomesEndpoint
-from courtlistener.models.endpoints.alerts import AlertsEndpoint
-from courtlistener.models.endpoints.docket_alerts import DocketAlertsEndpoint
+from courtlistener.models.endpoints.tag import TagEndpoint
+from courtlistener.models.endpoints.tags import TagsEndpoint
+from courtlistener.models.endpoints.visualizations import (
+    VisualizationsEndpoint,
+)
+from courtlistener.models.endpoints.visualizations_json import (
+    VisualizationsJsonEndpoint,
+)
 
 __all__ = [
     "SearchEndpoint",

@@ -1,5 +1,3 @@
-from datetime import date, datetime
-
 from pydantic import BaseModel
 
 
@@ -9,6 +7,7 @@ class Filter3(BaseModel):
     Filters for fields with types: ['int']
     and lookup types: ['gt', 'gte', 'lt', 'lte', 'range']
     """
+
     gt: None | int = None
     gte: None | int = None
     lt: None | int = None

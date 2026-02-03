@@ -1,21 +1,15 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
     multiple_choice_validator,
     related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
 
 
 class ClustersEndpoint(Endpoint):
@@ -63,9 +57,13 @@ class ClustersEndpoint(Endpoint):
         None | int,
         Field(
             None,
-            description="the ideological \"direction\" of a decision in the Supreme Court database. More details at: http://scdb.wustl.edu/documentation.php?var=decisionDirection",
+            description='the ideological "direction" of a decision in the Supreme Court database. More details at: http://scdb.wustl.edu/documentation.php?var=decisionDirection',
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Conservative'}, {'value': 2, 'display_name': 'Liberal'}, {'value': 3, 'display_name': 'Unspecifiable'}],
+                "choices": [
+                    {"value": 1, "display_name": "Conservative"},
+                    {"value": 2, "display_name": "Liberal"},
+                    {"value": 3, "display_name": "Unspecifiable"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -97,7 +95,21 @@ class ClustersEndpoint(Endpoint):
             None,
             description="The precedential status of document, one of: Published, Unpublished, Errata, Separate, In-chambers, Relating-to, Unknown",
             json_schema_extra={
-                "choices": [{'value': 'Published', 'display_name': 'Precedential'}, {'value': 'Unpublished', 'display_name': 'Non-Precedential'}, {'value': 'Errata', 'display_name': 'Errata'}, {'value': 'Separate', 'display_name': 'Separate Opinion'}, {'value': 'In-chambers', 'display_name': 'In-chambers'}, {'value': 'Relating-to', 'display_name': 'Relating-to orders'}, {'value': 'Unknown', 'display_name': 'Unknown Status'}],
+                "choices": [
+                    {"value": "Published", "display_name": "Precedential"},
+                    {
+                        "value": "Unpublished",
+                        "display_name": "Non-Precedential",
+                    },
+                    {"value": "Errata", "display_name": "Errata"},
+                    {"value": "Separate", "display_name": "Separate Opinion"},
+                    {"value": "In-chambers", "display_name": "In-chambers"},
+                    {
+                        "value": "Relating-to",
+                        "display_name": "Relating-to orders",
+                    },
+                    {"value": "Unknown", "display_name": "Unknown Status"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -162,7 +174,158 @@ class ClustersEndpoint(Endpoint):
             None,
             description="the source of the cluster, one of: C (court website), R (public.resource.org), CR (court website merged with resource.org), L (lawbox), LC (lawbox merged with court), LR (lawbox merged with resource.org), LCR (lawbox merged with court and resource.org), M (manual input), A (internet archive), H (brad heath archive), Z (columbia archive), ZA (columbia merged with internet archive), ZD (columbia merged with direct court input), ZC (columbia merged with court), ZH (columbia merged with brad heath archive), ZLC (columbia merged with lawbox and court), ZLR (columbia merged with lawbox and resource.org), ZLCR (columbia merged with lawbox, court, and resource.org), ZR (columbia merged with resource.org), ZCR (columbia merged with court and resource.org), ZL (columbia merged with lawbox), ZM (columbia merged with manual input), ZQ (columbia merged with 2020 anonymous database), U (Harvard, Library Innovation Lab Case Law Access Project), CU (court website merged with Harvard), D (direct court input), Q (2020 anonymous database), QU (2020 anonymous database merged with Harvard), CU (court website merged with Harvard), CRU (court website merged with public.resource.org and Harvard), DU (direct court input merged with Harvard), LU (lawbox merged with Harvard), LCU (Lawbox merged with court website and Harvard), LRU (Lawbox merged with public.resource.org and with Harvard), MU (Manual input merged with Harvard), RU (public.resource.org merged with Harvard), ZU (columbia archive merged with Harvard), ZLU (columbia archive merged with Lawbox and Harvard), ZDU (columbia archive merged with direct court input and Harvard), ZLRU (columbia archive merged with lawbox, public.resource.org and Harvard), ZLCRU (columbia archive merged with lawbox, court website, public.resource.org and Harvard), ZCU (columbia archive merged with court website and Harvard), ZMU (columbia archive merged with manual input and Harvard), ZRU (columbia archive merged with public.resource.org and Harvard), ZLCU (columbia archive merged with lawbox, court website and Harvard), G (recap)",
             json_schema_extra={
-                "choices": [{'value': 'C', 'display_name': 'court website'}, {'value': 'R', 'display_name': 'public.resource.org'}, {'value': 'CR', 'display_name': 'court website merged with resource.org'}, {'value': 'L', 'display_name': 'lawbox'}, {'value': 'LC', 'display_name': 'lawbox merged with court'}, {'value': 'LR', 'display_name': 'lawbox merged with resource.org'}, {'value': 'LCR', 'display_name': 'lawbox merged with court and resource.org'}, {'value': 'M', 'display_name': 'manual input'}, {'value': 'A', 'display_name': 'internet archive'}, {'value': 'H', 'display_name': 'brad heath archive'}, {'value': 'Z', 'display_name': 'columbia archive'}, {'value': 'ZA', 'display_name': 'columbia merged with internet archive'}, {'value': 'ZD', 'display_name': 'columbia merged with direct court input'}, {'value': 'ZC', 'display_name': 'columbia merged with court'}, {'value': 'ZH', 'display_name': 'columbia merged with brad heath archive'}, {'value': 'ZLC', 'display_name': 'columbia merged with lawbox and court'}, {'value': 'ZLR', 'display_name': 'columbia merged with lawbox and resource.org'}, {'value': 'ZLCR', 'display_name': 'columbia merged with lawbox, court, and resource.org'}, {'value': 'ZR', 'display_name': 'columbia merged with resource.org'}, {'value': 'ZCR', 'display_name': 'columbia merged with court and resource.org'}, {'value': 'ZL', 'display_name': 'columbia merged with lawbox'}, {'value': 'ZM', 'display_name': 'columbia merged with manual input'}, {'value': 'ZQ', 'display_name': 'columbia merged with 2020 anonymous database'}, {'value': 'U', 'display_name': 'Harvard, Library Innovation Lab Case Law Access Project'}, {'value': 'CU', 'display_name': 'court website merged with Harvard'}, {'value': 'D', 'display_name': 'direct court input'}, {'value': 'Q', 'display_name': '2020 anonymous database'}, {'value': 'QU', 'display_name': '2020 anonymous database merged with Harvard'}, {'value': 'CRU', 'display_name': 'court website merged with public.resource.org and Harvard'}, {'value': 'DU', 'display_name': 'direct court input merged with Harvard'}, {'value': 'LU', 'display_name': 'lawbox merged with Harvard'}, {'value': 'LCU', 'display_name': 'Lawbox merged with court website and Harvard'}, {'value': 'LRU', 'display_name': 'Lawbox merged with public.resource.org and with Harvard'}, {'value': 'MU', 'display_name': 'Manual input merged with Harvard'}, {'value': 'RU', 'display_name': 'public.resource.org merged with Harvard'}, {'value': 'ZU', 'display_name': 'columbia archive merged with Harvard'}, {'value': 'ZLU', 'display_name': 'columbia archive merged with Lawbox and Harvard'}, {'value': 'ZDU', 'display_name': 'columbia archive merged with direct court input and Harvard'}, {'value': 'ZLRU', 'display_name': 'columbia archive merged with lawbox, public.resource.org and Harvard'}, {'value': 'ZLCRU', 'display_name': 'columbia archive merged with lawbox, court website, public.resource.org and Harvard'}, {'value': 'ZCU', 'display_name': 'columbia archive merged with court website and Harvard'}, {'value': 'ZMU', 'display_name': 'columbia archive merged with manual input and Harvard'}, {'value': 'ZRU', 'display_name': 'columbia archive merged with public.resource.org and Harvard'}, {'value': 'ZLCU', 'display_name': 'columbia archive merged with lawbox, court website and Harvard'}, {'value': 'G', 'display_name': 'recap'}],
+                "choices": [
+                    {"value": "C", "display_name": "court website"},
+                    {"value": "R", "display_name": "public.resource.org"},
+                    {
+                        "value": "CR",
+                        "display_name": "court website merged with resource.org",
+                    },
+                    {"value": "L", "display_name": "lawbox"},
+                    {
+                        "value": "LC",
+                        "display_name": "lawbox merged with court",
+                    },
+                    {
+                        "value": "LR",
+                        "display_name": "lawbox merged with resource.org",
+                    },
+                    {
+                        "value": "LCR",
+                        "display_name": "lawbox merged with court and resource.org",
+                    },
+                    {"value": "M", "display_name": "manual input"},
+                    {"value": "A", "display_name": "internet archive"},
+                    {"value": "H", "display_name": "brad heath archive"},
+                    {"value": "Z", "display_name": "columbia archive"},
+                    {
+                        "value": "ZA",
+                        "display_name": "columbia merged with internet archive",
+                    },
+                    {
+                        "value": "ZD",
+                        "display_name": "columbia merged with direct court input",
+                    },
+                    {
+                        "value": "ZC",
+                        "display_name": "columbia merged with court",
+                    },
+                    {
+                        "value": "ZH",
+                        "display_name": "columbia merged with brad heath archive",
+                    },
+                    {
+                        "value": "ZLC",
+                        "display_name": "columbia merged with lawbox and court",
+                    },
+                    {
+                        "value": "ZLR",
+                        "display_name": "columbia merged with lawbox and resource.org",
+                    },
+                    {
+                        "value": "ZLCR",
+                        "display_name": "columbia merged with lawbox, court, and resource.org",
+                    },
+                    {
+                        "value": "ZR",
+                        "display_name": "columbia merged with resource.org",
+                    },
+                    {
+                        "value": "ZCR",
+                        "display_name": "columbia merged with court and resource.org",
+                    },
+                    {
+                        "value": "ZL",
+                        "display_name": "columbia merged with lawbox",
+                    },
+                    {
+                        "value": "ZM",
+                        "display_name": "columbia merged with manual input",
+                    },
+                    {
+                        "value": "ZQ",
+                        "display_name": "columbia merged with 2020 anonymous database",
+                    },
+                    {
+                        "value": "U",
+                        "display_name": "Harvard, Library Innovation Lab Case Law Access Project",
+                    },
+                    {
+                        "value": "CU",
+                        "display_name": "court website merged with Harvard",
+                    },
+                    {"value": "D", "display_name": "direct court input"},
+                    {"value": "Q", "display_name": "2020 anonymous database"},
+                    {
+                        "value": "QU",
+                        "display_name": "2020 anonymous database merged with Harvard",
+                    },
+                    {
+                        "value": "CRU",
+                        "display_name": "court website merged with public.resource.org and Harvard",
+                    },
+                    {
+                        "value": "DU",
+                        "display_name": "direct court input merged with Harvard",
+                    },
+                    {
+                        "value": "LU",
+                        "display_name": "lawbox merged with Harvard",
+                    },
+                    {
+                        "value": "LCU",
+                        "display_name": "Lawbox merged with court website and Harvard",
+                    },
+                    {
+                        "value": "LRU",
+                        "display_name": "Lawbox merged with public.resource.org and with Harvard",
+                    },
+                    {
+                        "value": "MU",
+                        "display_name": "Manual input merged with Harvard",
+                    },
+                    {
+                        "value": "RU",
+                        "display_name": "public.resource.org merged with Harvard",
+                    },
+                    {
+                        "value": "ZU",
+                        "display_name": "columbia archive merged with Harvard",
+                    },
+                    {
+                        "value": "ZLU",
+                        "display_name": "columbia archive merged with Lawbox and Harvard",
+                    },
+                    {
+                        "value": "ZDU",
+                        "display_name": "columbia archive merged with direct court input and Harvard",
+                    },
+                    {
+                        "value": "ZLRU",
+                        "display_name": "columbia archive merged with lawbox, public.resource.org and Harvard",
+                    },
+                    {
+                        "value": "ZLCRU",
+                        "display_name": "columbia archive merged with lawbox, court website, public.resource.org and Harvard",
+                    },
+                    {
+                        "value": "ZCU",
+                        "display_name": "columbia archive merged with court website and Harvard",
+                    },
+                    {
+                        "value": "ZMU",
+                        "display_name": "columbia archive merged with manual input and Harvard",
+                    },
+                    {
+                        "value": "ZRU",
+                        "display_name": "columbia archive merged with public.resource.org and Harvard",
+                    },
+                    {
+                        "value": "ZLCU",
+                        "display_name": "columbia archive merged with lawbox, court website and Harvard",
+                    },
+                    {"value": "G", "display_name": "recap"},
+                ],
             },
         ),
         BeforeValidator(multiple_choice_validator),
@@ -174,5 +337,3 @@ class ClustersEndpoint(Endpoint):
         ),
         BeforeValidator(related_validator),
     ]
-
-

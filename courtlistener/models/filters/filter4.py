@@ -1,5 +1,3 @@
-from datetime import date, datetime
-
 from pydantic import BaseModel
 
 
@@ -9,6 +7,7 @@ class Filter4(BaseModel):
     Filters for fields with types: ['str']
     and lookup types: ['endswith', 'iendswith', 'iexact', 'istartswith', 'startswith']
     """
+
     endswith: None | str = None
     iendswith: None | str = None
     iexact: None | str = None

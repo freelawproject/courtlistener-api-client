@@ -1,17 +1,11 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from typing import Annotated, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
 
 
 class DocketAlertsEndpoint(Endpoint):
@@ -33,7 +27,10 @@ class DocketAlertsEndpoint(Endpoint):
             None,
             description="The subscription type assigned, Unsubscription or Subscription.",
             json_schema_extra={
-                "choices": [{'value': 0, 'display_name': 'Unsubscription'}, {'value': 1, 'display_name': 'Subscription'}],
+                "choices": [
+                    {"value": 0, "display_name": "Unsubscription"},
+                    {"value": 1, "display_name": "Subscription"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -45,5 +42,3 @@ class DocketAlertsEndpoint(Endpoint):
             description="The docket that we are subscribed to.",
         ),
     ]
-
-

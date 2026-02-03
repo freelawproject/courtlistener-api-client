@@ -1,17 +1,14 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from typing import Annotated, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import AfterValidator, BeforeValidator, Field
 
-from courtlistener.utils import (
-    choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
-)
 from courtlistener.models.endpoint import Endpoint
+from courtlistener.utils import (
+    in_post_validator,
+    in_pre_validator,
+    multiple_choice_validator,
+    try_coerce_ints,
+)
 
 
 class PrayersEndpoint(Endpoint):
@@ -40,7 +37,13 @@ class PrayersEndpoint(Endpoint):
             None,
             description="Whether the prayer has been granted or is still waiting.",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'Still waiting for the document.'}, {'value': 2, 'display_name': 'Prayer has been granted.'}],
+                "choices": [
+                    {
+                        "value": 1,
+                        "display_name": "Still waiting for the document.",
+                    },
+                    {"value": 2, "display_name": "Prayer has been granted."},
+                ],
             },
         ),
         AfterValidator(in_post_validator),
@@ -48,5 +51,3 @@ class PrayersEndpoint(Endpoint):
         BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
-
-

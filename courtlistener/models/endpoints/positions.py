@@ -1,32 +1,14 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter4, Filter6, Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
     related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter6
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter7
-from courtlistener.models.filters import Filter4
-from courtlistener.models.filters import Filter4
 
 
 class PositionsEndpoint(Endpoint):
@@ -48,7 +30,37 @@ class PositionsEndpoint(Endpoint):
             None,
             description="If this is a judicial position, this indicates the role the person had. This field may be blank if job_title is complete instead.",
             json_schema_extra={
-                "choices": [{'value': 'Judge', 'display_name': "[('jud', 'Judge'), ('jus', 'Justice'), ('ad-law-jud', 'Administrative Law Judge'), ('act-jud', 'Acting Judge'), ('act-jus', 'Acting Justice'), ('act-pres-jud', 'Acting Presiding Judge'), ('act-c-admin-jus', 'Acting Chief Administrative Justice'), ('ass-jud', 'Associate Judge'), ('ass-jus', 'Associate Justice'), ('ass-c-jud', 'Associate Chief Judge'), ('ass-pres-jud', 'Associate Presiding Judge'), ('asst-pres-jud', 'Assistant Presiding Judge'), ('c-jud', 'Chief Judge'), ('c-jus', 'Chief Justice'), ('c-spec-m', 'Chief Special Master'), ('c-admin-jus', 'Chief Administrative Justice'), ('c-spec-tr-jud', 'Chief Special Trial Judge'), ('pres-jud', 'Presiding Judge'), ('pres-jus', 'Presiding Justice'), ('sup-jud', 'Supervising Judge'), ('ad-pres-jus', 'Administrative Presiding Justice'), ('com', 'Commissioner'), ('com-dep', 'Deputy Commissioner'), ('jud-pt', 'Judge Pro Tem'), ('jus-pt', 'Justice Pro Tem'), ('ref-jud-tr', 'Judge Trial Referee'), ('ref-off', 'Official Referee'), ('ref-state-trial', 'State Trial Referee'), ('ret-act-jus', 'Active Retired Justice'), ('ret-ass-jud', 'Retired Associate Judge'), ('ret-c-jud', 'Retired Chief Judge'), ('ret-jus', 'Retired Justice'), ('ret-senior-jud', 'Senior Judge'), ('mag', 'Magistrate'), ('c-mag', 'Chief Magistrate'), ('pres-mag', 'Presiding Magistrate'), ('mag-pt', 'Magistrate Pro Tem'), ('mag-rc', 'Magistrate (Recalled)'), ('mag-part-time', 'Magistrate (Part-Time)'), ('spec-chair', 'Special Chairman'), ('spec-jud', 'Special Judge'), ('spec-m', 'Special Master'), ('spec-scjcbc', 'Special Superior Court Judge for Complex Business Cases'), ('spec-tr-jud', 'Special Trial Judge'), ('chair', 'Chairman'), ('chan', 'Chancellor'), ('presi-jud', 'President'), ('res-jud', 'Reserve Judge'), ('trial-jud', 'Trial Judge'), ('vice-chan', 'Vice Chancellor'), ('vice-cj', 'Vice Chief Judge')]"}, {'value': 'Attorney General', 'display_name': "[('att-gen', 'Attorney General'), ('att-gen-ass', 'Assistant Attorney General'), ('att-gen-ass-spec', 'Special Assistant Attorney General'), ('sen-counsel', 'Senior Counsel'), ('dep-sol-gen', 'Deputy Solicitor General')]"}, {'value': 'Appointing Authority', 'display_name': "[('pres', 'President of the United States'), ('gov', 'Governor'), ('mayor', 'Mayor')]"}, {'value': 'Clerkships', 'display_name': "[('clerk', 'Clerk'), ('clerk-chief-dep', 'Chief Deputy Clerk'), ('staff-atty', 'Staff Attorney')]"}, {'value': 'prof', 'display_name': 'Professor'}, {'value': 'adj-prof', 'display_name': 'Adjunct Professor'}, {'value': 'prac', 'display_name': 'Practitioner'}, {'value': 'pros', 'display_name': 'Prosecutor'}, {'value': 'pub-def', 'display_name': 'Public Defender'}, {'value': 'da', 'display_name': 'District Attorney'}, {'value': 'ada', 'display_name': 'Assistant District Attorney'}, {'value': 'legis', 'display_name': 'Legislator'}, {'value': 'sen', 'display_name': 'Senator'}, {'value': 'state-sen', 'display_name': 'State Senator'}],
+                "choices": [
+                    {
+                        "value": "Judge",
+                        "display_name": "[('jud', 'Judge'), ('jus', 'Justice'), ('ad-law-jud', 'Administrative Law Judge'), ('act-jud', 'Acting Judge'), ('act-jus', 'Acting Justice'), ('act-pres-jud', 'Acting Presiding Judge'), ('act-c-admin-jus', 'Acting Chief Administrative Justice'), ('ass-jud', 'Associate Judge'), ('ass-jus', 'Associate Justice'), ('ass-c-jud', 'Associate Chief Judge'), ('ass-pres-jud', 'Associate Presiding Judge'), ('asst-pres-jud', 'Assistant Presiding Judge'), ('c-jud', 'Chief Judge'), ('c-jus', 'Chief Justice'), ('c-spec-m', 'Chief Special Master'), ('c-admin-jus', 'Chief Administrative Justice'), ('c-spec-tr-jud', 'Chief Special Trial Judge'), ('pres-jud', 'Presiding Judge'), ('pres-jus', 'Presiding Justice'), ('sup-jud', 'Supervising Judge'), ('ad-pres-jus', 'Administrative Presiding Justice'), ('com', 'Commissioner'), ('com-dep', 'Deputy Commissioner'), ('jud-pt', 'Judge Pro Tem'), ('jus-pt', 'Justice Pro Tem'), ('ref-jud-tr', 'Judge Trial Referee'), ('ref-off', 'Official Referee'), ('ref-state-trial', 'State Trial Referee'), ('ret-act-jus', 'Active Retired Justice'), ('ret-ass-jud', 'Retired Associate Judge'), ('ret-c-jud', 'Retired Chief Judge'), ('ret-jus', 'Retired Justice'), ('ret-senior-jud', 'Senior Judge'), ('mag', 'Magistrate'), ('c-mag', 'Chief Magistrate'), ('pres-mag', 'Presiding Magistrate'), ('mag-pt', 'Magistrate Pro Tem'), ('mag-rc', 'Magistrate (Recalled)'), ('mag-part-time', 'Magistrate (Part-Time)'), ('spec-chair', 'Special Chairman'), ('spec-jud', 'Special Judge'), ('spec-m', 'Special Master'), ('spec-scjcbc', 'Special Superior Court Judge for Complex Business Cases'), ('spec-tr-jud', 'Special Trial Judge'), ('chair', 'Chairman'), ('chan', 'Chancellor'), ('presi-jud', 'President'), ('res-jud', 'Reserve Judge'), ('trial-jud', 'Trial Judge'), ('vice-chan', 'Vice Chancellor'), ('vice-cj', 'Vice Chief Judge')]",
+                    },
+                    {
+                        "value": "Attorney General",
+                        "display_name": "[('att-gen', 'Attorney General'), ('att-gen-ass', 'Assistant Attorney General'), ('att-gen-ass-spec', 'Special Assistant Attorney General'), ('sen-counsel', 'Senior Counsel'), ('dep-sol-gen', 'Deputy Solicitor General')]",
+                    },
+                    {
+                        "value": "Appointing Authority",
+                        "display_name": "[('pres', 'President of the United States'), ('gov', 'Governor'), ('mayor', 'Mayor')]",
+                    },
+                    {
+                        "value": "Clerkships",
+                        "display_name": "[('clerk', 'Clerk'), ('clerk-chief-dep', 'Chief Deputy Clerk'), ('staff-atty', 'Staff Attorney')]",
+                    },
+                    {"value": "prof", "display_name": "Professor"},
+                    {"value": "adj-prof", "display_name": "Adjunct Professor"},
+                    {"value": "prac", "display_name": "Practitioner"},
+                    {"value": "pros", "display_name": "Prosecutor"},
+                    {"value": "pub-def", "display_name": "Public Defender"},
+                    {"value": "da", "display_name": "District Attorney"},
+                    {
+                        "value": "ada",
+                        "display_name": "Assistant District Attorney",
+                    },
+                    {"value": "legis", "display_name": "Legislator"},
+                    {"value": "sen", "display_name": "Senator"},
+                    {"value": "state-sen", "display_name": "State Senator"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -168,7 +180,25 @@ class PositionsEndpoint(Endpoint):
             None,
             description="The action that the judicial committee took in response to a nomination",
             json_schema_extra={
-                "choices": [{'value': 'no_rep', 'display_name': 'Not Reported'}, {'value': 'rep_w_rec', 'display_name': 'Reported with Recommendation'}, {'value': 'rep_wo_rec', 'display_name': 'Reported without Recommendation'}, {'value': 'rec_postpone', 'display_name': 'Recommendation Postponed'}, {'value': 'rec_bad', 'display_name': 'Recommended Unfavorably'}],
+                "choices": [
+                    {"value": "no_rep", "display_name": "Not Reported"},
+                    {
+                        "value": "rep_w_rec",
+                        "display_name": "Reported with Recommendation",
+                    },
+                    {
+                        "value": "rep_wo_rec",
+                        "display_name": "Reported without Recommendation",
+                    },
+                    {
+                        "value": "rec_postpone",
+                        "display_name": "Recommendation Postponed",
+                    },
+                    {
+                        "value": "rec_bad",
+                        "display_name": "Recommended Unfavorably",
+                    },
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -179,7 +209,15 @@ class PositionsEndpoint(Endpoint):
             None,
             description="The process by which a person was nominated into this position.",
             json_schema_extra={
-                "choices": [{'value': 'fed_senate', 'display_name': 'U.S. Senate'}, {'value': 'state_senate', 'display_name': 'State Senate'}, {'value': 'election', 'display_name': 'Primary Election'}, {'value': 'merit_comm', 'display_name': 'Merit Commission'}],
+                "choices": [
+                    {"value": "fed_senate", "display_name": "U.S. Senate"},
+                    {"value": "state_senate", "display_name": "State Senate"},
+                    {"value": "election", "display_name": "Primary Election"},
+                    {
+                        "value": "merit_comm",
+                        "display_name": "Merit Commission",
+                    },
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -211,7 +249,20 @@ class PositionsEndpoint(Endpoint):
             None,
             description="The method that was used for selecting this judge for this position (generally an election or appointment).",
             json_schema_extra={
-                "choices": [{'value': 'Election', 'display_name': "[('e_part', 'Partisan Election'), ('e_non_part', 'Non-Partisan Election')]"}, {'value': 'Appointment', 'display_name': "[('a_pres', 'Appointment (President)'), ('a_gov', 'Appointment (Governor)'), ('a_legis', 'Appointment (Legislature)'), ('a_judge', 'Appointment (Judge)')]"}, {'value': 'Other', 'display_name': "[('ct_trans', 'Transferred (Court Restructuring)')]"}],
+                "choices": [
+                    {
+                        "value": "Election",
+                        "display_name": "[('e_part', 'Partisan Election'), ('e_non_part', 'Non-Partisan Election')]",
+                    },
+                    {
+                        "value": "Appointment",
+                        "display_name": "[('a_pres', 'Appointment (President)'), ('a_gov', 'Appointment (Governor)'), ('a_legis', 'Appointment (Legislature)'), ('a_judge', 'Appointment (Judge)')]",
+                    },
+                    {
+                        "value": "Other",
+                        "display_name": "[('ct_trans', 'Transferred (Court Restructuring)')]",
+                    },
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -222,7 +273,36 @@ class PositionsEndpoint(Endpoint):
             None,
             description="The reason for a termination",
             json_schema_extra={
-                "choices": [{'value': 'ded', 'display_name': 'Death'}, {'value': 'retire_vol', 'display_name': 'Voluntary Retirement'}, {'value': 'retire_mand', 'display_name': 'Mandatory Retirement'}, {'value': 'resign', 'display_name': 'Resigned'}, {'value': 'other_pos', 'display_name': 'Appointed to Other Judgeship'}, {'value': 'lost', 'display_name': 'Lost Election'}, {'value': 'abolished', 'display_name': 'Court Abolished'}, {'value': 'bad_judge', 'display_name': 'Impeached and Convicted'}, {'value': 'recess_not_confirmed', 'display_name': 'Recess Appointment Not Confirmed'}, {'value': 'termed_out', 'display_name': 'Term Limit Reached'}],
+                "choices": [
+                    {"value": "ded", "display_name": "Death"},
+                    {
+                        "value": "retire_vol",
+                        "display_name": "Voluntary Retirement",
+                    },
+                    {
+                        "value": "retire_mand",
+                        "display_name": "Mandatory Retirement",
+                    },
+                    {"value": "resign", "display_name": "Resigned"},
+                    {
+                        "value": "other_pos",
+                        "display_name": "Appointed to Other Judgeship",
+                    },
+                    {"value": "lost", "display_name": "Lost Election"},
+                    {"value": "abolished", "display_name": "Court Abolished"},
+                    {
+                        "value": "bad_judge",
+                        "display_name": "Impeached and Convicted",
+                    },
+                    {
+                        "value": "recess_not_confirmed",
+                        "display_name": "Recess Appointment Not Confirmed",
+                    },
+                    {
+                        "value": "termed_out",
+                        "display_name": "Term Limit Reached",
+                    },
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -261,5 +341,3 @@ class PositionsEndpoint(Endpoint):
         ),
         BeforeValidator(related_validator),
     ]
-
-

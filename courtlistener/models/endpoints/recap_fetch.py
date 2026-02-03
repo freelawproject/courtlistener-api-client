@@ -1,17 +1,14 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from typing import Annotated, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import AfterValidator, BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
-    related_validator,
+    in_post_validator,
     in_pre_validator,
     try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
 
 
 class RecapFetchEndpoint(Endpoint):
@@ -37,7 +34,11 @@ class RecapFetchEndpoint(Endpoint):
             None,
             description="The type of object that is requested",
             json_schema_extra={
-                "choices": [{'value': 1, 'display_name': 'HTML Docket'}, {'value': 2, 'display_name': 'PDF'}, {'value': 3, 'display_name': 'Attachment Page'}],
+                "choices": [
+                    {"value": 1, "display_name": "HTML Docket"},
+                    {"value": 2, "display_name": "PDF"},
+                    {"value": 3, "display_name": "Attachment Page"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -70,5 +71,3 @@ class RecapFetchEndpoint(Endpoint):
             description="The docket number of a case to update (must be used in combination with the court field).",
         ),
     ]
-
-

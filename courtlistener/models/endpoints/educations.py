@@ -1,20 +1,14 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter4, Filter8
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
     related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter4
 
 
 class EducationsEndpoint(Endpoint):
@@ -64,7 +58,32 @@ class EducationsEndpoint(Endpoint):
             None,
             description="Normalized degree level, e.g. BA, JD.",
             json_schema_extra={
-                "choices": [{'value': 'ba', 'display_name': "Bachelor's (e.g. B.A.)"}, {'value': 'ma', 'display_name': "Master's (e.g. M.A.)"}, {'value': 'jd', 'display_name': 'Juris Doctor (J.D.)'}, {'value': 'llm', 'display_name': 'Master of Laws (LL.M)'}, {'value': 'llb', 'display_name': 'Bachelor of Laws (e.g. LL.B)'}, {'value': 'jsd', 'display_name': 'Doctor of Law (J.S.D)'}, {'value': 'phd', 'display_name': 'Doctor of Philosophy (PhD)'}, {'value': 'aa', 'display_name': 'Associate (e.g. A.A.)'}, {'value': 'md', 'display_name': 'Medical Degree (M.D.)'}, {'value': 'mba', 'display_name': 'Master of Business Administration (M.B.A.)'}, {'value': 'cfa', 'display_name': 'Accounting Certification (C.P.A., C.M.A., C.F.A.)'}, {'value': 'cert', 'display_name': 'Certificate'}],
+                "choices": [
+                    {"value": "ba", "display_name": "Bachelor's (e.g. B.A.)"},
+                    {"value": "ma", "display_name": "Master's (e.g. M.A.)"},
+                    {"value": "jd", "display_name": "Juris Doctor (J.D.)"},
+                    {"value": "llm", "display_name": "Master of Laws (LL.M)"},
+                    {
+                        "value": "llb",
+                        "display_name": "Bachelor of Laws (e.g. LL.B)",
+                    },
+                    {"value": "jsd", "display_name": "Doctor of Law (J.S.D)"},
+                    {
+                        "value": "phd",
+                        "display_name": "Doctor of Philosophy (PhD)",
+                    },
+                    {"value": "aa", "display_name": "Associate (e.g. A.A.)"},
+                    {"value": "md", "display_name": "Medical Degree (M.D.)"},
+                    {
+                        "value": "mba",
+                        "display_name": "Master of Business Administration (M.B.A.)",
+                    },
+                    {
+                        "value": "cfa",
+                        "display_name": "Accounting Certification (C.P.A., C.M.A., C.F.A.)",
+                    },
+                    {"value": "cert", "display_name": "Certificate"},
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -89,5 +108,3 @@ class EducationsEndpoint(Endpoint):
         ),
         BeforeValidator(related_validator),
     ]
-
-

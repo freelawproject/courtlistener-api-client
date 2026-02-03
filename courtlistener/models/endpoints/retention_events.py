@@ -1,20 +1,13 @@
-from typing import Any, ClassVar, Annotated
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Annotated, ClassVar
 
-from pydantic import Field, ConfigDict, BeforeValidator, AfterValidator
+from pydantic import BeforeValidator, Field
 
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
-    multiple_choice_validator,
-    related_validator,
-    in_pre_validator,
-    try_coerce_ints,
-    in_post_validator,
 )
-from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter8
-from courtlistener.models.filters import Filter7
 
 
 class RetentionEventsEndpoint(Endpoint):
@@ -63,7 +56,25 @@ class RetentionEventsEndpoint(Endpoint):
             None,
             description="The method through which this position was retained.",
             json_schema_extra={
-                "choices": [{'value': 'reapp_gov', 'display_name': 'Governor Reappointment'}, {'value': 'reapp_leg', 'display_name': 'Legislative Reappointment'}, {'value': 'elec_p', 'display_name': 'Partisan Election'}, {'value': 'elec_n', 'display_name': 'Nonpartisan Election'}, {'value': 'elec_u', 'display_name': 'Uncontested Election'}],
+                "choices": [
+                    {
+                        "value": "reapp_gov",
+                        "display_name": "Governor Reappointment",
+                    },
+                    {
+                        "value": "reapp_leg",
+                        "display_name": "Legislative Reappointment",
+                    },
+                    {"value": "elec_p", "display_name": "Partisan Election"},
+                    {
+                        "value": "elec_n",
+                        "display_name": "Nonpartisan Election",
+                    },
+                    {
+                        "value": "elec_u",
+                        "display_name": "Uncontested Election",
+                    },
+                ],
             },
         ),
         BeforeValidator(choice_validator),
@@ -96,5 +107,3 @@ class RetentionEventsEndpoint(Endpoint):
             description="Whether the retention event was won.",
         ),
     ]
-
-
