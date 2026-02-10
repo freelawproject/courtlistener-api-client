@@ -1,0 +1,127 @@
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
+
+from pydantic import AfterValidator, BeforeValidator, Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter2, Filter8
+from courtlistener.utils import (
+    choice_validator,
+    in_post_validator,
+    in_pre_validator,
+    related_validator,
+)
+
+
+class RecapDocumentsEndpoint(Endpoint):
+    """Recap Documents Endpoint"""
+
+    endpoint: ClassVar[str] = "/recap-documents/"
+    endpoint_id: ClassVar[str] = "recap-documents"
+    endpoint_name: ClassVar[str] = "Recap Documents"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    date_created: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The moment when the item was created.",
+        ),
+    ]
+    date_modified: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The last moment when the item was modified. A value in year 1750 indicates the value is unknown",
+        ),
+    ]
+    date_upload: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="upload_date in RECAP. The date the file was uploaded to RECAP. This information is provided by RECAP.",
+        ),
+    ]
+    document_type: Annotated[
+        None | int,
+        Field(
+            None,
+            description="Whether this is a regular document or an attachment.",
+            json_schema_extra={
+                "choices": [
+                    {"value": 1, "display_name": "PACER Document"},
+                    {"value": 2, "display_name": "Attachment"},
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    document_number: Annotated[
+        None | str | Filter2,
+        Field(
+            None,
+            description="If the file is a document, the number is the document_number in RECAP docket.",
+        ),
+    ]
+    pacer_doc_id: Annotated[
+        None | str | list[str],
+        Field(
+            None,
+            description="The ID of the document in PACER.",
+        ),
+        AfterValidator(in_post_validator),
+        BeforeValidator(in_pre_validator),
+    ]
+    is_available: Annotated[
+        None | bool,
+        Field(
+            None,
+            description="True if the item is available in RECAP",
+        ),
+    ]
+    sha1: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The ID used for a document in RECAP",
+        ),
+    ]
+    ocr_status: Annotated[
+        None | int,
+        Field(
+            None,
+            description="The status of OCR processing on this item.",
+        ),
+    ]
+    is_free_on_pacer: Annotated[
+        None | bool,
+        Field(
+            None,
+            description="Is this item freely available as an opinion on PACER?",
+        ),
+    ]
+    docket_entry: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "DocketEntriesEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    tags: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "TagsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]

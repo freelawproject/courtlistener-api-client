@@ -1,0 +1,20 @@
+from datetime import date, datetime
+
+from pydantic import BaseModel
+
+
+class {{ filter.class_name }}(BaseModel):
+    """{{ filter.class_name }}.
+
+    Filters for fields with types: {{ filter.types }}
+    and lookup types: {{ filter.lookup_types }}
+    """
+    {% for lookup_type in filter.lookup_types %}
+    {% if lookup_type == "range" %}
+    range: None | tuple[{{ filter.types_str }}, {{ filter.types_str }}] = None
+    {% elif lookup_type in ["year", "month", "day", "hour", "minute", "second"] %}
+    {{ lookup_type }}: None | int = None
+    {% else %}
+    {{ lookup_type }}: None | {{ filter.types_str }} = None
+    {% endif %}
+    {% endfor %}

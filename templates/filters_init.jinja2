@@ -1,0 +1,17 @@
+from pydantic import BaseModel
+
+{% for filter in filters %}
+from courtlistener.models.filters.{{ filter.class_name.lower() }} import {{ filter.class_name }}
+{% endfor %}
+
+__all__ = [
+{% for filter in filters %}
+    "{{ filter.class_name }}",
+{% endfor %}
+]
+
+FILTERS: dict[str, type[BaseModel]] = {
+{% for filter in filters %}
+    "{{ filter.class_name }}": {{ filter.class_name }},
+{% endfor %}
+}

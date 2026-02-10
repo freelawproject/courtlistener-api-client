@@ -1,0 +1,343 @@
+from datetime import date, datetime
+from typing import Annotated, Any, ClassVar
+
+from pydantic import BeforeValidator, Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter4, Filter6, Filter7, Filter8
+from courtlistener.utils import (
+    choice_validator,
+    related_validator,
+)
+
+
+class PositionsEndpoint(Endpoint):
+    """Positions Endpoint"""
+
+    endpoint: ClassVar[str] = "/positions/"
+    endpoint_id: ClassVar[str] = "positions"
+    endpoint_name: ClassVar[str] = "Positions"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    position_type: Annotated[
+        None | str,
+        Field(
+            None,
+            description="If this is a judicial position, this indicates the role the person had. This field may be blank if job_title is complete instead.",
+            json_schema_extra={
+                "choices": [
+                    {
+                        "value": "Judge",
+                        "display_name": "[('jud', 'Judge'), ('jus', 'Justice'), ('ad-law-jud', 'Administrative Law Judge'), ('act-jud', 'Acting Judge'), ('act-jus', 'Acting Justice'), ('act-pres-jud', 'Acting Presiding Judge'), ('act-c-admin-jus', 'Acting Chief Administrative Justice'), ('ass-jud', 'Associate Judge'), ('ass-jus', 'Associate Justice'), ('ass-c-jud', 'Associate Chief Judge'), ('ass-pres-jud', 'Associate Presiding Judge'), ('asst-pres-jud', 'Assistant Presiding Judge'), ('c-jud', 'Chief Judge'), ('c-jus', 'Chief Justice'), ('c-spec-m', 'Chief Special Master'), ('c-admin-jus', 'Chief Administrative Justice'), ('c-spec-tr-jud', 'Chief Special Trial Judge'), ('pres-jud', 'Presiding Judge'), ('pres-jus', 'Presiding Justice'), ('sup-jud', 'Supervising Judge'), ('ad-pres-jus', 'Administrative Presiding Justice'), ('com', 'Commissioner'), ('com-dep', 'Deputy Commissioner'), ('jud-pt', 'Judge Pro Tem'), ('jus-pt', 'Justice Pro Tem'), ('ref-jud-tr', 'Judge Trial Referee'), ('ref-off', 'Official Referee'), ('ref-state-trial', 'State Trial Referee'), ('ret-act-jus', 'Active Retired Justice'), ('ret-ass-jud', 'Retired Associate Judge'), ('ret-c-jud', 'Retired Chief Judge'), ('ret-jus', 'Retired Justice'), ('ret-senior-jud', 'Senior Judge'), ('mag', 'Magistrate'), ('c-mag', 'Chief Magistrate'), ('pres-mag', 'Presiding Magistrate'), ('mag-pt', 'Magistrate Pro Tem'), ('mag-rc', 'Magistrate (Recalled)'), ('mag-part-time', 'Magistrate (Part-Time)'), ('spec-chair', 'Special Chairman'), ('spec-jud', 'Special Judge'), ('spec-m', 'Special Master'), ('spec-scjcbc', 'Special Superior Court Judge for Complex Business Cases'), ('spec-tr-jud', 'Special Trial Judge'), ('chair', 'Chairman'), ('chan', 'Chancellor'), ('presi-jud', 'President'), ('res-jud', 'Reserve Judge'), ('trial-jud', 'Trial Judge'), ('vice-chan', 'Vice Chancellor'), ('vice-cj', 'Vice Chief Judge')]",
+                    },
+                    {
+                        "value": "Attorney General",
+                        "display_name": "[('att-gen', 'Attorney General'), ('att-gen-ass', 'Assistant Attorney General'), ('att-gen-ass-spec', 'Special Assistant Attorney General'), ('sen-counsel', 'Senior Counsel'), ('dep-sol-gen', 'Deputy Solicitor General')]",
+                    },
+                    {
+                        "value": "Appointing Authority",
+                        "display_name": "[('pres', 'President of the United States'), ('gov', 'Governor'), ('mayor', 'Mayor')]",
+                    },
+                    {
+                        "value": "Clerkships",
+                        "display_name": "[('clerk', 'Clerk'), ('clerk-chief-dep', 'Chief Deputy Clerk'), ('staff-atty', 'Staff Attorney')]",
+                    },
+                    {"value": "prof", "display_name": "Professor"},
+                    {"value": "adj-prof", "display_name": "Adjunct Professor"},
+                    {"value": "prac", "display_name": "Practitioner"},
+                    {"value": "pros", "display_name": "Prosecutor"},
+                    {"value": "pub-def", "display_name": "Public Defender"},
+                    {"value": "da", "display_name": "District Attorney"},
+                    {
+                        "value": "ada",
+                        "display_name": "Assistant District Attorney",
+                    },
+                    {"value": "legis", "display_name": "Legislator"},
+                    {"value": "sen", "display_name": "Senator"},
+                    {"value": "state-sen", "display_name": "State Senator"},
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    person: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    appointer: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    predecessor: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    job_title: Annotated[
+        None | str | Filter6,
+        Field(
+            None,
+            description="If title isn\u0027t in position_type, a free-text position may be entered here.",
+        ),
+    ]
+    date_created: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The moment when the item was created.",
+        ),
+    ]
+    date_modified: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The last moment when the item was modified. A value in year 1750 indicates the value is unknown",
+        ),
+    ]
+    date_nominated: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date recorded in the Senate Executive Journal when a federal judge was nominated for their position or the date a state judge nominated by the legislature. When a nomination is by primary election, this is the date of the election. When a nomination is from a merit commission, this is the date the nomination was announced.",
+        ),
+    ]
+    date_elected: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="Judges are elected in most states. This is the date of theirfirst election. This field will be null if the judge was initially selected by nomination.",
+        ),
+    ]
+    date_recess_appointment: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="If a judge was appointed while congress was in recess, this is the date of that appointment.",
+        ),
+    ]
+    date_referred_to_judicial_committee: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="Federal judges are usually referred to the Judicial Committee before being nominated. This is the date of that referral.",
+        ),
+    ]
+    date_judicial_committee_action: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date that the Judicial Committee took action on the referral.",
+        ),
+    ]
+    date_hearing: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="After being nominated, a judge is usually subject to a hearing. This is the date of that hearing.",
+        ),
+    ]
+    date_confirmation: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="After the hearing the senate will vote on judges. This is the date of that vote.",
+        ),
+    ]
+    date_start: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date the position starts active duty.",
+        ),
+    ]
+    date_retirement: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date when they become a senior judge by going into active retirement",
+        ),
+    ]
+    date_termination: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The last date of their employment. The compliment to date_start",
+        ),
+    ]
+    judicial_committee_action: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The action that the judicial committee took in response to a nomination",
+            json_schema_extra={
+                "choices": [
+                    {"value": "no_rep", "display_name": "Not Reported"},
+                    {
+                        "value": "rep_w_rec",
+                        "display_name": "Reported with Recommendation",
+                    },
+                    {
+                        "value": "rep_wo_rec",
+                        "display_name": "Reported without Recommendation",
+                    },
+                    {
+                        "value": "rec_postpone",
+                        "display_name": "Recommendation Postponed",
+                    },
+                    {
+                        "value": "rec_bad",
+                        "display_name": "Recommended Unfavorably",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    nomination_process: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The process by which a person was nominated into this position.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "fed_senate", "display_name": "U.S. Senate"},
+                    {"value": "state_senate", "display_name": "State Senate"},
+                    {"value": "election", "display_name": "Primary Election"},
+                    {
+                        "value": "merit_comm",
+                        "display_name": "Merit Commission",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    voice_vote: Annotated[
+        None | bool,
+        Field(
+            None,
+            description="Whether the Senate voted by voice vote for this position.",
+        ),
+    ]
+    votes_yes: Annotated[
+        None | int,
+        Field(
+            None,
+            description="If votes are an integer, this is the number of votes in favor of a position.",
+        ),
+    ]
+    votes_no: Annotated[
+        None | int,
+        Field(
+            None,
+            description="If votes are an integer, this is the number of votes opposed to a position.",
+        ),
+    ]
+    how_selected: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The method that was used for selecting this judge for this position (generally an election or appointment).",
+            json_schema_extra={
+                "choices": [
+                    {
+                        "value": "Election",
+                        "display_name": "[('e_part', 'Partisan Election'), ('e_non_part', 'Non-Partisan Election')]",
+                    },
+                    {
+                        "value": "Appointment",
+                        "display_name": "[('a_pres', 'Appointment (President)'), ('a_gov', 'Appointment (Governor)'), ('a_legis', 'Appointment (Legislature)'), ('a_judge', 'Appointment (Judge)')]",
+                    },
+                    {
+                        "value": "Other",
+                        "display_name": "[('ct_trans', 'Transferred (Court Restructuring)')]",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    termination_reason: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The reason for a termination",
+            json_schema_extra={
+                "choices": [
+                    {"value": "ded", "display_name": "Death"},
+                    {
+                        "value": "retire_vol",
+                        "display_name": "Voluntary Retirement",
+                    },
+                    {
+                        "value": "retire_mand",
+                        "display_name": "Mandatory Retirement",
+                    },
+                    {"value": "resign", "display_name": "Resigned"},
+                    {
+                        "value": "other_pos",
+                        "display_name": "Appointed to Other Judgeship",
+                    },
+                    {"value": "lost", "display_name": "Lost Election"},
+                    {"value": "abolished", "display_name": "Court Abolished"},
+                    {
+                        "value": "bad_judge",
+                        "display_name": "Impeached and Convicted",
+                    },
+                    {
+                        "value": "recess_not_confirmed",
+                        "display_name": "Recess Appointment Not Confirmed",
+                    },
+                    {
+                        "value": "termed_out",
+                        "display_name": "Term Limit Reached",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
+    location_city: Annotated[
+        None | str | Filter4,
+        Field(
+            None,
+            description="If not a court or school, the city where person worked.",
+        ),
+    ]
+    location_state: Annotated[
+        None | str | Filter4,
+        Field(
+            None,
+            description="If not a court or school, the state where person worked.",
+        ),
+    ]
+    court: Annotated[
+        None | dict[str, Any] | str,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "CourtsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    retention_events: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "RetentionEventsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]

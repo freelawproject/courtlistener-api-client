@@ -1,0 +1,39 @@
+from typing import Annotated, Any, ClassVar
+
+from pydantic import BeforeValidator, Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.utils import (
+    related_validator,
+)
+
+
+class DocketTagsEndpoint(Endpoint):
+    """Docket Tags Endpoint"""
+
+    endpoint: ClassVar[str] = "/docket-tags/"
+    endpoint_id: ClassVar[str] = "docket-tags"
+    endpoint_name: ClassVar[str] = "Docket Tags"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    docket: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    tag: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "TagsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]

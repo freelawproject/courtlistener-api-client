@@ -5,9 +5,9 @@ requires = [
 ]
 
 [project]
-name = "{{PROJECT_NAME}}"
+name = "courtlistener"
 version = "0.0.1"
-description = "{{PROJECT_DESCRIPTION}}"
+description = "Python SDK for the Court Listener API"
 authors = [{ name = "Free Law Project", email = "info@free.law" }]
 requires-python = ">=3.13"
 readme = "README.md"
@@ -32,8 +32,29 @@ classifiers = [
 urls.Repository = "https://github.com/freelawproject/{{PROJECT_NAME}}"
 urls."Organisation Homepage" = "https://free.law/"
 
+dependencies = [
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "click>=8.0.0",
+    "jinja2>=3.0.0",
+    "mypy>=1.10.0",
+    "pre-commit>=4.5.1",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "python-dotenv>=1.0.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+courtlistener-mcp = "courtlistener.mcp_server:main"
+
 [tool.setuptools]
-packages = [ "project_name" ]
+packages = [ "courtlistener" ]
 
 [tool.ruff]
 line-length = 79

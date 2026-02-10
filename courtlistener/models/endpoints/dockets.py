@@ -1,0 +1,644 @@
+from datetime import date, datetime
+from typing import Annotated, Any, ClassVar
+
+from pydantic import AfterValidator, BeforeValidator, Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter1, Filter6, Filter7, Filter8
+from courtlistener.utils import (
+    in_post_validator,
+    in_pre_validator,
+    multiple_choice_validator,
+    related_validator,
+    try_coerce_ints,
+)
+
+
+class DocketsEndpoint(Endpoint):
+    """Dockets Endpoint"""
+
+    endpoint: ClassVar[str] = "/dockets/"
+    endpoint_id: ClassVar[str] = "dockets"
+    endpoint_name: ClassVar[str] = "Dockets"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    date_modified: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The last moment when the item was modified. A value in year 1750 indicates the value is unknown",
+        ),
+    ]
+    date_created: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The moment when the item was created.",
+        ),
+    ]
+    date_filed: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date the case was filed.",
+        ),
+    ]
+    date_terminated: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date the case was terminated.",
+        ),
+    ]
+    date_last_filing: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date the case was last updated in the docket, as shown in PACER\u0027s Docket History report or iquery page.",
+        ),
+    ]
+    docket_number: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The docket numbers of a case, can be consolidated and quite long. In some instances they are too long to be indexed by postgres and we store the full docket in the correction field on the Opinion Cluster.",
+        ),
+    ]
+    docket_number_core: Annotated[
+        None | str | Filter1,
+        Field(
+            None,
+            description="For federal district court dockets, this is the most distilled docket number available. In this field, the docket number is stripped down to only the year and serial digits, eliminating the office at the beginning, letters in the middle, and the judge at the end. Thus, a docket number like 2:07-cv-34911-MJL becomes simply 0734911. This is the format that is provided by the IDB and is useful for de-duplication types of activities which otherwise get messy. We use a char field here to preserve leading zeros.",
+        ),
+    ]
+    nature_of_suit: Annotated[
+        None | str | Filter6,
+        Field(
+            None,
+            description="The nature of suit code from PACER.",
+        ),
+    ]
+    pacer_case_id: Annotated[
+        None | str,
+        Field(
+            None,
+            description="The case ID provided by PACER.",
+        ),
+    ]
+    source: Annotated[
+        None | int | list[int],
+        Field(
+            None,
+            description="contains the source of the Docket.",
+            json_schema_extra={
+                "choices": [
+                    {"value": 0, "display_name": "Default"},
+                    {"value": 1, "display_name": "RECAP"},
+                    {"value": 2, "display_name": "Scraper"},
+                    {"value": 3, "display_name": "RECAP and Scraper"},
+                    {"value": 4, "display_name": "Columbia"},
+                    {"value": 6, "display_name": "Columbia and Scraper"},
+                    {"value": 5, "display_name": "Columbia and RECAP"},
+                    {
+                        "value": 7,
+                        "display_name": "Columbia, RECAP, and Scraper",
+                    },
+                    {"value": 8, "display_name": "Integrated Database"},
+                    {"value": 9, "display_name": "RECAP and IDB"},
+                    {"value": 10, "display_name": "Scraper and IDB"},
+                    {"value": 11, "display_name": "RECAP, Scraper, and IDB"},
+                    {"value": 12, "display_name": "Columbia and IDB"},
+                    {"value": 13, "display_name": "Columbia, RECAP, and IDB"},
+                    {
+                        "value": 14,
+                        "display_name": "Columbia, Scraper, and IDB",
+                    },
+                    {
+                        "value": 15,
+                        "display_name": "Columbia, RECAP, Scraper, and IDB",
+                    },
+                    {"value": 16, "display_name": "Harvard"},
+                    {"value": 17, "display_name": "Harvard and RECAP"},
+                    {"value": 18, "display_name": "Scraper and Harvard"},
+                    {
+                        "value": 19,
+                        "display_name": "RECAP, Scraper and Harvard",
+                    },
+                    {"value": 20, "display_name": "Harvard and Columbia"},
+                    {
+                        "value": 21,
+                        "display_name": "Columbia, RECAP, and Harvard",
+                    },
+                    {
+                        "value": 22,
+                        "display_name": "Columbia, Scraper, and Harvard",
+                    },
+                    {
+                        "value": 23,
+                        "display_name": "Columbia, RECAP, Scraper, and Harvard",
+                    },
+                    {"value": 24, "display_name": "IDB and Harvard"},
+                    {"value": 25, "display_name": "RECAP, IDB and Harvard"},
+                    {"value": 26, "display_name": "Scraper, IDB and Harvard"},
+                    {
+                        "value": 27,
+                        "display_name": "RECAP, Scraper, IDB and Harvard",
+                    },
+                    {
+                        "value": 28,
+                        "display_name": "Columbia, IDB, and Harvard",
+                    },
+                    {
+                        "value": 29,
+                        "display_name": "Columbia, Recap, IDB, and Harvard",
+                    },
+                    {
+                        "value": 30,
+                        "display_name": "Columbia, Scraper, IDB, and Harvard",
+                    },
+                    {
+                        "value": 31,
+                        "display_name": "Columbia, Recap, Scraper, IDB, and Harvard",
+                    },
+                    {"value": 32, "display_name": "Direct court input"},
+                    {
+                        "value": 33,
+                        "display_name": "RECAP and Direct court input",
+                    },
+                    {
+                        "value": 34,
+                        "display_name": "Scraper and Direct court input",
+                    },
+                    {
+                        "value": 35,
+                        "display_name": "RECAP, Scraper, and Direct court input",
+                    },
+                    {
+                        "value": 36,
+                        "display_name": "Columbia and Direct court input",
+                    },
+                    {
+                        "value": 37,
+                        "display_name": "RECAP, Columbia, and Direct court input",
+                    },
+                    {
+                        "value": 38,
+                        "display_name": "Scraper, Columbia, and Direct court input",
+                    },
+                    {
+                        "value": 39,
+                        "display_name": "RECAP, Scraper, Columbia, and Direct court input",
+                    },
+                    {
+                        "value": 40,
+                        "display_name": "IDB and Direct court input",
+                    },
+                    {
+                        "value": 41,
+                        "display_name": "RECAP, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 42,
+                        "display_name": "Scraper, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 43,
+                        "display_name": "RECAP, Scraper, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 44,
+                        "display_name": "Columbia, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 45,
+                        "display_name": "RECAP, Columbia, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 46,
+                        "display_name": "Scraper, Columbia, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 47,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, and Direct court input",
+                    },
+                    {
+                        "value": 48,
+                        "display_name": "Direct court input and Harvard",
+                    },
+                    {
+                        "value": 49,
+                        "display_name": "RECAP, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 50,
+                        "display_name": "Scraper, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 51,
+                        "display_name": "RECAP, Scraper, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 52,
+                        "display_name": "Columbia, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 53,
+                        "display_name": "RECAP, Columbia, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 54,
+                        "display_name": "Scraper, Columbia, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 55,
+                        "display_name": "RECAP, Scraper, Columbia, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 56,
+                        "display_name": "IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 57,
+                        "display_name": "RECAP, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 58,
+                        "display_name": "Scraper, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 59,
+                        "display_name": "RECAP, Scraper, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 60,
+                        "display_name": "Columbia, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 61,
+                        "display_name": "RECAP, Columbia, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 62,
+                        "display_name": "Scraper, Columbia, IDB, Harvard, and Direct court input",
+                    },
+                    {
+                        "value": 63,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, Harvard, and Direct court input",
+                    },
+                    {"value": 64, "display_name": "2020 anonymous database"},
+                    {
+                        "value": 72,
+                        "display_name": "IDB and 2020 anonymous database",
+                    },
+                    {
+                        "value": 66,
+                        "display_name": "2020 anonymous database and Scraper",
+                    },
+                    {
+                        "value": 67,
+                        "display_name": "RECAP, Scraper, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 68,
+                        "display_name": "Columbia and 2020 anonymous database",
+                    },
+                    {
+                        "value": 69,
+                        "display_name": "RECAP, Columbia, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 70,
+                        "display_name": "Scraper, Columbia, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 71,
+                        "display_name": "RECAP, Scraper, Columbia, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 73,
+                        "display_name": "RECAP, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 74,
+                        "display_name": "Scraper, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 75,
+                        "display_name": "RECAP, Scraper, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 76,
+                        "display_name": "Columbia, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 77,
+                        "display_name": "RECAP, Columbia, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 78,
+                        "display_name": "Scraper, Columbia, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 79,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 80,
+                        "display_name": "2020 anonymous database and Harvard",
+                    },
+                    {
+                        "value": 82,
+                        "display_name": "2020 anonymous database, Scraper, and Harvard",
+                    },
+                    {
+                        "value": 81,
+                        "display_name": "RECAP, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 83,
+                        "display_name": "RECAP, Scraper, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 84,
+                        "display_name": "Columbia, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 85,
+                        "display_name": "RECAP, Columbia, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 86,
+                        "display_name": "Scraper, Columbia, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 87,
+                        "display_name": "RECAP, Scraper, Columbia, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 88,
+                        "display_name": "IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 89,
+                        "display_name": "RECAP, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 90,
+                        "display_name": "Scraper, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 91,
+                        "display_name": "RECAP, Scraper, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 92,
+                        "display_name": "Columbia, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 93,
+                        "display_name": "RECAP, Columbia, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 94,
+                        "display_name": "Scraper, Columbia, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 95,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, Harvard, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 96,
+                        "display_name": "Direct court input and 2020 anonymous database",
+                    },
+                    {
+                        "value": 97,
+                        "display_name": "RECAP, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 98,
+                        "display_name": "Scraper, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 99,
+                        "display_name": "RECAP, Scraper, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 100,
+                        "display_name": "Columbia, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 101,
+                        "display_name": "RECAP, Columbia, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 102,
+                        "display_name": "Scraper, Columbia, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 103,
+                        "display_name": "RECAP, Scraper, Columbia, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 104,
+                        "display_name": "IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 105,
+                        "display_name": "RECAP, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 106,
+                        "display_name": "Scraper, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 107,
+                        "display_name": "RECAP, Scraper, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 108,
+                        "display_name": "Columbia, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 109,
+                        "display_name": "RECAP, Columbia, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 110,
+                        "display_name": "Scraper, Columbia, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 111,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 112,
+                        "display_name": "Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 113,
+                        "display_name": "RECAP, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 114,
+                        "display_name": "Scraper, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 115,
+                        "display_name": "RECAP, Scraper, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 116,
+                        "display_name": "Columbia, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 117,
+                        "display_name": "RECAP, Columbia, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 118,
+                        "display_name": "Scraper, Columbia, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 119,
+                        "display_name": "RECAP, Scraper, Columbia, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 120,
+                        "display_name": "IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 121,
+                        "display_name": "RECAP, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 122,
+                        "display_name": "Scraper, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 123,
+                        "display_name": "RECAP, Scraper, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 124,
+                        "display_name": "Columbia, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 125,
+                        "display_name": "RECAP, Columbia, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 126,
+                        "display_name": "Scraper, Columbia, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                    {
+                        "value": 127,
+                        "display_name": "RECAP, Scraper, Columbia, IDB, Harvard, Direct court input, and 2020 anonymous database",
+                    },
+                ],
+            },
+        ),
+        AfterValidator(in_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(try_coerce_ints),
+        BeforeValidator(in_pre_validator),
+    ]
+    date_blocked: Annotated[
+        None | date | Filter7,
+        Field(
+            None,
+            description="The date that this opinion was blocked from indexing by search engines",
+        ),
+    ]
+    blocked: Annotated[
+        None | bool,
+        Field(
+            None,
+            description="Whether a document should be blocked from indexing by search engines",
+        ),
+    ]
+    court: Annotated[
+        None | dict[str, Any] | str,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "CourtsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    clusters: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "ClustersEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    docket_entries: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "DocketEntriesEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    audio_files: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "AudioEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    assigned_to: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "PeopleEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    referred_to: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "PeopleEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    parties: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "PartiesEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    tags: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            description="The tags associated with the docket.",
+            json_schema_extra={
+                "related_class_name": "TagsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]

@@ -1,0 +1,11 @@
+from typing import ClassVar
+
+from courtlistener.models.endpoint import Endpoint
+
+
+class VisualizationsEndpoint(Endpoint):
+    """Visualizations Endpoint"""
+
+    endpoint: ClassVar[str] = "/visualizations/"
+    endpoint_id: ClassVar[str] = "visualizations"
+    endpoint_name: ClassVar[str] = "Visualizations"

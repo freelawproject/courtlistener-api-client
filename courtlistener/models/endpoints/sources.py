@@ -1,0 +1,35 @@
+from datetime import datetime
+from typing import Annotated, ClassVar
+
+from pydantic import Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter8
+
+
+class SourcesEndpoint(Endpoint):
+    """Sources Endpoint"""
+
+    endpoint: ClassVar[str] = "/sources/"
+    endpoint_id: ClassVar[str] = "sources"
+    endpoint_name: ClassVar[str] = "Sources"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    date_modified: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The last moment when the item was modified. A value in year 1750 indicates the value is unknown",
+        ),
+    ]
+    person: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]

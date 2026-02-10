@@ -1,0 +1,72 @@
+from datetime import datetime
+from typing import Annotated, Any, ClassVar
+
+from pydantic import BeforeValidator, Field
+
+from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter6, Filter8
+from courtlistener.utils import (
+    related_validator,
+)
+
+
+class PartiesEndpoint(Endpoint):
+    """Parties Endpoint"""
+
+    endpoint: ClassVar[str] = "/parties/"
+    endpoint_id: ClassVar[str] = "parties"
+    endpoint_name: ClassVar[str] = "Parties"
+
+    id: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    date_created: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The moment when the item was created.",
+        ),
+    ]
+    date_modified: Annotated[
+        None | datetime | Filter8,
+        Field(
+            None,
+            description="The last moment when the item was modified. A value in year 1750 indicates the value is unknown",
+        ),
+    ]
+    name: Annotated[
+        None | str | Filter6,
+        Field(
+            None,
+            description="The name of the party.",
+        ),
+    ]
+    docket: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "DocketsEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    attorney: Annotated[
+        None | dict[str, Any] | int,
+        Field(
+            None,
+            json_schema_extra={
+                "related_class_name": "AttorneysEndpoint",
+            },
+        ),
+        BeforeValidator(related_validator),
+    ]
+    filter_nested_results: Annotated[
+        None | bool,
+        Field(
+            None,
+        ),
+    ]

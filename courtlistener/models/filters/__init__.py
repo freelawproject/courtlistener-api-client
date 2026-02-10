@@ -1,0 +1,32 @@
+from pydantic import BaseModel
+
+from courtlistener.models.filters.filter1 import Filter1
+from courtlistener.models.filters.filter2 import Filter2
+from courtlistener.models.filters.filter3 import Filter3
+from courtlistener.models.filters.filter4 import Filter4
+from courtlistener.models.filters.filter5 import Filter5
+from courtlistener.models.filters.filter6 import Filter6
+from courtlistener.models.filters.filter7 import Filter7
+from courtlistener.models.filters.filter8 import Filter8
+
+__all__ = [
+    "Filter1",
+    "Filter2",
+    "Filter3",
+    "Filter4",
+    "Filter5",
+    "Filter6",
+    "Filter7",
+    "Filter8",
+]
+
+FILTERS: dict[str, type[BaseModel]] = {
+    "Filter1": Filter1,
+    "Filter2": Filter2,
+    "Filter3": Filter3,
+    "Filter4": Filter4,
+    "Filter5": Filter5,
+    "Filter6": Filter6,
+    "Filter7": Filter7,
+    "Filter8": Filter8,
+}
