@@ -1,6 +1,9 @@
+import re
+from contextlib import suppress
+from datetime import date
 from typing import TYPE_CHECKING, Any
 
-from pydantic import ValidationInfo
+from pydantic import TypeAdapter, ValidationInfo
 
 if TYPE_CHECKING:
     from courtlistener.models import Endpoint
@@ -108,7 +111,9 @@ def get_valid_choice(
     return None
 
 
-def choice_validator(value: Any, info: ValidationInfo) -> int | str:
+def choice_validator(value: Any, info: ValidationInfo) -> None | int | str:
+    if value is None:
+        return None
     choice_dict = get_choice_dict_from_info(info)
     valid_value = get_valid_choice(value, choice_dict)
     if valid_value is not None:
@@ -118,7 +123,9 @@ def choice_validator(value: Any, info: ValidationInfo) -> int | str:
 
 def multiple_choice_validator(
     values: Any, info: ValidationInfo
-) -> int | str | list[int | str]:
+) -> None | int | str | list[int | str]:
+    if values is None:
+        return None
     choice_dict = get_choice_dict_from_info(info)
     values_list = values if isinstance(values, list) else [values]
     valid_values = []
@@ -169,3 +176,55 @@ def in_post_validator(
     if isinstance(value, list):
         return {"in": ",".join([str(v) for v in value])}
     return value
+
+
+def is_relative_date_string(value: str) -> bool:
+    units = r"(d|days?|m|months?|y|years?)"
+
+    formats = [
+        rf"(\d+\s*{units}\s*ago)",
+        rf"(-\d+\s*{units})",
+        rf"(past\s*\d+\s*{units})",
+    ]
+
+    relative_date_pattern = re.compile(
+        rf"^({'|'.join(formats)})$", re.IGNORECASE
+    )
+    return relative_date_pattern.match(value) is not None
+
+
+def relative_date_validator(
+    value: Any, info: ValidationInfo
+) -> None | str | date:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        if is_relative_date_string(value):
+            return value
+        date_adapter = TypeAdapter(date)
+        with suppress(Exception):
+            return date_adapter.validate_python(value)
+    raise ValueError(
+        f"'{value}' is not a valid value for {info.field_name}. "
+        f"Expected a date or a pattern like '3 days ago', '-2m', 'past 1 year'."
+    )
+
+
+def search_model_validator(data):
+    from courtlistener.models import ENDPOINTS
+
+    endpoint_types = {
+        "o": "opinion_search",
+        "r": "recap_search",
+        "d": "recap_docket_search",
+        "rd": "recap_document_search",
+        "p": "judge_search",
+        "oa": "oral_argument_search",
+    }
+
+    endpoint_type = data.pop("type", "o")
+
+    endpoint_model = ENDPOINTS[endpoint_types[endpoint_type]]
+    return endpoint_model(**data).model_dump(by_alias=True)
