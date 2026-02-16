@@ -677,9 +677,15 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
     for endpoint in endpoints.values():
         for endpoint_field in endpoint["fields"].values():
             if endpoint_field["types"] and endpoint_field["lookup_types"]:
+                filter_types = endpoint_field["types"]
+                if any(
+                    x in endpoint_field["lookup_types"]
+                    for x in ["gt", "gte", "lt", "lte"]
+                ) and endpoint_field["types"] == ["str"]:
+                    filter_types = ["int"]
                 filter_class_json = json.dumps(
                     {
-                        "types": endpoint_field["types"],
+                        "types": filter_types,
                         "lookup_types": endpoint_field["lookup_types"],
                     },
                     indent=2,
