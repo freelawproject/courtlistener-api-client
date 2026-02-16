@@ -210,3 +210,21 @@ def relative_date_validator(
         f"'{value}' is not a valid value for {info.field_name}. "
         f"Expected a date or a pattern like '3 days ago', '-2m', 'past 1 year'."
     )
+
+
+def search_model_validator(data):
+    from courtlistener.models import ENDPOINTS
+
+    endpoint_types = {
+        "o": "opinion_search",
+        "r": "recap_search",
+        "d": "recap_docket_search",
+        "rd": "recap_document_search",
+        "p": "judge_search",
+        "oa": "oral_argument_search",
+    }
+
+    endpoint_type = data.pop("type", "o")
+
+    endpoint_model = ENDPOINTS[endpoint_types[endpoint_type]]
+    return endpoint_model(**data).model_dump(by_alias=True)

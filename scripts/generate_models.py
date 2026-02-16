@@ -657,13 +657,15 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
                 "types_str": " | ".join(python_types),
                 "validators": validators,
                 "filter_class": None,
+                "literal_value": filter.get("literal_value"),
             }
         name = options.get("name") or endpoint_id.replace("-", " ").title()
         description = options.get("description") or f"{name} Endpoint"
         attr_name = endpoint_id.replace("-", "_").replace("/", "_")
+        endpoint = endpoint_options.get("endpoint", f"/{endpoint_id}/")
         endpoints[endpoint_id] = {
             "id": endpoint_id,
-            "endpoint": f"/{endpoint_id}/",
+            "endpoint": endpoint,
             "name": name,
             "description": description,
             "attr_name": attr_name,
