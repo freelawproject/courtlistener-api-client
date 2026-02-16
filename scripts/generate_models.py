@@ -567,7 +567,10 @@ def get_types_and_validators(
     elif filter_type in ["NumberRangeFilter", "ModelChoiceFilter"]:
         python_types = ["int"]
     elif filter_type == "BooleanFilter":
-        python_types = ["bool"]
+        if field_type == "integer":  # Fix for mislabeled NumberFilter fields
+            python_types = ["int"]
+        else:
+            python_types = ["bool"]
     elif filter_type == "NumberInFilter":
         python_types = ["list[int]", "int"]
         validators.append("AfterValidator(in_post_validator)")
@@ -649,6 +652,7 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
             # Create query field
             endpoint_fields[field_name] = {
                 "id": field_name,
+                "alias": filter.get("alias"),
                 "lookup_types": lookup_types,
                 "choices": choices,
                 "description": field.get("help_text"),
