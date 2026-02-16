@@ -146,6 +146,9 @@ def get_types_and_validators(
             python_types = ["date"]
         elif field_type in ["integer", "field"]:
             python_types = ["int"]
+    elif filter_type == "RelativeDateFilter":
+        python_types = ["str | date"]
+        validators.append("BeforeValidator(relative_date_validator)")
     return sorted(python_types, key=lambda x: len(x)), validators
 
 
