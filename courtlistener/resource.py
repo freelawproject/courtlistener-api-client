@@ -92,6 +92,13 @@ class ResourceIterator:
         return self._count
 
     @property
+    def document_count(self) -> int | None:
+        """Total count of nested documents for recap search endpoint."""
+        if self.current_page is not None:
+            return self.current_page.document_count
+        return None
+
+    @property
     def results(self) -> list[dict[str, Any]]:
         """Results from the current page."""
         return self.current_page.results
