@@ -25,7 +25,6 @@ SKIP_LIST = {
     "increment_event",
     "recap_fetch",
     "recap_query",
-    "disclosure_typeahead",
 }
 
 #  Search-type endpoints where .get(id) doesn't make sense.
