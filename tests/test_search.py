@@ -12,7 +12,6 @@ import pytest
 
 @pytest.mark.integration
 class TestSearch:
-
     def test_search_opinions_via_opinion_search(self, client):
         """Opinion search returns opinion results."""
         results = client.opinion_search.list(q="Miranda")
@@ -26,7 +25,6 @@ class TestSearch:
 
 @pytest.mark.integration
 class TestOpinionSearch:
-
     def test_basic_query(self, client):
         """Opinion search with a query string."""
         results = client.opinion_search.list(q="copyright")
@@ -34,9 +32,7 @@ class TestOpinionSearch:
 
     def test_with_court_filter(self, client):
         """Opinion search filtered to SCOTUS returns only SCOTUS."""
-        results = client.opinion_search.list(
-            q="copyright", court="scotus"
-        )
+        results = client.opinion_search.list(q="copyright", court="scotus")
         assert len(results.results) > 0
         for result in results.results:
             assert result["court_id"] == "scotus"
@@ -52,9 +48,7 @@ class TestOpinionSearch:
 
     def test_relative_date_filed_after(self, client):
         """Relative date string filters results correctly."""
-        results = client.opinion_search.list(
-            q="tax", filed_after="1 year ago"
-        )
+        results = client.opinion_search.list(q="tax", filed_after="1 year ago")
         assert len(results.results) > 0
         one_year_ago = date.today() - timedelta(days=365)
         for result in results.results:
@@ -75,7 +69,6 @@ class TestOpinionSearch:
 
 @pytest.mark.integration
 class TestRecapSearch:
-
     def test_basic_query(self, client):
         """Recap search returns results."""
         results = client.recap_search.list(q="bankruptcy")

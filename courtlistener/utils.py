@@ -67,7 +67,9 @@ def get_endpoint_model_from_info(info: ValidationInfo) -> type["Endpoint"]:
     raise ValueError(f"Model for {info.field_name} not found")
 
 
-def related_validator(value: Any, info: ValidationInfo) -> str | int | dict[str, Any] | None:
+def related_validator(
+    value: Any, info: ValidationInfo
+) -> str | int | dict[str, Any] | None:
     from courtlistener.models import ENDPOINTS
 
     if value is None or isinstance(value, str | int):

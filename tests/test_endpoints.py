@@ -45,16 +45,8 @@ class TestEndpointList:
 
     @pytest.mark.parametrize(
         "endpoint_name",
-        [
-            name
-            for name in ENDPOINTS
-            if name not in SKIP_LIST
-        ],
-        ids=[
-            name
-            for name in ENDPOINTS
-            if name not in SKIP_LIST
-        ],
+        [name for name in ENDPOINTS if name not in SKIP_LIST],
+        ids=[name for name in ENDPOINTS if name not in SKIP_LIST],
     )
     def test_list(self, client, endpoint_name):
         resource = getattr(client, endpoint_name)
@@ -70,32 +62,20 @@ class TestEndpointGet:
 
     @pytest.mark.parametrize(
         "endpoint_name",
-        [
-            name
-            for name in ENDPOINTS
-            if name not in SKIP_GET
-        ],
-        ids=[
-            name
-            for name in ENDPOINTS
-            if name not in SKIP_GET
-        ],
+        [name for name in ENDPOINTS if name not in SKIP_GET],
+        ids=[name for name in ENDPOINTS if name not in SKIP_GET],
     )
     def test_get(self, client, endpoint_name):
         resource = getattr(client, endpoint_name)
         results = resource.list()
 
         if not results.results:
-            pytest.skip(
-                f"No results for {endpoint_name}, can't test .get()"
-            )
+            pytest.skip(f"No results for {endpoint_name}, can't test .get()")
 
         first = results.results[0]
         item_id = first.get("id")
         if item_id is None:
-            pytest.skip(
-                f"First result for {endpoint_name} has no 'id' field"
-            )
+            pytest.skip(f"First result for {endpoint_name} has no 'id' field")
 
         detail = resource.get(item_id)
         assert isinstance(detail, dict)

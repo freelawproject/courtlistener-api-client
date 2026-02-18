@@ -14,7 +14,6 @@ import pytest
 
 @pytest.mark.integration
 class TestDocketsList:
-
     def test_list_with_court_filter(self, client):
         """Filter by court using the short code."""
         results = client.dockets.list(court="scotus")
@@ -24,9 +23,7 @@ class TestDocketsList:
 
     def test_list_with_date_filter(self, client):
         """Nested date filter dict gets flattened to query params."""
-        results = client.dockets.list(
-            date_filed={"gte": "2020-01-01"}
-        )
+        results = client.dockets.list(date_filed={"gte": "2020-01-01"})
         assert len(results.results) > 0
         for docket in results.results:
             filed = date.fromisoformat(docket["date_filed"])
@@ -48,9 +45,7 @@ class TestDocketsList:
 
     def test_list_with_nature_of_suit_filter(self, client):
         """String filter with 'contains' lookup."""
-        results = client.dockets.list(
-            nature_of_suit={"contains": "Contract"}
-        )
+        results = client.dockets.list(nature_of_suit={"contains": "Contract"})
         assert isinstance(results.results, list)
         for docket in results.results:
             assert "Contract" in docket["nature_of_suit"]
@@ -71,7 +66,6 @@ class TestDocketsList:
 
 @pytest.mark.integration
 class TestDocketsGet:
-
     def test_get_by_id(self, client):
         """Get a specific docket and verify response structure."""
         results = client.dockets.list()

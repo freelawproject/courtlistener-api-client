@@ -5,7 +5,6 @@ import pytest
 
 @pytest.mark.integration
 class TestPagination:
-
     def test_first_page_has_results(self, client):
         """Courts endpoint returns a first page with results."""
         results = client.courts.list()

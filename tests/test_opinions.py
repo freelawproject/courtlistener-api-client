@@ -8,7 +8,6 @@ import pytest
 
 @pytest.mark.integration
 class TestOpinions:
-
     def test_list(self, client):
         """Opinions list returns results with expected fields."""
         results = client.opinions.list()
@@ -34,7 +33,6 @@ class TestOpinions:
 
 @pytest.mark.integration
 class TestClusters:
-
     def test_list(self, client):
         """Clusters list returns results with expected fields."""
         results = client.clusters.list()
