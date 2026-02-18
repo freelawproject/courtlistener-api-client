@@ -5,7 +5,7 @@ requires = [
 ]
 
 [project]
-name = "courtlistener"
+name = "courtlistener-api-client"
 version = "0.0.1"
 description = "Python SDK for the Court Listener API"
 authors = [{ name = "Free Law Project", email = "info@free.law" }]
@@ -29,7 +29,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-urls.Repository = "https://github.com/freelawproject/{{PROJECT_NAME}}"
+urls.Repository = "https://github.com/freelawproject/courtlistener-api-client"
 urls."Organisation Homepage" = "https://free.law/"
 
 dependencies = [

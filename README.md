@@ -5,7 +5,7 @@ A Python client for the [CourtListener API](https://www.courtlistener.com/api/re
 ## Installation
 
 ```bash
-pip install courtlistener
+pip install courtlistener-api-client
 ```
 
 ## Authentication
