@@ -18,9 +18,6 @@ from courtlistener.models.endpoints.debts import DebtsEndpoint
 from courtlistener.models.endpoints.disclosure_positions import (
     DisclosurePositionsEndpoint,
 )
-from courtlistener.models.endpoints.disclosure_typeahead import (
-    DisclosureTypeaheadEndpoint,
-)
 from courtlistener.models.endpoints.docket_alerts import DocketAlertsEndpoint
 from courtlistener.models.endpoints.docket_entries import DocketEntriesEndpoint
 from courtlistener.models.endpoints.docket_tags import DocketTagsEndpoint
@@ -102,7 +99,6 @@ __all__ = [
     "OpinionsCitedEndpoint",
     "TagEndpoint",
     "PeopleEndpoint",
-    "DisclosureTypeaheadEndpoint",
     "PositionsEndpoint",
     "RetentionEventsEndpoint",
     "EducationsEndpoint",
@@ -154,7 +150,6 @@ ENDPOINTS: dict[str, type[Endpoint]] = {
     "opinions_cited": OpinionsCitedEndpoint,
     "tag": TagEndpoint,
     "people": PeopleEndpoint,
-    "disclosure_typeahead": DisclosureTypeaheadEndpoint,
     "positions": PositionsEndpoint,
     "retention_events": RetentionEventsEndpoint,
     "educations": EducationsEndpoint,
