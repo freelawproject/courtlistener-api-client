@@ -28,8 +28,7 @@ SKIP_LIST = {
     "disclosure_typeahead",
 }
 
-# Endpoints where .get(id) doesn't make sense (write-only, no detail view,
-# or require special parameters we can't easily provide generically).
+#  Search-type endpoints where .get(id) doesn't make sense.
 SKIP_GET = SKIP_LIST | {
     "opinion_search",
     "recap_search",
@@ -48,12 +47,12 @@ class TestEndpointList:
         "endpoint_name",
         [
             name
-            for name in ENDPOINTS.keys()
+            for name in ENDPOINTS
             if name not in SKIP_LIST
         ],
         ids=[
             name
-            for name in ENDPOINTS.keys()
+            for name in ENDPOINTS
             if name not in SKIP_LIST
         ],
     )
@@ -73,12 +72,12 @@ class TestEndpointGet:
         "endpoint_name",
         [
             name
-            for name in ENDPOINTS.keys()
+            for name in ENDPOINTS
             if name not in SKIP_GET
         ],
         ids=[
             name
-            for name in ENDPOINTS.keys()
+            for name in ENDPOINTS
             if name not in SKIP_GET
         ],
     )

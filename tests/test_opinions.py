@@ -1,4 +1,7 @@
-"""Hand-written tests for Opinion and Cluster endpoints."""
+"""Hand-written tests for Opinion and Cluster endpoints.
+
+Each test validates the actual response data structure and content.
+"""
 
 import pytest
 
@@ -7,42 +10,50 @@ import pytest
 class TestOpinions:
 
     def test_list(self, client):
-        """Opinions list returns results."""
+        """Opinions list returns results with expected fields."""
         results = client.opinions.list()
-        assert isinstance(results.results, list)
         assert len(results.results) > 0
+        for opinion in results.results:
+            assert "id" in opinion
+            assert "type" in opinion
+            assert "cluster" in opinion
 
     def test_get_by_id(self, client):
-        """Get a single opinion and verify structure."""
+        """Get a single opinion and verify it matches the list."""
         results = client.opinions.list()
-        assert results.results, "Need at least one opinion"
+        first = results.results[0]
 
-        opinion_id = results.results[0]["id"]
-        opinion = client.opinions.get(opinion_id)
+        opinion = client.opinions.get(first["id"])
 
-        assert isinstance(opinion, dict)
-        assert opinion["id"] == opinion_id
-        assert "type" in opinion
-        assert "cluster" in opinion
+        assert opinion["id"] == first["id"]
+        assert opinion["type"] == first["type"]
+        assert opinion["cluster"] == first["cluster"]
+        assert "date_created" in opinion
+        assert "download_url" in opinion
 
 
 @pytest.mark.integration
 class TestClusters:
 
     def test_list(self, client):
-        """Clusters list returns results."""
+        """Clusters list returns results with expected fields."""
         results = client.clusters.list()
-        assert isinstance(results.results, list)
         assert len(results.results) > 0
+        for cluster in results.results:
+            assert "id" in cluster
+            assert "case_name" in cluster
+            assert "docket" in cluster
+            assert "date_filed" in cluster
 
     def test_get_by_id(self, client):
-        """Get a single cluster and verify structure."""
+        """Get a single cluster and verify it matches the list."""
         results = client.clusters.list()
-        assert results.results, "Need at least one cluster"
+        first = results.results[0]
 
-        cluster_id = results.results[0]["id"]
-        cluster = client.clusters.get(cluster_id)
+        cluster = client.clusters.get(first["id"])
 
-        assert isinstance(cluster, dict)
-        assert cluster["id"] == cluster_id
-        assert "case_name" in cluster
+        assert cluster["id"] == first["id"]
+        assert cluster["case_name"] == first["case_name"]
+        assert cluster["docket"] == first["docket"]
+        assert "sub_opinions" in cluster
+        assert "citations" in cluster
