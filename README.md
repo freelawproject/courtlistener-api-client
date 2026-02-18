@@ -1,6 +1,6 @@
 # CourtListener API Client
 
-A Python client for the [CourtListener API](https://www.courtlistener.com/api/rest/v4/), providing access to millions of legal opinions, dockets, judges, and more from [Free Law Project](https://free.law/).
+A Python client for the [CourtListener API](https://www.courtlistener.com/help/api/rest/v4), providing access to millions of legal opinions, dockets, judges, and more from [Free Law Project](https://free.law/).
 
 ## Installation
 
@@ -78,9 +78,7 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 
 | Endpoint | Description |
 | --- | --- |
-| `search` | General search across all types |
-| `opinion_search` | Search opinions |
-| `recap_search` | Search RECAP archive |
+| `search` | Search opinions, RECAP, judges, and oral arguments |
 | `dockets` | Court dockets |
 | `docket_entries` | Docket entries |
 | `recap_documents` | RECAP documents |
