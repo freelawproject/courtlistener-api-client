@@ -557,8 +557,15 @@ def get_types_and_validators(
     lookup_types: list[str],
     choice_key_type: str | None,
 ) -> tuple[list[str], list[str]]:
+    lookup_types = lookup_types if isinstance(lookup_types, list) else []
     python_types = []
     validators = []
+
+    if "in" in lookup_types:
+        validators.append("AfterValidator(in_post_validator)")
+        if filter_type == "ChoiceFilter":
+            filter_type = "MultipleChoiceFilter"
+
     if filter_type == "RelatedFilter":
         python_types = ["dict[str, Any]"]
         validators.append("BeforeValidator(related_validator)")
@@ -592,17 +599,25 @@ def get_types_and_validators(
         if choice_key_type is not None:
             python_types = [f"list[{choice_key_type}]", choice_key_type]
             validators.append("BeforeValidator(multiple_choice_validator)")
+    elif filter_type == "IsoDateTimeFilter":
+        python_types = ["datetime"]
+    elif filter_type == "DateFilter":
+        python_types = ["date"]
     elif filter_type == "NumberFilter":
-        if field_type == "datetime" or "hour" in lookup_types:
-            python_types = ["datetime"]
-        elif field_type == "date" or "year" in lookup_types:
-            python_types = ["date"]
-        elif field_type in ["integer", "field"]:
-            python_types = ["int"]
+        python_types = ["int"]
     elif filter_type == "RelativeDateFilter":
         python_types = ["str | date"]
         validators.append("BeforeValidator(relative_date_validator)")
-    return sorted(python_types, key=lambda x: len(x)), validators
+
+    if "in" in lookup_types:
+        for python_type in python_types:
+            if "list" not in python_type:
+                python_types.append(f"list[{python_type}]")
+        if "int" in python_types:
+            validators.append("BeforeValidator(try_coerce_ints)")
+        validators.append("BeforeValidator(in_pre_validator)")
+    python_types = sorted(set(python_types), key=lambda x: len(x))
+    return python_types, validators
 
 
 def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
@@ -633,7 +648,6 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
         for field_name, filter in filters.items():
             # Get field data
             field = fields.get(field_name, {})
-            lookup_types = process_lookup_types(filter.get("lookup_types", []))
             related_endpoint_id = get_related_endpoint_id(
                 filter.get("type"), filter.get("lookup_types", [])
             )
@@ -646,9 +660,10 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
             python_types, validators = get_types_and_validators(
                 filter.get("type"),
                 field.get("type"),
-                lookup_types,
+                filter.get("lookup_types"),
                 choice_key_type,
             )
+            lookup_types = process_lookup_types(filter.get("lookup_types", []))
             # Create query field
             endpoint_fields[field_name] = {
                 "id": field_name,
