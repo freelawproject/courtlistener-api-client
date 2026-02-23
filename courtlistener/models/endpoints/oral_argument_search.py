@@ -1864,13 +1864,13 @@ class OralArgumentSearchEndpoint(Endpoint):
             None,
         ),
     ]
-    semantic: Annotated[
-        None | bool,
+    case_name: Annotated[
+        None | str,
         Field(
             None,
         ),
     ]
-    case_name: Annotated[
+    docket_number: Annotated[
         None | str,
         Field(
             None,
@@ -1895,12 +1895,6 @@ class OralArgumentSearchEndpoint(Endpoint):
             None,
         ),
         BeforeValidator(relative_date_validator),
-    ]
-    docket_number: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
     ]
     order_by: Annotated[
         None | str,

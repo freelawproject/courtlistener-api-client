@@ -130,8 +130,8 @@ __all__ = [
     "DocketAlertsEndpoint",
     "OpinionSearchEndpoint",
     "RecapSearchEndpoint",
-    "RecapDocketSearchEndpoint",
     "RecapDocumentSearchEndpoint",
+    "RecapDocketSearchEndpoint",
     "JudgeSearchEndpoint",
     "OralArgumentSearchEndpoint",
 ]
@@ -181,8 +181,8 @@ ENDPOINTS: dict[str, type[Endpoint]] = {
     "docket_alerts": DocketAlertsEndpoint,
     "opinion_search": OpinionSearchEndpoint,
     "recap_search": RecapSearchEndpoint,
-    "recap_docket_search": RecapDocketSearchEndpoint,
     "recap_document_search": RecapDocumentSearchEndpoint,
+    "recap_docket_search": RecapDocketSearchEndpoint,
     "judge_search": JudgeSearchEndpoint,
     "oral_argument_search": OralArgumentSearchEndpoint,
 }

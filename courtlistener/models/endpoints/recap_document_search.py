@@ -1864,12 +1864,6 @@ class RecapDocumentSearchEndpoint(Endpoint):
             None,
         ),
     ]
-    semantic: Annotated[
-        None | bool,
-        Field(
-            None,
-        ),
-    ]
     available_only: Annotated[
         None | bool,
         Field(
