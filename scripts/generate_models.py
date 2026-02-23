@@ -239,6 +239,28 @@ OPINION_SEARCH_OPTIONS: dict[str, Any] = {
         "cited_lt": {
             "type": "NumberFilter",
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {
+                    "value": "dateFiled desc",
+                    "display_name": "Newest Cases First",
+                },
+                {
+                    "value": "dateFiled asc",
+                    "display_name": "Oldest Cases First",
+                },
+                {
+                    "value": "citeCount desc",
+                    "display_name": "Most Cited First",
+                },
+                {
+                    "value": "citeCount asc",
+                    "display_name": "Least Cited First",
+                },
+            ],
+        },
     },
 }
 
@@ -317,6 +339,28 @@ RECAP_SEARCH_OPTIONS: dict[str, Any] = {
         "atty_name": {
             "type": "CharFilter",
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {
+                    "value": "dateFiled desc",
+                    "display_name": "Newest Cases First",
+                },
+                {
+                    "value": "dateFiled asc",
+                    "display_name": "Oldest Cases First",
+                },
+                {
+                    "value": "entry_date_filed desc",
+                    "display_name": "Newest Documents First",
+                },
+                {
+                    "value": "entry_date_filed asc",
+                    "display_name": "Oldest Documents First",
+                },
+            ],
+        },
     },
 }
 
@@ -380,6 +424,25 @@ JUDGE_SEARCH_OPTIONS: dict[str, Any] = {
             "type": "ChoiceFilter",
             "choices": POLITICAL_AFFILIATION_CHOICES,
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {"value": "name_reverse asc", "display_name": "Last Name"},
+                {
+                    "value": "dob desc,name_reverse asc",
+                    "display_name": "Most Recently Born",
+                },
+                {
+                    "value": "dob asc,name_reverse asc",
+                    "display_name": "Least Recently Born",
+                },
+                {
+                    "value": "dod desc,name_reverse asc",
+                    "display_name": "Most Recently Deceased",
+                },
+            ],
+        },
     },
 }
 
@@ -415,6 +478,14 @@ ORAL_ARGUMENT_SEARCH_OPTIONS: dict[str, Any] = {
         },
         "docket_number": {
             "type": "CharFilter",
+        },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {"value": "dateArgued desc", "display_name": "Newest First"},
+                {"value": "dateArgued asc", "display_name": "Oldest First"},
+            ],
         },
     },
 }
