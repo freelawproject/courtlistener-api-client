@@ -36,6 +36,16 @@ class TestDocketsList:
         for docket in results.results:
             assert docket["source"] in (0, 1)
 
+        results = client.dockets.list(source__in=[0, 1])
+        assert isinstance(results.results, list)
+        for docket in results.results:
+            assert docket["source"] in (0, 1)
+
+        results = client.dockets.list(source__in="0,1")
+        assert isinstance(results.results, list)
+        for docket in results.results:
+            assert docket["source"] in (0, 1)
+
     def test_list_with_source_display_name(self, client):
         """Source choice by display name resolves to int value."""
         results = client.dockets.list(source="RECAP")

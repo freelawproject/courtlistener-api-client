@@ -101,7 +101,16 @@ class RecapDocumentsEndpoint(Endpoint):
         Field(
             None,
             description="The status of OCR processing on this item.",
+            json_schema_extra={
+                "choices": [
+                    {"value": 1, "display_name": "OCR Complete"},
+                    {"value": 2, "display_name": "OCR Not Necessary"},
+                    {"value": 3, "display_name": "OCR Failed"},
+                    {"value": 4, "display_name": "OCR Needed"},
+                ],
+            },
         ),
+        BeforeValidator(choice_validator),
     ]
     is_free_on_pacer: Annotated[
         None | bool,
