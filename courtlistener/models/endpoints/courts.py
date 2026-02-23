@@ -11,6 +11,7 @@ from pydantic import BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter6, Filter7, Filter8
 from courtlistener.utils import (
+    choice_validator,
     multiple_choice_validator,
     related_validator,
 )
@@ -153,4 +154,37 @@ class CourtsEndpoint(Endpoint):
             None,
             description="Parent court for subdivisions",
         ),
+    ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "Id (asc)"},
+                    {"value": "-id", "display_name": "Id (desc)"},
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                    {"value": "position", "display_name": "Position (asc)"},
+                    {"value": "-position", "display_name": "Position (desc)"},
+                    {
+                        "value": "start_date",
+                        "display_name": "Start Date (asc)",
+                    },
+                    {
+                        "value": "-start_date",
+                        "display_name": "Start Date (desc)",
+                    },
+                    {"value": "end_date", "display_name": "End Date (asc)"},
+                    {"value": "-end_date", "display_name": "End Date (desc)"},
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
     ]

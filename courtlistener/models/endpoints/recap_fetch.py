@@ -119,3 +119,40 @@ class RecapFetchEndpoint(Endpoint):
         BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "Id (asc)"},
+                    {"value": "-id", "display_name": "Id (desc)"},
+                    {
+                        "value": "date_created",
+                        "display_name": "Date Created (asc)",
+                    },
+                    {
+                        "value": "-date_created",
+                        "display_name": "Date Created (desc)",
+                    },
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                    {
+                        "value": "date_completed",
+                        "display_name": "Date Completed (asc)",
+                    },
+                    {
+                        "value": "-date_completed",
+                        "display_name": "Date Completed (desc)",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]

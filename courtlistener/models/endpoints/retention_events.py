@@ -112,3 +112,40 @@ class RetentionEventsEndpoint(Endpoint):
             description="Whether the retention event was won.",
         ),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "Id (asc)"},
+                    {"value": "-id", "display_name": "Id (desc)"},
+                    {
+                        "value": "date_created",
+                        "display_name": "Date Created (asc)",
+                    },
+                    {
+                        "value": "-date_created",
+                        "display_name": "Date Created (desc)",
+                    },
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                    {
+                        "value": "date_retention",
+                        "display_name": "Date Retention (asc)",
+                    },
+                    {
+                        "value": "-date_retention",
+                        "display_name": "Date Retention (desc)",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]

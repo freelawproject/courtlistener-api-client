@@ -55,3 +55,34 @@ class AlertsEndpoint(Endpoint):
         ),
         BeforeValidator(choice_validator),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {
+                        "value": "date_created",
+                        "display_name": "Date Created (asc)",
+                    },
+                    {
+                        "value": "-date_created",
+                        "display_name": "Date Created (desc)",
+                    },
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                    {"value": "name", "display_name": "Name (asc)"},
+                    {"value": "-name", "display_name": "Name (desc)"},
+                    {"value": "rate", "display_name": "Rate (asc)"},
+                    {"value": "-rate", "display_name": "Rate (desc)"},
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]

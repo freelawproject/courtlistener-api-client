@@ -10,6 +10,7 @@ from pydantic import BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
+    choice_validator,
     multiple_choice_validator,
     relative_date_validator,
 )
@@ -1900,4 +1901,24 @@ class OralArgumentSearchEndpoint(Endpoint):
         Field(
             None,
         ),
+    ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "score desc", "display_name": "Relevance"},
+                    {
+                        "value": "dateArgued desc",
+                        "display_name": "Newest First",
+                    },
+                    {
+                        "value": "dateArgued asc",
+                        "display_name": "Oldest First",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
     ]

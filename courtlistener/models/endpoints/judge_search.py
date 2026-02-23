@@ -2038,3 +2038,28 @@ class JudgeSearchEndpoint(Endpoint):
         ),
         BeforeValidator(choice_validator),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "score desc", "display_name": "Relevance"},
+                    {"value": "name_reverse asc", "display_name": "Last Name"},
+                    {
+                        "value": "dob desc,name_reverse asc",
+                        "display_name": "Most Recently Born",
+                    },
+                    {
+                        "value": "dob asc,name_reverse asc",
+                        "display_name": "Least Recently Born",
+                    },
+                    {
+                        "value": "dod desc,name_reverse asc",
+                        "display_name": "Most Recently Deceased",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]

@@ -1987,6 +1987,26 @@ class SearchEndpoint(Endpoint):
             None,
         ),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "score desc", "display_name": "Relevance"},
+                    {
+                        "value": "dateArgued desc",
+                        "display_name": "Newest First",
+                    },
+                    {
+                        "value": "dateArgued asc",
+                        "display_name": "Oldest First",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
     available_only: Annotated[
         None | bool,
         Field(

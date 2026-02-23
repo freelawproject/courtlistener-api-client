@@ -239,6 +239,28 @@ OPINION_SEARCH_OPTIONS: dict[str, Any] = {
         "cited_lt": {
             "type": "NumberFilter",
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {
+                    "value": "dateFiled desc",
+                    "display_name": "Newest Cases First",
+                },
+                {
+                    "value": "dateFiled asc",
+                    "display_name": "Oldest Cases First",
+                },
+                {
+                    "value": "citeCount desc",
+                    "display_name": "Most Cited First",
+                },
+                {
+                    "value": "citeCount asc",
+                    "display_name": "Least Cited First",
+                },
+            ],
+        },
     },
 }
 
@@ -317,6 +339,28 @@ RECAP_SEARCH_OPTIONS: dict[str, Any] = {
         "atty_name": {
             "type": "CharFilter",
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {
+                    "value": "dateFiled desc",
+                    "display_name": "Newest Cases First",
+                },
+                {
+                    "value": "dateFiled asc",
+                    "display_name": "Oldest Cases First",
+                },
+                {
+                    "value": "entry_date_filed desc",
+                    "display_name": "Newest Documents First",
+                },
+                {
+                    "value": "entry_date_filed asc",
+                    "display_name": "Oldest Documents First",
+                },
+            ],
+        },
     },
 }
 
@@ -380,6 +424,25 @@ JUDGE_SEARCH_OPTIONS: dict[str, Any] = {
             "type": "ChoiceFilter",
             "choices": POLITICAL_AFFILIATION_CHOICES,
         },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {"value": "name_reverse asc", "display_name": "Last Name"},
+                {
+                    "value": "dob desc,name_reverse asc",
+                    "display_name": "Most Recently Born",
+                },
+                {
+                    "value": "dob asc,name_reverse asc",
+                    "display_name": "Least Recently Born",
+                },
+                {
+                    "value": "dod desc,name_reverse asc",
+                    "display_name": "Most Recently Deceased",
+                },
+            ],
+        },
     },
 }
 
@@ -415,6 +478,14 @@ ORAL_ARGUMENT_SEARCH_OPTIONS: dict[str, Any] = {
         },
         "docket_number": {
             "type": "CharFilter",
+        },
+        "order_by": {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": "score desc", "display_name": "Relevance"},
+                {"value": "dateArgued desc", "display_name": "Newest First"},
+                {"value": "dateArgued asc", "display_name": "Oldest First"},
+            ],
         },
     },
 }
@@ -494,6 +565,32 @@ def get_options() -> dict[str, Any]:
             print(f"Error getting options for {endpoint_id}: {e}")
             continue
     return options
+
+
+def get_orderings(endpoint_options: dict[str, Any]) -> dict[str, Any] | None:
+    """Add order_by filter to the endpoint options."""
+    orderings = endpoint_options.get("ordering", [])
+    choices = []
+    for ordering in orderings:
+        display_name = ordering.replace("_", " ").title()
+        choices.append(
+            {
+                "value": ordering,
+                "display_name": display_name + " (asc)",
+            }
+        )
+        choices.append(
+            {
+                "value": "-" + ordering,
+                "display_name": display_name + " (desc)",
+            }
+        )
+    if choices:
+        return {
+            "type": "ChoiceFilter",
+            "choices": choices,
+        }
+    return None
 
 
 def process_lookup_types(lookup_types: list[str] | str) -> list[str]:
@@ -618,6 +715,9 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
     for endpoint_id, endpoint_options in options.items():
         fields = endpoint_options.get("actions", {}).get("POST", {})
         filters = endpoint_options.get("filters", {})
+        order_by = get_orderings(endpoint_options)
+        if order_by:
+            filters["order_by"] = order_by
         endpoint_fields = {}
         for field_name, filter in filters.items():
             # Get field data

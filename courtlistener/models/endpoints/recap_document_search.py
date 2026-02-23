@@ -10,6 +10,7 @@ from pydantic import BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
+    choice_validator,
     multiple_choice_validator,
     relative_date_validator,
 )
@@ -1968,4 +1969,32 @@ class RecapDocumentSearchEndpoint(Endpoint):
         Field(
             None,
         ),
+    ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "score desc", "display_name": "Relevance"},
+                    {
+                        "value": "dateFiled desc",
+                        "display_name": "Newest Cases First",
+                    },
+                    {
+                        "value": "dateFiled asc",
+                        "display_name": "Oldest Cases First",
+                    },
+                    {
+                        "value": "entry_date_filed desc",
+                        "display_name": "Newest Documents First",
+                    },
+                    {
+                        "value": "entry_date_filed asc",
+                        "display_name": "Oldest Documents First",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
     ]
