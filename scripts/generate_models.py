@@ -496,6 +496,32 @@ def get_options() -> dict[str, Any]:
     return options
 
 
+def get_orderings(endpoint_options: dict[str, Any]) -> dict[str, Any] | None:
+    """Add order_by filter to the endpoint options."""
+    orderings = endpoint_options.get("ordering", [])
+    choices = []
+    for ordering in orderings:
+        display_name = ordering.replace("_", " ").title()
+        choices.append(
+            {
+                "value": ordering,
+                "display_name": display_name + " (asc)",
+            }
+        )
+        choices.append(
+            {
+                "value": "-" + ordering,
+                "display_name": display_name + " (desc)",
+            }
+        )
+    if choices:
+        return {
+            "type": "ChoiceFilter",
+            "choices": choices,
+        }
+    return None
+
+
 def process_lookup_types(lookup_types: list[str] | str) -> list[str]:
     """Process lookup types, remove "exact" and "in"."""
     if isinstance(lookup_types, list):
@@ -618,6 +644,9 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
     for endpoint_id, endpoint_options in options.items():
         fields = endpoint_options.get("actions", {}).get("POST", {})
         filters = endpoint_options.get("filters", {})
+        order_by = get_orderings(endpoint_options)
+        if order_by:
+            filters["order_by"] = order_by
         endpoint_fields = {}
         for field_name, filter in filters.items():
             # Get field data
