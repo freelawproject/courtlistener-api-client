@@ -11,6 +11,7 @@ from pydantic import BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter5, Filter7, Filter8
 from courtlistener.utils import (
+    choice_validator,
     related_validator,
 )
 
@@ -93,4 +94,57 @@ class DocketEntriesEndpoint(Endpoint):
             },
         ),
         BeforeValidator(related_validator),
+    ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "Id (asc)"},
+                    {"value": "-id", "display_name": "Id (desc)"},
+                    {
+                        "value": "date_created",
+                        "display_name": "Date Created (asc)",
+                    },
+                    {
+                        "value": "-date_created",
+                        "display_name": "Date Created (desc)",
+                    },
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                    {
+                        "value": "date_filed",
+                        "display_name": "Date Filed (asc)",
+                    },
+                    {
+                        "value": "-date_filed",
+                        "display_name": "Date Filed (desc)",
+                    },
+                    {
+                        "value": "recap_sequence_number",
+                        "display_name": "Recap Sequence Number (asc)",
+                    },
+                    {
+                        "value": "-recap_sequence_number",
+                        "display_name": "Recap Sequence Number (desc)",
+                    },
+                    {
+                        "value": "entry_number",
+                        "display_name": "Entry Number (asc)",
+                    },
+                    {
+                        "value": "-entry_number",
+                        "display_name": "Entry Number (desc)",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
     ]

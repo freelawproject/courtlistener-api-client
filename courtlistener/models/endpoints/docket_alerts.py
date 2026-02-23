@@ -47,3 +47,30 @@ class DocketAlertsEndpoint(Endpoint):
             description="The docket that we are subscribed to.",
         ),
     ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {
+                        "value": "date_created",
+                        "display_name": "Date Created (asc)",
+                    },
+                    {
+                        "value": "-date_created",
+                        "display_name": "Date Created (desc)",
+                    },
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date Modified (asc)",
+                    },
+                    {
+                        "value": "-date_modified",
+                        "display_name": "Date Modified (desc)",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
+    ]
