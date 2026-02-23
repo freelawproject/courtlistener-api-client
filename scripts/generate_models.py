@@ -522,24 +522,15 @@ def get_related_endpoint_id(
 
 
 def get_choices(
-    filter_type: str,
     filter_choices: list[dict[str, str | int]],
-    field_choices: list[dict[str, str | int]],
 ) -> list[dict[str, str | int]]:
     """Get choices from the filter or, for NumberInFilter and CharInFilter, fallback to the field."""
     choices = []
     values = set()
-    if filter_choices:
-        for choice in filter_choices:
-            if choice["value"] not in values:
-                choices.append(choice)
-                values.add(choice["value"])
-        return choices
-    if filter_type in ["NumberInFilter", "CharInFilter"]:
-        for choice in field_choices:
-            if choice["value"] not in values:
-                choices.append(choice)
-                values.add(choice["value"])
+    for choice in filter_choices:
+        if choice["value"] not in values:
+            choices.append(choice)
+            values.add(choice["value"])
     return choices
 
 
@@ -553,7 +544,6 @@ def get_choice_key_type(choices: list[dict[str, str | int]]) -> str | None:
 
 def get_types_and_validators(
     filter_type: str,
-    field_type: str,
     lookup_types: list[str],
     choice_key_type: str | None,
 ) -> tuple[list[str], list[str]]:
@@ -571,26 +561,10 @@ def get_types_and_validators(
         validators.append("BeforeValidator(related_validator)")
     elif filter_type == "CharFilter":
         python_types = ["str"]
-    elif filter_type in ["NumberRangeFilter", "ModelChoiceFilter"]:
+    elif filter_type in ["ModelChoiceFilter"]:
         python_types = ["int"]
     elif filter_type == "BooleanFilter":
-        if field_type == "integer":  # Fix for mislabeled NumberFilter fields
-            python_types = ["int"]
-        else:
-            python_types = ["bool"]
-    elif filter_type == "NumberInFilter":
-        python_types = ["list[int]", "int"]
-        validators.append("AfterValidator(in_post_validator)")
-        if choice_key_type is not None:
-            validators.append("BeforeValidator(multiple_choice_validator)")
-        validators.append("BeforeValidator(try_coerce_ints)")
-        validators.append("BeforeValidator(in_pre_validator)")
-    elif filter_type == "CharInFilter":
-        python_types = ["list[str]", "str"]
-        validators.append("AfterValidator(in_post_validator)")
-        if choice_key_type is not None:
-            validators.append("BeforeValidator(multiple_choice_validator)")
-        validators.append("BeforeValidator(in_pre_validator)")
+        python_types = ["bool"]
     elif filter_type == "ChoiceFilter":
         if choice_key_type is not None:
             python_types = [choice_key_type]
@@ -651,15 +625,10 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
             related_endpoint_id = get_related_endpoint_id(
                 filter.get("type"), filter.get("lookup_types", [])
             )
-            choices = get_choices(
-                filter.get("type"),
-                filter.get("choices", []),
-                field.get("choices", []),
-            )
+            choices = get_choices(filter.get("choices", []))
             choice_key_type = get_choice_key_type(choices)
             python_types, validators = get_types_and_validators(
                 filter.get("type"),
-                field.get("type"),
                 filter.get("lookup_types"),
                 choice_key_type,
             )
@@ -738,6 +707,7 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
                     f"NOT IMPLEMENTED: {endpoint['id']} {endpoint_field['id']}"
                 )
 
+    # Generate filter classes
     filter_classes = {
         i: json.loads(filter_class_json)
         for i, filter_class_json in enumerate(filter_classes_json)
