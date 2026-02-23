@@ -2,8 +2,12 @@
 
 ## Current
 
-0.0.1 - Initial release
+### 0.0.2 - 2026-02-23
+
+- Regenerate endpoints after changes to the API [#6961](https://github.com/freelawproject/courtlistener/issues/6961)
 
 ## Past
 
-No past releases yet.
+### 0.0.1 - 2026-02-20
+
+- Initial release
