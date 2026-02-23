@@ -11,6 +11,7 @@ from pydantic import BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter7, Filter8
 from courtlistener.utils import (
+    choice_validator,
     multiple_choice_validator,
     related_validator,
 )
@@ -76,7 +77,24 @@ class AudioEndpoint(Endpoint):
         Field(
             None,
             description="The status of the Speech to Text for this item?",
+            json_schema_extra={
+                "choices": [
+                    {"value": 0, "display_name": "Speech to Text Needed"},
+                    {"value": 1, "display_name": "Speech to Text Complete"},
+                    {"value": 2, "display_name": "Speech to Text Failed"},
+                    {
+                        "value": 3,
+                        "display_name": "Transcription does not match audio",
+                    },
+                    {
+                        "value": 4,
+                        "display_name": "File size is bigger than 25 MB",
+                    },
+                    {"value": 5, "display_name": "File does not exist"},
+                ],
+            },
         ),
+        BeforeValidator(choice_validator),
     ]
     docket: Annotated[
         None | dict[str, Any] | int,

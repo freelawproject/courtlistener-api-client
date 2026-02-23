@@ -241,6 +241,15 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
         BeforeValidator(in_pre_validator),
     ]
+    class_action: Annotated[
+        None | bool | list[bool],
+        Field(
+            None,
+            description='Involves an allegation by the plaintiff that the complaint meets the prerequisites of a "Class Action" as provided in Rule 23 - F.R.CV.P. ',
+        ),
+        AfterValidator(in_post_validator),
+        BeforeValidator(in_pre_validator),
+    ]
     plaintiff: Annotated[
         None | str | Filter4,
         Field(
@@ -273,88 +282,51 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
         BeforeValidator(in_pre_validator),
     ]
     procedural_progress: Annotated[
-        None | int | list[int],
+        None | str | list[str],
         Field(
             None,
             description="The point to which the case had progressed when it was disposed of. See notes in codebook.",
             json_schema_extra={
                 "choices": [
                     {
-                        "value": 1,
-                        "display_name": "No court action (before issue joined)",
+                        "value": "Before issue joined",
+                        "display_name": "[(1, 'No court action (before issue joined)'), (2, 'Order entered'), (11, 'Hearing held'), (12, 'Order decided')]",
                     },
-                    {"value": 2, "display_name": "Order entered"},
-                    {"value": 11, "display_name": "Hearing held"},
-                    {"value": 12, "display_name": "Order decided"},
                     {
-                        "value": 3,
-                        "display_name": "No court action (after issue joined)",
-                    },
-                    {"value": 4, "display_name": "Judgment on motion"},
-                    {"value": 5, "display_name": "Pretrial conference held"},
-                    {"value": 6, "display_name": "During court trial"},
-                    {"value": 7, "display_name": "During jury trial"},
-                    {"value": 8, "display_name": "After court trial"},
-                    {"value": 9, "display_name": "After jury trial"},
-                    {"value": 10, "display_name": "Other"},
-                    {
-                        "value": 13,
-                        "display_name": "Request for trial de novo after arbitration",
+                        "value": "After issue joined",
+                        "display_name": "[(3, 'No court action (after issue joined)'), (4, 'Judgment on motion'), (5, 'Pretrial conference held'), (6, 'During court trial'), (7, 'During jury trial'), (8, 'After court trial'), (9, 'After jury trial'), (10, 'Other'), (13, 'Request for trial de novo after arbitration')]",
                     },
                 ],
             },
         ),
         AfterValidator(in_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
     disposition: Annotated[
-        None | int | list[int],
+        None | str | list[str],
         Field(
             None,
             description="The manner in which the case was disposed of.",
             json_schema_extra={
                 "choices": [
                     {
-                        "value": 0,
-                        "display_name": "Transfer to another district",
-                    },
-                    {"value": 1, "display_name": "Remanded to state court"},
-                    {
-                        "value": 10,
-                        "display_name": "Multi-district litigation transfer",
-                    },
-                    {"value": 11, "display_name": "Remanded to U.S. agency"},
-                    {"value": 2, "display_name": "Want of prosecution"},
-                    {"value": 3, "display_name": "Lack of jurisdiction"},
-                    {"value": 12, "display_name": "Voluntarily dismissed"},
-                    {"value": 13, "display_name": "Settled"},
-                    {"value": 14, "display_name": "Other"},
-                    {"value": 4, "display_name": "Default"},
-                    {"value": 5, "display_name": "Consent"},
-                    {"value": 6, "display_name": "Motion before trial"},
-                    {"value": 7, "display_name": "Jury verdict"},
-                    {"value": 8, "display_name": "Directed verdict"},
-                    {"value": 9, "display_name": "Court trial"},
-                    {"value": 15, "display_name": "Award of arbitrator"},
-                    {"value": 16, "display_name": "Stayed pending bankruptcy"},
-                    {"value": 17, "display_name": "Other"},
-                    {"value": 18, "display_name": "Statistical closing"},
-                    {
-                        "value": 19,
-                        "display_name": "Appeal affirmed (magistrate judge)",
+                        "value": "Cases transferred or remanded",
+                        "display_name": "[(0, 'Transfer to another district'), (1, 'Remanded to state court'), (10, 'Multi-district litigation transfer'), (11, 'Remanded to U.S. agency')]",
                     },
                     {
-                        "value": 20,
-                        "display_name": "Appeal denied (magistrate judge",
+                        "value": "Dismissals",
+                        "display_name": "[(2, 'Want of prosecution'), (3, 'Lack of jurisdiction'), (12, 'Voluntarily dismissed'), (13, 'Settled'), (14, 'Other')]",
+                    },
+                    {
+                        "value": "Judgment on",
+                        "display_name": "[(4, 'Default'), (5, 'Consent'), (6, 'Motion before trial'), (7, 'Jury verdict'), (8, 'Directed verdict'), (9, 'Court trial'), (15, 'Award of arbitrator'), (16, 'Stayed pending bankruptcy'), (17, 'Other'), (18, 'Statistical closing'), (19, 'Appeal affirmed (magistrate judge)'), (20, 'Appeal denied (magistrate judge')]",
                     },
                 ],
             },
         ),
         AfterValidator(in_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
     judgment: Annotated[

@@ -12,6 +12,7 @@ from courtlistener.utils import (
     choice_validator,
     in_post_validator,
     in_pre_validator,
+    multiple_choice_validator,
     try_coerce_ints,
 )
 
@@ -28,8 +29,41 @@ class RecapFetchEndpoint(Endpoint):
         Field(
             None,
             description="The current status of this request. Possible values are: (1): Awaiting processing in queue., (2): Item processed successfully., (3): Item encountered an error while processing., (4): Item is currently being processed., (5): Item failed processing, but will be retried., (6): Item failed validity tests., (7): There was insufficient metadata to complete the task.",
+            json_schema_extra={
+                "choices": [
+                    {
+                        "value": 1,
+                        "display_name": "Awaiting processing in queue.",
+                    },
+                    {
+                        "value": 2,
+                        "display_name": "Item processed successfully.",
+                    },
+                    {
+                        "value": 3,
+                        "display_name": "Item encountered an error while processing.",
+                    },
+                    {
+                        "value": 4,
+                        "display_name": "Item is currently being processed.",
+                    },
+                    {
+                        "value": 5,
+                        "display_name": "Item failed processing, but will be retried.",
+                    },
+                    {
+                        "value": 6,
+                        "display_name": "Item failed validity tests.",
+                    },
+                    {
+                        "value": 7,
+                        "display_name": "There was insufficient metadata to complete the task.",
+                    },
+                ],
+            },
         ),
         AfterValidator(in_post_validator),
+        BeforeValidator(multiple_choice_validator),
         BeforeValidator(try_coerce_ints),
         BeforeValidator(in_pre_validator),
     ]
@@ -75,4 +109,13 @@ class RecapFetchEndpoint(Endpoint):
             None,
             description="The docket number of a case to update (must be used in combination with the court field).",
         ),
+    ]
+    recap_document: Annotated[
+        None | int | list[int],
+        Field(
+            None,
+        ),
+        AfterValidator(in_post_validator),
+        BeforeValidator(try_coerce_ints),
+        BeforeValidator(in_pre_validator),
     ]
