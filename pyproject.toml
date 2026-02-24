@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "courtlistener-api-client"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python SDK for the Court Listener API"
 authors = [{ name = "Free Law Project", email = "info@free.law" }]
 requires-python = ">=3.13"
@@ -36,6 +36,7 @@ dependencies = [
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
     "mcp>=1.0.0",
+    "tiktoken>=0.12.0",
 ]
 
 [project.optional-dependencies]

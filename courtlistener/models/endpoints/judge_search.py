@@ -1864,12 +1864,6 @@ class JudgeSearchEndpoint(Endpoint):
             None,
         ),
     ]
-    semantic: Annotated[
-        None | bool,
-        Field(
-            None,
-        ),
-    ]
     name: Annotated[
         None | str,
         Field(

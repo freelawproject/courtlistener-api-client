@@ -229,7 +229,8 @@ def search_model_validator(data):
         "oa": "oral_argument_search",
     }
 
-    endpoint_type = data.pop("type", "o")
+    endpoint_type = data.pop("type") or "o"
 
     endpoint_model = ENDPOINTS[endpoint_types[endpoint_type]]
+    data = {k: v for k, v in data.items() if v is not None}
     return endpoint_model(**data).model_dump(by_alias=True)

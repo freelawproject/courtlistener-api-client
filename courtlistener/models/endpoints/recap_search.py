@@ -23,7 +23,7 @@ class RecapSearchEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "recap-search"
     endpoint_name: ClassVar[str] = "Recap Search"
 
-    type: Literal["rd"] = "rd"
+    type: Literal["r"] = "r"
     court: Annotated[
         None | str | list[str],
         Field(
@@ -1860,12 +1860,6 @@ class RecapSearchEndpoint(Endpoint):
     ]
     q: Annotated[
         None | str,
-        Field(
-            None,
-        ),
-    ]
-    semantic: Annotated[
-        None | bool,
         Field(
             None,
         ),

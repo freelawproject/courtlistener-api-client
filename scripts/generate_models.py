@@ -163,382 +163,325 @@ POLITICAL_AFFILIATION_CHOICES = [
 ]
 
 
-OPINION_SEARCH_OPTIONS: dict[str, Any] = {
-    "endpoint": "/search/",
-    "actions": {
-        "POST": {
-            "cited_gt": {
-                "type": "integer",
-            },
-            "cited_lt": {
-                "type": "integer",
+SEARCH_FILTERS: dict[str, Any] = {
+    "court": {
+        "type": "MultipleChoiceFilter",
+        "choices": COURT_CHOICES,
+        "search_types": ["o", "r", "rd", "d", "p", "oa"],
+    },
+    "q": {
+        "type": "CharFilter",
+        "search_types": ["o", "r", "rd", "d", "p", "oa"],
+    },
+    "semantic": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "available_only": {
+        "type": "BooleanFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "case_name": {
+        "type": "CharFilter",
+        "search_types": ["o", "r", "rd", "d", "oa"],
+    },
+    "description": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "docket_number": {
+        "type": "CharFilter",
+        "search_types": ["o", "r", "rd", "d", "oa"],
+    },
+    "nature_of_suit": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "cause": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "filed_before": {
+        "type": "RelativeDateFilter",
+        "search_types": ["o", "r", "rd", "d"],
+    },
+    "filed_after": {
+        "type": "RelativeDateFilter",
+        "search_types": ["o", "r", "rd", "d"],
+    },
+    "entry_date_filed_before": {
+        "type": "RelativeDateFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "entry_date_filed_after": {
+        "type": "RelativeDateFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "document_number": {
+        "type": "NumberFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "attachment_number": {
+        "type": "NumberFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "assigned_to": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "referred_to": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "party_name": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "atty_name": {
+        "type": "CharFilter",
+        "search_types": ["r", "rd", "d"],
+    },
+    "judge": {
+        "type": "CharFilter",
+        "search_types": ["o", "oa"],
+    },
+    "citation": {
+        "type": "CharFilter",
+        "search_types": ["o"],
+    },
+    "neutral_cite": {
+        "type": "CharFilter",
+        "search_types": ["o"],
+    },
+    "stat_Published": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "stat_Unpublished": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "stat_Errata": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "stat_Separate": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "stat_In_chambers": {
+        "type": "BooleanFilter",
+        "alias": "stat_In-chambers",
+        "search_types": ["o"],
+    },
+    "stat_Relating_to": {
+        "type": "BooleanFilter",
+        "alias": "stat_Relating-to",
+        "search_types": ["o"],
+    },
+    "stat_Unknown": {
+        "type": "BooleanFilter",
+        "search_types": ["o"],
+    },
+    "cited_gt": {
+        "type": "NumberFilter",
+        "search_types": ["o"],
+    },
+    "cited_lt": {
+        "type": "NumberFilter",
+        "search_types": ["o"],
+    },
+    "name": {
+        "type": "CharFilter",
+        "search_types": ["p"],
+    },
+    "born_before": {
+        "type": "RelativeDateFilter",
+        "search_types": ["p"],
+    },
+    "born_after": {
+        "type": "RelativeDateFilter",
+        "search_types": ["p"],
+    },
+    "dob_city": {
+        "type": "CharFilter",
+        "search_types": ["p"],
+    },
+    "dob_state": {
+        "type": "ChoiceFilter",
+        "choices": STATE_CHOICES,
+        "search_types": ["p"],
+    },
+    "school": {
+        "type": "CharFilter",
+        "search_types": ["p"],
+    },
+    "appointer": {
+        "type": "CharFilter",
+        "search_types": ["p"],
+    },
+    "selection_method": {
+        "type": "ChoiceFilter",
+        "choices": SELECTION_METHOD_CHOICES,
+        "search_types": ["p"],
+    },
+    "political_affiliation": {
+        "type": "ChoiceFilter",
+        "choices": POLITICAL_AFFILIATION_CHOICES,
+        "search_types": ["p"],
+    },
+    "argued_before": {
+        "type": "RelativeDateFilter",
+        "search_types": ["oa"],
+    },
+    "argued_after": {
+        "type": "RelativeDateFilter",
+        "search_types": ["oa"],
+    },
+}
+
+SEARCH_ORDERINGS = [
+    {
+        "value": "score desc",
+        "display_name": "Relevance",
+        "search_types": ["o", "r", "rd", "d", "p", "oa"],
+    },
+    {
+        "value": "dateFiled desc",
+        "display_name": "Newest Cases First",
+        "search_types": ["o", "r", "rd", "d"],
+    },
+    {
+        "value": "dateFiled asc",
+        "display_name": "Oldest Cases First",
+        "search_types": ["o", "r", "rd", "d"],
+    },
+    {
+        "value": "citeCount desc",
+        "display_name": "Most Cited First",
+        "search_types": ["o"],
+    },
+    {
+        "value": "citeCount asc",
+        "display_name": "Least Cited First",
+        "search_types": ["o"],
+    },
+    {
+        "value": "entry_date_filed desc",
+        "display_name": "Newest Documents First",
+        "search_types": ["r", "rd", "d"],
+    },
+    {
+        "value": "entry_date_filed asc",
+        "display_name": "Oldest Documents First",
+        "search_types": ["r", "rd", "d"],
+    },
+    {
+        "value": "name_reverse asc",
+        "display_name": "Last Name",
+        "search_types": ["p"],
+    },
+    {
+        "value": "dob desc,name_reverse asc",
+        "display_name": "Most Recently Born",
+        "search_types": ["p"],
+    },
+    {
+        "value": "dob asc,name_reverse asc",
+        "display_name": "Least Recently Born",
+        "search_types": ["p"],
+    },
+    {
+        "value": "dod desc,name_reverse asc",
+        "display_name": "Most Recently Deceased",
+        "search_types": ["p"],
+    },
+    {
+        "value": "dateArgued desc",
+        "display_name": "Newest First",
+        "search_types": ["oa"],
+    },
+    {
+        "value": "dateArgued asc",
+        "display_name": "Oldest First",
+        "search_types": ["oa"],
+    },
+]
+
+
+def load_search_options():
+    search_type_groups = [
+        ("o", "opinion-search"),
+        ("r", "recap-search"),
+        ("rd", "recap-document-search"),
+        ("d", "recap-docket-search"),
+        ("p", "judge-search"),
+        ("oa", "oral-argument-search"),
+        (None, "search"),
+    ]
+
+    search_options = {}
+
+    for search_type, endpoint_id in search_type_groups:
+        filters = {
+            k: v
+            for k, v in SEARCH_FILTERS.items()
+            if search_type is None or search_type in v["search_types"]
+        }
+        order_by = {
+            "type": "ChoiceFilter",
+            "choices": [
+                {"value": o["value"], "display_name": o["display_name"]}
+                for o in SEARCH_ORDERINGS
+                if search_type is None or search_type in o["search_types"]
+            ],
+        }
+
+        if search_type is not None:
+            type_filter = {
+                "literal_value": search_type,
+            }
+        else:
+            type_filter = {
+                "type": "ChoiceFilter",
+                "choices": [
+                    {
+                        "value": "o",
+                        "display_name": "Opinion",
+                    },
+                    {
+                        "value": "r",
+                        "display_name": "Recap",
+                    },
+                    {
+                        "value": "rd",
+                        "display_name": "Document",
+                    },
+                    {
+                        "value": "d",
+                        "display_name": "Docket",
+                    },
+                    {
+                        "value": "p",
+                        "display_name": "Judge",
+                    },
+                    {
+                        "value": "oa",
+                        "display_name": "Oral Argument",
+                    },
+                ],
+            }
+
+        search_options[endpoint_id] = {
+            "endpoint": "/search/",
+            "actions": {"POST": {}},
+            "filters": {
+                "type": type_filter,
+                **filters,
+                "order_by": order_by,
             },
         }
-    },
-    "filters": {
-        "type": {
-            "literal_value": "o",
-        },
-        "court": {
-            "type": "MultipleChoiceFilter",
-            "choices": COURT_CHOICES,
-        },
-        "q": {
-            "type": "CharFilter",
-        },
-        "semantic": {
-            "type": "BooleanFilter",
-        },
-        "case_name": {
-            "type": "CharFilter",
-        },
-        "judge": {
-            "type": "CharFilter",
-        },
-        "stat_Published": {
-            "type": "BooleanFilter",
-        },
-        "stat_Unpublished": {
-            "type": "BooleanFilter",
-        },
-        "stat_Errata": {
-            "type": "BooleanFilter",
-        },
-        "stat_Separate": {
-            "type": "BooleanFilter",
-        },
-        "stat_In_chambers": {
-            "type": "BooleanFilter",
-            "alias": "stat_In-chambers",
-        },
-        "stat_Relating_to": {
-            "type": "BooleanFilter",
-            "alias": "stat_Relating-to",
-        },
-        "stat_Unknown": {
-            "type": "BooleanFilter",
-        },
-        "filed_before": {
-            "type": "RelativeDateFilter",
-        },
-        "filed_after": {
-            "type": "RelativeDateFilter",
-        },
-        "citation": {
-            "type": "CharFilter",
-        },
-        "neutral_cite": {
-            "type": "CharFilter",
-        },
-        "docket_number": {
-            "type": "CharFilter",
-        },
-        "cited_gt": {
-            "type": "NumberFilter",
-        },
-        "cited_lt": {
-            "type": "NumberFilter",
-        },
-        "order_by": {
-            "type": "ChoiceFilter",
-            "choices": [
-                {"value": "score desc", "display_name": "Relevance"},
-                {
-                    "value": "dateFiled desc",
-                    "display_name": "Newest Cases First",
-                },
-                {
-                    "value": "dateFiled asc",
-                    "display_name": "Oldest Cases First",
-                },
-                {
-                    "value": "citeCount desc",
-                    "display_name": "Most Cited First",
-                },
-                {
-                    "value": "citeCount asc",
-                    "display_name": "Least Cited First",
-                },
-            ],
-        },
-    },
-}
-
-
-RECAP_SEARCH_OPTIONS: dict[str, Any] = {
-    "endpoint": "/search/",
-    "actions": {
-        "POST": {
-            "document_number": {
-                "type": "integer",
-            },
-            "attachment_number": {
-                "type": "integer",
-            },
-        }
-    },
-    "filters": {
-        "type": {
-            "literal_value": "r",
-        },
-        "court": {
-            "type": "MultipleChoiceFilter",
-            "choices": COURT_CHOICES,
-        },
-        "q": {
-            "type": "CharFilter",
-        },
-        "semantic": {
-            "type": "BooleanFilter",
-        },
-        "available_only": {
-            "type": "BooleanFilter",
-        },
-        "case_name": {
-            "type": "CharFilter",
-        },
-        "description": {
-            "type": "CharFilter",
-        },
-        "docket_number": {
-            "type": "CharFilter",
-        },
-        "nature_of_suit": {
-            "type": "CharFilter",
-        },
-        "cause": {
-            "type": "CharFilter",
-        },
-        "filed_before": {
-            "type": "RelativeDateFilter",
-        },
-        "filed_after": {
-            "type": "RelativeDateFilter",
-        },
-        "entry_date_filed_before": {
-            "type": "RelativeDateFilter",
-        },
-        "entry_date_filed_after": {
-            "type": "RelativeDateFilter",
-        },
-        "document_number": {
-            "type": "NumberFilter",
-        },
-        "attachment_number": {
-            "type": "NumberFilter",
-        },
-        "assigned_to": {
-            "type": "CharFilter",
-        },
-        "referred_to": {
-            "type": "CharFilter",
-        },
-        "party_name": {
-            "type": "CharFilter",
-        },
-        "atty_name": {
-            "type": "CharFilter",
-        },
-        "order_by": {
-            "type": "ChoiceFilter",
-            "choices": [
-                {"value": "score desc", "display_name": "Relevance"},
-                {
-                    "value": "dateFiled desc",
-                    "display_name": "Newest Cases First",
-                },
-                {
-                    "value": "dateFiled asc",
-                    "display_name": "Oldest Cases First",
-                },
-                {
-                    "value": "entry_date_filed desc",
-                    "display_name": "Newest Documents First",
-                },
-                {
-                    "value": "entry_date_filed asc",
-                    "display_name": "Oldest Documents First",
-                },
-            ],
-        },
-    },
-}
-
-
-RECAP_DOCKET_SEARCH_OPTIONS: dict[str, Any] = RECAP_SEARCH_OPTIONS.copy()
-RECAP_DOCKET_SEARCH_OPTIONS["filters"]["type"] = {
-    "literal_value": "d",
-}
-
-
-RECAP_DOCUMENT_SEARCH_OPTIONS: dict[str, Any] = RECAP_SEARCH_OPTIONS.copy()
-RECAP_DOCUMENT_SEARCH_OPTIONS["filters"]["type"] = {
-    "literal_value": "rd",
-}
-
-
-JUDGE_SEARCH_OPTIONS: dict[str, Any] = {
-    "endpoint": "/search/",
-    "actions": {"POST": {}},
-    "filters": {
-        "type": {
-            "literal_value": "p",
-        },
-        "court": {
-            "type": "MultipleChoiceFilter",
-            "choices": COURT_CHOICES,
-        },
-        "q": {
-            "type": "CharFilter",
-        },
-        "semantic": {
-            "type": "BooleanFilter",
-        },
-        "name": {
-            "type": "CharFilter",
-        },
-        "born_before": {
-            "type": "RelativeDateFilter",
-        },
-        "born_after": {
-            "type": "RelativeDateFilter",
-        },
-        "dob_city": {
-            "type": "CharFilter",
-        },
-        "dob_state": {
-            "type": "ChoiceFilter",
-            "choices": STATE_CHOICES,
-        },
-        "school": {
-            "type": "CharFilter",
-        },
-        "appointer": {
-            "type": "CharFilter",
-        },
-        "selection_method": {
-            "type": "ChoiceFilter",
-            "choices": SELECTION_METHOD_CHOICES,
-        },
-        "political_affiliation": {
-            "type": "ChoiceFilter",
-            "choices": POLITICAL_AFFILIATION_CHOICES,
-        },
-        "order_by": {
-            "type": "ChoiceFilter",
-            "choices": [
-                {"value": "score desc", "display_name": "Relevance"},
-                {"value": "name_reverse asc", "display_name": "Last Name"},
-                {
-                    "value": "dob desc,name_reverse asc",
-                    "display_name": "Most Recently Born",
-                },
-                {
-                    "value": "dob asc,name_reverse asc",
-                    "display_name": "Least Recently Born",
-                },
-                {
-                    "value": "dod desc,name_reverse asc",
-                    "display_name": "Most Recently Deceased",
-                },
-            ],
-        },
-    },
-}
-
-
-ORAL_ARGUMENT_SEARCH_OPTIONS: dict[str, Any] = {
-    "endpoint": "/search/",
-    "actions": {"POST": {}},
-    "filters": {
-        "type": {
-            "literal_value": "oa",
-        },
-        "court": {
-            "type": "MultipleChoiceFilter",
-            "choices": COURT_CHOICES,
-        },
-        "q": {
-            "type": "CharFilter",
-        },
-        "semantic": {
-            "type": "BooleanFilter",
-        },
-        "case_name": {
-            "type": "CharFilter",
-        },
-        "judge": {
-            "type": "CharFilter",
-        },
-        "argued_before": {
-            "type": "RelativeDateFilter",
-        },
-        "argued_after": {
-            "type": "RelativeDateFilter",
-        },
-        "docket_number": {
-            "type": "CharFilter",
-        },
-        "order_by": {
-            "type": "ChoiceFilter",
-            "choices": [
-                {"value": "score desc", "display_name": "Relevance"},
-                {"value": "dateArgued desc", "display_name": "Newest First"},
-                {"value": "dateArgued asc", "display_name": "Oldest First"},
-            ],
-        },
-    },
-}
-
-
-SEARCH_OPTIONS: dict[str, Any] = {
-    "endpoint": "/search/",
-    "actions": {
-        "POST": {
-            **OPINION_SEARCH_OPTIONS["actions"]["POST"],
-            **RECAP_SEARCH_OPTIONS["actions"]["POST"],
-            **JUDGE_SEARCH_OPTIONS["actions"]["POST"],
-            **ORAL_ARGUMENT_SEARCH_OPTIONS["actions"]["POST"],
-        }
-    },
-    "filters": {
-        **OPINION_SEARCH_OPTIONS["filters"],
-        **RECAP_SEARCH_OPTIONS["filters"],
-        **JUDGE_SEARCH_OPTIONS["filters"],
-        **ORAL_ARGUMENT_SEARCH_OPTIONS["filters"],
-    },
-}
-
-
-SEARCH_OPTIONS["filters"]["type"] = {
-    "type": "ChoiceFilter",
-    "choices": [
-        {
-            "value": "o",
-            "display_name": "Opinion",
-        },
-        {
-            "value": "r",
-            "display_name": "Recap",
-        },
-        {
-            "value": "rd",
-            "display_name": "Document",
-        },
-        {
-            "value": "d",
-            "display_name": "Docket",
-        },
-        {
-            "value": "p",
-            "display_name": "Judge",
-        },
-        {
-            "value": "oa",
-            "display_name": "Oral Argument",
-        },
-    ],
-}
+    return search_options
 
 
 def to_title_case(s: str) -> str:
@@ -702,13 +645,7 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
             cache_path.write_text(json.dumps(options, indent=2))
 
     # Add custom endpoints
-    options["opinion-search"] = OPINION_SEARCH_OPTIONS
-    options["recap-search"] = RECAP_SEARCH_OPTIONS
-    options["recap-docket-search"] = RECAP_DOCKET_SEARCH_OPTIONS
-    options["recap-document-search"] = RECAP_DOCUMENT_SEARCH_OPTIONS
-    options["judge-search"] = JUDGE_SEARCH_OPTIONS
-    options["oral-argument-search"] = ORAL_ARGUMENT_SEARCH_OPTIONS
-    options["search"] = SEARCH_OPTIONS
+    options = {**options, **load_search_options()}
 
     # Assemble endpoints data
     endpoints: dict[str, Any] = {}
@@ -733,13 +670,16 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
                 choice_key_type,
             )
             lookup_types = process_lookup_types(filter.get("lookup_types", []))
+
             # Create query field
             endpoint_fields[field_name] = {
                 "id": field_name,
                 "alias": filter.get("alias"),
                 "lookup_types": lookup_types,
                 "choices": choices,
-                "description": field.get("help_text"),
+                "description": (
+                    field.get("help_text") or filter.get("description")
+                ),
                 "related_endpoint_id": related_endpoint_id,
                 "types": python_types,
                 "types_str": " | ".join(python_types),

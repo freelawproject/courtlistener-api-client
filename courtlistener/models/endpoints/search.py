@@ -1887,13 +1887,119 @@ class SearchEndpoint(Endpoint):
             None,
         ),
     ]
+    available_only: Annotated[
+        None | bool,
+        Field(
+            None,
+        ),
+    ]
     case_name: Annotated[
         None | str,
         Field(
             None,
         ),
     ]
+    description: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    docket_number: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    nature_of_suit: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    cause: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    filed_before: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
+    filed_after: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
+    entry_date_filed_before: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
+    entry_date_filed_after: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
+    document_number: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    attachment_number: Annotated[
+        None | int,
+        Field(
+            None,
+        ),
+    ]
+    assigned_to: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    referred_to: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    party_name: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    atty_name: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
     judge: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    citation: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    neutral_cite: Annotated[
         None | str,
         Field(
             None,
@@ -1943,38 +2049,6 @@ class SearchEndpoint(Endpoint):
             None,
         ),
     ]
-    filed_before: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    filed_after: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    citation: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    neutral_cite: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    docket_number: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
     cited_gt: Annotated[
         None | int,
         Field(
@@ -1983,100 +2057,6 @@ class SearchEndpoint(Endpoint):
     ]
     cited_lt: Annotated[
         None | int,
-        Field(
-            None,
-        ),
-    ]
-    order_by: Annotated[
-        None | str,
-        Field(
-            None,
-            json_schema_extra={
-                "choices": [
-                    {"value": "score desc", "display_name": "Relevance"},
-                    {
-                        "value": "dateArgued desc",
-                        "display_name": "Newest First",
-                    },
-                    {
-                        "value": "dateArgued asc",
-                        "display_name": "Oldest First",
-                    },
-                ],
-            },
-        ),
-        BeforeValidator(choice_validator),
-    ]
-    available_only: Annotated[
-        None | bool,
-        Field(
-            None,
-        ),
-    ]
-    description: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    nature_of_suit: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    cause: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    entry_date_filed_before: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    entry_date_filed_after: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    document_number: Annotated[
-        None | int,
-        Field(
-            None,
-        ),
-    ]
-    attachment_number: Annotated[
-        None | int,
-        Field(
-            None,
-        ),
-    ]
-    assigned_to: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    referred_to: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    party_name: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    atty_name: Annotated[
-        None | str,
         Field(
             None,
         ),
@@ -2262,6 +2242,63 @@ class SearchEndpoint(Endpoint):
             None,
         ),
         BeforeValidator(relative_date_validator),
+    ]
+    order_by: Annotated[
+        None | str,
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "score desc", "display_name": "Relevance"},
+                    {
+                        "value": "dateFiled desc",
+                        "display_name": "Newest Cases First",
+                    },
+                    {
+                        "value": "dateFiled asc",
+                        "display_name": "Oldest Cases First",
+                    },
+                    {
+                        "value": "citeCount desc",
+                        "display_name": "Most Cited First",
+                    },
+                    {
+                        "value": "citeCount asc",
+                        "display_name": "Least Cited First",
+                    },
+                    {
+                        "value": "entry_date_filed desc",
+                        "display_name": "Newest Documents First",
+                    },
+                    {
+                        "value": "entry_date_filed asc",
+                        "display_name": "Oldest Documents First",
+                    },
+                    {"value": "name_reverse asc", "display_name": "Last Name"},
+                    {
+                        "value": "dob desc,name_reverse asc",
+                        "display_name": "Most Recently Born",
+                    },
+                    {
+                        "value": "dob asc,name_reverse asc",
+                        "display_name": "Least Recently Born",
+                    },
+                    {
+                        "value": "dod desc,name_reverse asc",
+                        "display_name": "Most Recently Deceased",
+                    },
+                    {
+                        "value": "dateArgued desc",
+                        "display_name": "Newest First",
+                    },
+                    {
+                        "value": "dateArgued asc",
+                        "display_name": "Oldest First",
+                    },
+                ],
+            },
+        ),
+        BeforeValidator(choice_validator),
     ]
 
     @model_validator(mode="after")

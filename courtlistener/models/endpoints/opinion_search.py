@@ -1876,7 +1876,39 @@ class OpinionSearchEndpoint(Endpoint):
             None,
         ),
     ]
+    docket_number: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    filed_before: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
+    filed_after: Annotated[
+        None | str | date,
+        Field(
+            None,
+        ),
+        BeforeValidator(relative_date_validator),
+    ]
     judge: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    citation: Annotated[
+        None | str,
+        Field(
+            None,
+        ),
+    ]
+    neutral_cite: Annotated[
         None | str,
         Field(
             None,
@@ -1922,38 +1954,6 @@ class OpinionSearchEndpoint(Endpoint):
     ]
     stat_Unknown: Annotated[
         None | bool,
-        Field(
-            None,
-        ),
-    ]
-    filed_before: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    filed_after: Annotated[
-        None | str | date,
-        Field(
-            None,
-        ),
-        BeforeValidator(relative_date_validator),
-    ]
-    citation: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    neutral_cite: Annotated[
-        None | str,
-        Field(
-            None,
-        ),
-    ]
-    docket_number: Annotated[
-        None | str,
         Field(
             None,
         ),
