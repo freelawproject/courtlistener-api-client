@@ -1,4 +1,4 @@
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from courtlistener import CourtListener
 
@@ -26,5 +26,7 @@ class MCPTool:
             "get_input_schema must be implemented by subclass"
         )
 
-    def __call__(self, arguments: dict, session: dict) -> list[TextContent]:
+    def __call__(
+        self, arguments: dict, session: dict
+    ) -> list[TextContent] | CallToolResult:
         raise NotImplementedError("__call__ must be implemented by subclass")

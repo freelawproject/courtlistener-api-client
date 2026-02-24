@@ -40,18 +40,14 @@ class CourtListener:
 
     def __getattr__(self, name: str) -> Resource[Any]:
         """Dynamically create resource accessors based on registered endpoints."""
-        if name.startswith("_"):
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{name}'"
-            )
+        if not name.startswith("_"):
+            if name in self._resources:
+                return self._resources[name]
 
-        if name in self._resources:
-            return self._resources[name]
-
-        if name in ENDPOINTS:
-            resource: Resource[Any] = Resource(self, ENDPOINTS[name])
-            self._resources[name] = resource
-            return resource
+            if name in ENDPOINTS:
+                resource: Resource[Any] = Resource(self, ENDPOINTS[name])
+                self._resources[name] = resource
+                return resource
 
         raise AttributeError(
             f"'{type(self).__name__}' object has no attribute '{name}'"
