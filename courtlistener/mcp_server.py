@@ -1,6 +1,6 @@
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from courtlistener.mcp_tools import MCP_TOOLS
 
@@ -16,7 +16,9 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+async def call_tool(
+    name: str, arguments: dict
+) -> list[TextContent] | CallToolResult:
     """Handle tool calls."""
     mcp_tool = MCP_TOOLS.get(name)
     if mcp_tool is None:
