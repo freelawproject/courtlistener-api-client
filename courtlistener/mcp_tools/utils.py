@@ -19,7 +19,9 @@ def prepare_choices_str(choices, max_tokens=1000):
         tiktoken.encoding_for_model("gpt-5-mini").encode(choices_str)
     )
     if num_tokens > max_tokens:
-        return ""  # TODO: Show a snippet and direct model to use get_choices tool
+        return (
+            ""  # TODO: Show a snippet and direct model to use get_choices tool
+        )
 
     choices_str = "Valid choices:\n\n" + choices_str
     return choices_str
