@@ -195,6 +195,26 @@ def in_post_validator(
     return value
 
 
+def comma_separated_pre_validator(
+    value: Any, info: ValidationInfo
+) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.split(",")
+    if isinstance(value, list) and all(isinstance(v, str) for v in value):
+        return value
+    raise ValueError(f"Invalid value '{value}' for {info.field_name}")
+
+
+def comma_separated_post_validator(
+    value: str | list[str], info: ValidationInfo
+) -> str:
+    if isinstance(value, list):
+        return ",".join([str(v) for v in value])
+    return value
+
+
 def is_relative_date_string(value: str) -> bool:
     units = r"(d|days?|m|months?|y|years?)"
 
