@@ -28,6 +28,7 @@ class TagsEndpoint(Endpoint):
         None | list[str],
         Field(
             None,
+            description="Filter field returned in the response.",
             json_schema_extra={
                 "choices": [
                     {"value": "id", "display_name": "ID"},

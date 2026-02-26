@@ -26,6 +26,7 @@ class IncrementEventEndpoint(Endpoint):
         None | list[str],
         Field(
             None,
+            description="Filter field returned in the response.",
             json_schema_extra={
                 "choices": [{"value": "label", "display_name": "Label"}],
             },

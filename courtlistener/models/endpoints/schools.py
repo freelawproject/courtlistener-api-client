@@ -30,6 +30,7 @@ class SchoolsEndpoint(Endpoint):
         None | list[str],
         Field(
             None,
+            description="Filter field returned in the response.",
             json_schema_extra={
                 "choices": [
                     {"value": "resource_uri", "display_name": "Resource uri"},
