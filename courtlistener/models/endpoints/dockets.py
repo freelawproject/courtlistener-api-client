@@ -12,6 +12,8 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter1, Filter6, Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -27,6 +29,177 @@ class DocketsEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "dockets"
     endpoint_name: ClassVar[str] = "Dockets"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            json_schema_extra={
+                "choices": [
+                    {"value": "resource_uri", "display_name": "Resource uri"},
+                    {"value": "id", "display_name": "Id"},
+                    {"value": "court", "display_name": "Court"},
+                    {"value": "court_id", "display_name": "Court id"},
+                    {
+                        "value": "original_court_info",
+                        "display_name": "Original court info",
+                    },
+                    {"value": "idb_data", "display_name": "Idb data"},
+                    {"value": "clusters", "display_name": "Clusters"},
+                    {"value": "audio_files", "display_name": "Audio files"},
+                    {"value": "assigned_to", "display_name": "Assigned to"},
+                    {"value": "referred_to", "display_name": "Referred to"},
+                    {
+                        "value": "bankruptcy_information",
+                        "display_name": "Bankruptcy information",
+                    },
+                    {"value": "absolute_url", "display_name": "Absolute url"},
+                    {"value": "date_created", "display_name": "Date created"},
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date modified",
+                    },
+                    {"value": "source", "display_name": "Source"},
+                    {
+                        "value": "appeal_from_str",
+                        "display_name": "Appeal from str",
+                    },
+                    {
+                        "value": "assigned_to_str",
+                        "display_name": "Assigned to str",
+                    },
+                    {
+                        "value": "referred_to_str",
+                        "display_name": "Referred to str",
+                    },
+                    {"value": "panel_str", "display_name": "Panel str"},
+                    {
+                        "value": "date_last_index",
+                        "display_name": "Date last index",
+                    },
+                    {
+                        "value": "date_cert_granted",
+                        "display_name": "Date cert granted",
+                    },
+                    {
+                        "value": "date_cert_denied",
+                        "display_name": "Date cert denied",
+                    },
+                    {"value": "date_argued", "display_name": "Date argued"},
+                    {
+                        "value": "date_reargued",
+                        "display_name": "Date reargued",
+                    },
+                    {
+                        "value": "date_reargument_denied",
+                        "display_name": "Date reargument denied",
+                    },
+                    {"value": "date_filed", "display_name": "Date filed"},
+                    {
+                        "value": "date_terminated",
+                        "display_name": "Date terminated",
+                    },
+                    {
+                        "value": "date_last_filing",
+                        "display_name": "Date last filing",
+                    },
+                    {
+                        "value": "case_name_short",
+                        "display_name": "Case name short",
+                    },
+                    {"value": "case_name", "display_name": "Case name"},
+                    {
+                        "value": "case_name_full",
+                        "display_name": "Case name full",
+                    },
+                    {"value": "slug", "display_name": "Slug"},
+                    {
+                        "value": "docket_number",
+                        "display_name": "Docket number",
+                    },
+                    {
+                        "value": "docket_number_core",
+                        "display_name": "Docket number core",
+                    },
+                    {
+                        "value": "docket_number_raw",
+                        "display_name": "Docket number raw",
+                    },
+                    {
+                        "value": "federal_dn_office_code",
+                        "display_name": "Federal dn office code",
+                    },
+                    {
+                        "value": "federal_dn_case_type",
+                        "display_name": "Federal dn case type",
+                    },
+                    {
+                        "value": "federal_dn_judge_initials_assigned",
+                        "display_name": "Federal dn judge initials assigned",
+                    },
+                    {
+                        "value": "federal_dn_judge_initials_referred",
+                        "display_name": "Federal dn judge initials referred",
+                    },
+                    {
+                        "value": "federal_defendant_number",
+                        "display_name": "Federal defendant number",
+                    },
+                    {
+                        "value": "pacer_case_id",
+                        "display_name": "Pacer case id",
+                    },
+                    {"value": "cause", "display_name": "Cause"},
+                    {
+                        "value": "nature_of_suit",
+                        "display_name": "Nature of suit",
+                    },
+                    {"value": "jury_demand", "display_name": "Jury demand"},
+                    {
+                        "value": "jurisdiction_type",
+                        "display_name": "Jurisdiction type",
+                    },
+                    {
+                        "value": "appellate_fee_status",
+                        "display_name": "Appellate fee status",
+                    },
+                    {
+                        "value": "appellate_case_type_information",
+                        "display_name": "Appellate case type information",
+                    },
+                    {"value": "mdl_status", "display_name": "Mdl status"},
+                    {"value": "filepath_ia", "display_name": "Filepath ia"},
+                    {
+                        "value": "filepath_ia_json",
+                        "display_name": "Filepath ia json",
+                    },
+                    {
+                        "value": "ia_upload_failure_count",
+                        "display_name": "Ia upload failure count",
+                    },
+                    {
+                        "value": "ia_needs_upload",
+                        "display_name": "Ia needs upload",
+                    },
+                    {
+                        "value": "ia_date_first_change",
+                        "display_name": "Ia date first change",
+                    },
+                    {"value": "date_blocked", "display_name": "Date blocked"},
+                    {"value": "blocked", "display_name": "Blocked"},
+                    {"value": "appeal_from", "display_name": "Appeal from"},
+                    {
+                        "value": "parent_docket",
+                        "display_name": "Parent docket",
+                    },
+                    {"value": "tags", "display_name": "Tags"},
+                    {"value": "panel", "display_name": "Panel"},
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     id: Annotated[
         None | int,
         Field(
