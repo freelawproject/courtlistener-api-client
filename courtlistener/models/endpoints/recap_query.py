@@ -12,8 +12,11 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter2, Filter8
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
+    multiple_choice_validator,
     related_validator,
 )
 
@@ -25,6 +28,30 @@ class RecapQueryEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "recap-query"
     endpoint_name: ClassVar[str] = "Recap Query"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            description="Filter which fields are returned.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "pacer_doc_id", "display_name": "Pacer doc id"},
+                    {
+                        "value": "filepath_local",
+                        "display_name": "Filepath local",
+                    },
+                    {
+                        "value": "acms_document_guid",
+                        "display_name": "Acms document guid",
+                    },
+                    {"value": "id", "display_name": "ID"},
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     id: Annotated[
         None | int,
         Field(

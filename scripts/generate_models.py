@@ -613,6 +613,11 @@ def get_types_and_validators(
         if choice_key_type is not None:
             python_types = [f"list[{choice_key_type}]", choice_key_type]
             validators.append("BeforeValidator(multiple_choice_validator)")
+    elif filter_type == "MultipleChoiceStringFilter":
+        python_types = ["list[str]"]
+        validators.append("AfterValidator(comma_separated_post_validator)")
+        validators.append("BeforeValidator(multiple_choice_validator)")
+        validators.append("BeforeValidator(comma_separated_pre_validator)")
     elif filter_type == "IsoDateTimeFilter":
         python_types = ["datetime"]
     elif filter_type == "DateFilter":
@@ -656,6 +661,21 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
         if order_by:
             filters["order_by"] = order_by
         endpoint_fields = {}
+
+        if fields:
+            field_filter_choices = [
+                {"value": k, "display_name": v["label"]}
+                for k, v in fields.items()
+            ]
+            filters = {
+                "fields": {
+                    "type": "MultipleChoiceStringFilter",
+                    "choices": field_filter_choices,
+                    "description": "Filter which fields are returned.",
+                },
+                **filters,
+            }
+
         for field_name, filter in filters.items():
             # Get field data
             field = fields.get(field_name, {})

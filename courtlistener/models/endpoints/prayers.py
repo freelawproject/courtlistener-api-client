@@ -10,6 +10,8 @@ from pydantic import AfterValidator, BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -24,6 +26,27 @@ class PrayersEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "prayers"
     endpoint_name: ClassVar[str] = "Prayers"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            description="Filter which fields are returned.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "ID"},
+                    {"value": "date_created", "display_name": "Date created"},
+                    {"value": "status", "display_name": "Status"},
+                    {
+                        "value": "recap_document",
+                        "display_name": "Recap document",
+                    },
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     user: Annotated[
         None | int,
         Field(

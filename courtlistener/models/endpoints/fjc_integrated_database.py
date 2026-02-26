@@ -12,6 +12,8 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter4, Filter7, Filter8
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -26,6 +28,119 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "fjc-integrated-database"
     endpoint_name: ClassVar[str] = "Fjc Integrated Database"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            description="Filter which fields are returned.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "resource_uri", "display_name": "Resource uri"},
+                    {"value": "date_created", "display_name": "Date created"},
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date modified",
+                    },
+                    {
+                        "value": "dataset_source",
+                        "display_name": "Dataset source",
+                    },
+                    {"value": "office", "display_name": "Office"},
+                    {
+                        "value": "docket_number",
+                        "display_name": "Docket number",
+                    },
+                    {"value": "origin", "display_name": "Origin"},
+                    {"value": "date_filed", "display_name": "Date filed"},
+                    {"value": "jurisdiction", "display_name": "Jurisdiction"},
+                    {
+                        "value": "nature_of_suit",
+                        "display_name": "Nature of suit",
+                    },
+                    {"value": "title", "display_name": "Title"},
+                    {"value": "section", "display_name": "Section"},
+                    {"value": "subsection", "display_name": "Subsection"},
+                    {
+                        "value": "diversity_of_residence",
+                        "display_name": "Diversity of residence",
+                    },
+                    {"value": "class_action", "display_name": "Class action"},
+                    {
+                        "value": "monetary_demand",
+                        "display_name": "Monetary demand",
+                    },
+                    {
+                        "value": "county_of_residence",
+                        "display_name": "County of residence",
+                    },
+                    {
+                        "value": "arbitration_at_filing",
+                        "display_name": "Arbitration at filing",
+                    },
+                    {
+                        "value": "arbitration_at_termination",
+                        "display_name": "Arbitration at termination",
+                    },
+                    {
+                        "value": "multidistrict_litigation_docket_number",
+                        "display_name": "Multidistrict litigation docket number",
+                    },
+                    {"value": "plaintiff", "display_name": "Plaintiff"},
+                    {"value": "defendant", "display_name": "Defendant"},
+                    {
+                        "value": "date_transfer",
+                        "display_name": "Date transfer",
+                    },
+                    {
+                        "value": "transfer_office",
+                        "display_name": "Transfer office",
+                    },
+                    {
+                        "value": "transfer_docket_number",
+                        "display_name": "Transfer docket number",
+                    },
+                    {
+                        "value": "transfer_origin",
+                        "display_name": "Transfer origin",
+                    },
+                    {
+                        "value": "date_terminated",
+                        "display_name": "Date terminated",
+                    },
+                    {
+                        "value": "termination_class_action_status",
+                        "display_name": "Termination class action status",
+                    },
+                    {
+                        "value": "procedural_progress",
+                        "display_name": "Procedural progress",
+                    },
+                    {"value": "disposition", "display_name": "Disposition"},
+                    {
+                        "value": "nature_of_judgement",
+                        "display_name": "Nature of judgement",
+                    },
+                    {
+                        "value": "amount_received",
+                        "display_name": "Amount received",
+                    },
+                    {"value": "judgment", "display_name": "Judgment"},
+                    {"value": "pro_se", "display_name": "Pro se"},
+                    {"value": "year_of_tape", "display_name": "Year of tape"},
+                    {
+                        "value": "nature_of_offense",
+                        "display_name": "Nature of offense",
+                    },
+                    {"value": "version", "display_name": "Version"},
+                    {"value": "circuit", "display_name": "Circuit"},
+                    {"value": "district", "display_name": "District"},
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     dataset_source: Annotated[
         None | int | list[int],
         Field(

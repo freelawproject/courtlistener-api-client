@@ -10,6 +10,8 @@ from pydantic import AfterValidator, BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -24,6 +26,81 @@ class RecapFetchEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "recap-fetch"
     endpoint_name: ClassVar[str] = "Recap Fetch"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            description="Filter which fields are returned.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "id", "display_name": "ID"},
+                    {"value": "court", "display_name": "Court"},
+                    {"value": "docket", "display_name": "Docket"},
+                    {
+                        "value": "recap_document",
+                        "display_name": "Recap document",
+                    },
+                    {
+                        "value": "pacer_username",
+                        "display_name": "Pacer username",
+                    },
+                    {
+                        "value": "pacer_password",
+                        "display_name": "Pacer password",
+                    },
+                    {"value": "client_code", "display_name": "Client code"},
+                    {"value": "date_created", "display_name": "Date created"},
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date modified",
+                    },
+                    {
+                        "value": "date_completed",
+                        "display_name": "Date completed",
+                    },
+                    {"value": "status", "display_name": "Status"},
+                    {"value": "request_type", "display_name": "Request type"},
+                    {"value": "message", "display_name": "Message"},
+                    {
+                        "value": "pacer_case_id",
+                        "display_name": "Pacer case id",
+                    },
+                    {
+                        "value": "docket_number",
+                        "display_name": "Docket number",
+                    },
+                    {
+                        "value": "de_date_start",
+                        "display_name": "De date start",
+                    },
+                    {"value": "de_date_end", "display_name": "De date end"},
+                    {
+                        "value": "de_number_start",
+                        "display_name": "De number start",
+                    },
+                    {
+                        "value": "de_number_end",
+                        "display_name": "De number end",
+                    },
+                    {
+                        "value": "show_parties_and_counsel",
+                        "display_name": "Show parties and counsel",
+                    },
+                    {
+                        "value": "show_terminated_parties",
+                        "display_name": "Show terminated parties",
+                    },
+                    {
+                        "value": "show_list_of_member_cases",
+                        "display_name": "Show list of member cases",
+                    },
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     status: Annotated[
         None | int | list[int],
         Field(

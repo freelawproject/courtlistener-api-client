@@ -73,6 +73,18 @@ class TestDocketsList:
             filed = date.fromisoformat(docket["date_filed"])
             assert date(2023, 1, 1) <= filed <= date(2023, 12, 31)
 
+    def test_list_with_fields_filter(self, client):
+        """Date filter with both gte and lte."""
+        results = client.dockets.list(fields="id,court")
+        assert len(results.results) > 0
+        for docket in results.results:
+            assert all(k in ["id", "court"] for k in docket)
+
+        results = client.dockets.list(fields=["id", "court"])
+        assert len(results.results) > 0
+        for docket in results.results:
+            assert all(k in ["id", "court"] for k in docket)
+
 
 @pytest.mark.integration
 class TestDocketsGet:

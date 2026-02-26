@@ -12,8 +12,11 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.filters import Filter2, Filter8
 from courtlistener.utils import (
     choice_validator,
+    comma_separated_post_validator,
+    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
+    multiple_choice_validator,
     related_validator,
 )
 
@@ -25,6 +28,73 @@ class RecapDocumentsEndpoint(Endpoint):
     endpoint_id: ClassVar[str] = "recap-documents"
     endpoint_name: ClassVar[str] = "Recap Documents"
 
+    fields: Annotated[
+        None | list[str],
+        Field(
+            None,
+            description="Filter which fields are returned.",
+            json_schema_extra={
+                "choices": [
+                    {"value": "resource_uri", "display_name": "Resource uri"},
+                    {"value": "id", "display_name": "Id"},
+                    {"value": "tags", "display_name": "Tags"},
+                    {"value": "absolute_url", "display_name": "Absolute url"},
+                    {"value": "date_created", "display_name": "Date created"},
+                    {
+                        "value": "date_modified",
+                        "display_name": "Date modified",
+                    },
+                    {"value": "sha1", "display_name": "Sha1"},
+                    {"value": "page_count", "display_name": "Page count"},
+                    {"value": "file_size", "display_name": "File size"},
+                    {
+                        "value": "filepath_local",
+                        "display_name": "Filepath local",
+                    },
+                    {"value": "filepath_ia", "display_name": "Filepath ia"},
+                    {
+                        "value": "ia_upload_failure_count",
+                        "display_name": "Ia upload failure count",
+                    },
+                    {"value": "thumbnail", "display_name": "Thumbnail"},
+                    {
+                        "value": "thumbnail_status",
+                        "display_name": "Thumbnail status",
+                    },
+                    {"value": "plain_text", "display_name": "Plain text"},
+                    {"value": "ocr_status", "display_name": "Ocr status"},
+                    {"value": "date_upload", "display_name": "Date upload"},
+                    {
+                        "value": "document_number",
+                        "display_name": "Document number",
+                    },
+                    {
+                        "value": "attachment_number",
+                        "display_name": "Attachment number",
+                    },
+                    {"value": "pacer_doc_id", "display_name": "Pacer doc id"},
+                    {"value": "is_available", "display_name": "Is available"},
+                    {
+                        "value": "is_free_on_pacer",
+                        "display_name": "Is free on pacer",
+                    },
+                    {"value": "is_sealed", "display_name": "Is sealed"},
+                    {
+                        "value": "document_type",
+                        "display_name": "Document type",
+                    },
+                    {"value": "description", "display_name": "Description"},
+                    {
+                        "value": "acms_document_guid",
+                        "display_name": "Acms document guid",
+                    },
+                ],
+            },
+        ),
+        AfterValidator(comma_separated_post_validator),
+        BeforeValidator(multiple_choice_validator),
+        BeforeValidator(comma_separated_pre_validator),
+    ]
     id: Annotated[
         None | int,
         Field(
