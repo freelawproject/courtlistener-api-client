@@ -656,6 +656,21 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
         if order_by:
             filters["order_by"] = order_by
         endpoint_fields = {}
+
+        if fields:
+            field_filter_choices = [
+                {"value": k, "display_name": v["label"]}
+                for k, v in fields.items()
+            ]
+            filters = {
+                "fields": {
+                    "type": "MultipleChoiceStringFilter",
+                    "choices": field_filter_choices,
+                    "help_text": "Filter field returned in the response.",
+                },
+                **filters,
+            }
+
         for field_name, filter in filters.items():
             # Get field data
             field = fields.get(field_name, {})
