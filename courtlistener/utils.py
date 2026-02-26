@@ -86,6 +86,9 @@ def related_validator(
             break
     if related_model is None:
         raise ValueError(f"Related model for {info.field_name} not found")
+    if not isinstance(value, dict):
+        raise ValueError(f"Invalid value '{value}' for {info.field_name}")
+    value = {k: v for k, v in value.items() if v is not None}
     return related_model.model_validate(value).model_dump(by_alias=True)
 
 
@@ -144,7 +147,11 @@ def multiple_choice_validator(
     return valid_values[0] if len(valid_values) == 1 else valid_values
 
 
-def in_pre_validator(value: Any, info: ValidationInfo) -> list[int | str]:
+def in_pre_validator(
+    value: Any, info: ValidationInfo
+) -> list[int | str] | None:
+    if value is None:
+        return None
     if isinstance(value, dict):
         value = value.get("in")
         if isinstance(value, str):
@@ -162,8 +169,13 @@ def in_pre_validator(value: Any, info: ValidationInfo) -> list[int | str]:
 
 
 def try_coerce_ints(
-    value: list[int | str], info: ValidationInfo
-) -> list[int | str]:
+    value: list[int | str] | int | str, info: ValidationInfo
+) -> list[int | str] | int | str:
+    if isinstance(value, int | str):
+        try:
+            return int(value)
+        except ValueError:
+            return value
     valid_values = []
     for v in value:
         if isinstance(v, str):
