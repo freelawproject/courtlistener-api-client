@@ -671,7 +671,7 @@ def get_endpoint_data(cache_path: str | Path | None = None) -> dict[str, Any]:
                 "fields": {
                     "type": "MultipleChoiceStringFilter",
                     "choices": field_filter_choices,
-                    "description": "Filter field returned in the response.",
+                    "description": "Filter which fields are returned.",
                 },
                 **filters,
             }

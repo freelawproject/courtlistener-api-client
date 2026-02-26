@@ -30,7 +30,7 @@ class RecapFetchEndpoint(Endpoint):
         None | list[str],
         Field(
             None,
-            description="Filter field returned in the response.",
+            description="Filter which fields are returned.",
             json_schema_extra={
                 "choices": [
                     {"value": "id", "display_name": "ID"},
