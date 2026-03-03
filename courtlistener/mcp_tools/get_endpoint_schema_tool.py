@@ -47,7 +47,9 @@ class GetEndpointSchemaTool(MCPTool):
                 for filter_name, filter in properties.items():
                     if "const" not in filter:
                         updated_properties[filter_name] = prepare_filter(
-                            filter
+                            filter,
+                            endpoint_id=endpoint_id,
+                            field_name=filter_name,
                         )
                 schema = {
                     "type": "object",

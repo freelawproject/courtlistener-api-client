@@ -46,7 +46,11 @@ class SearchTool(MCPTool):
                     + "\n\n"
                     + f"Valid when type in: {filter.get('search_types', [])}"
                 ).strip()
-            updated_properties[filter_name] = prepare_filter(filter)
+            updated_properties[filter_name] = prepare_filter(
+                filter,
+                endpoint_id="search",
+                field_name=filter_name,
+            )
         return {
             "type": "object",
             "properties": updated_properties,
