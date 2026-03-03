@@ -5,7 +5,8 @@
 ### 0.0.4 - 2026-02-24
 
 - Add `get_endpoint_schema` and `call_endpoint` tools to MCP server.
-- Added `fields` filters to non-search endpoints and added client-side fields filtering to the `search` tool.
+- Add `fields` filters to non-search endpoints and add client-side fields filtering to the `search` tool.
+- Add `get_choices` tool for long choice lists.
 
 ## Past
 
