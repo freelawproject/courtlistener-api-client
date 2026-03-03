@@ -3,6 +3,18 @@ import json
 import tiktoken
 
 
+def prepare_query_id(response, session: dict) -> int:
+    if "queries" not in session:
+        session["queries"] = {}
+    queries = session["queries"]
+    if len(queries) == 0:
+        query_id = 1
+    else:
+        query_id = max(queries.keys()) + 1
+    queries[query_id] = response.current_page.model_dump()
+    return query_id
+
+
 def prepare_choices_str(
     choices,
     endpoint_id: str = "",
