@@ -34,9 +34,7 @@ class CallEndpointTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: dict
-    ) -> list[TextContent] | CallToolResult:
+    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         """Call the call_endpoint tool."""
         endpoint_id = arguments.get("endpoint_id")
         query = arguments.get("query") or {}
@@ -45,12 +43,14 @@ class CallEndpointTool(MCPTool):
                 with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
-                    return [
-                        TextContent(
-                            type="text",
-                            text=json.dumps(response.results, indent=2),
-                        )
-                    ]
+                    return CallToolResult(
+                        content=[
+                            TextContent(
+                                type="text",
+                                text=json.dumps(response.results, indent=2),
+                            )
+                        ]
+                    )
         return CallToolResult(
             content=[
                 TextContent(
