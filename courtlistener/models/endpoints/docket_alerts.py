@@ -24,7 +24,7 @@ class DocketAlertsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Docket Alerts"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

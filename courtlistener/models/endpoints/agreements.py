@@ -27,7 +27,7 @@ class AgreementsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Agreements"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

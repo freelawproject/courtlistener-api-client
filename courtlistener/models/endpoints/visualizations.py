@@ -23,7 +23,7 @@ class VisualizationsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Visualizations"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

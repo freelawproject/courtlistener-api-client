@@ -23,7 +23,7 @@ class VisualizationsJsonEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Visualizations/Json"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

@@ -23,7 +23,7 @@ class BankruptcyInformationEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Bankruptcy Information"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

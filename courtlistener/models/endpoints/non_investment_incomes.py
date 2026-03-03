@@ -27,7 +27,7 @@ class NonInvestmentIncomesEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Non Investment Incomes"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

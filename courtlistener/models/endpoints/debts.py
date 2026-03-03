@@ -27,7 +27,7 @@ class DebtsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Debts"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

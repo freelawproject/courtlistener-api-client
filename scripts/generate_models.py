@@ -614,7 +614,7 @@ def get_types_and_validators(
             python_types = [f"list[{choice_key_type}]", choice_key_type]
             validators.append("BeforeValidator(multiple_choice_validator)")
     elif filter_type == "MultipleChoiceStringFilter":
-        python_types = ["list[str]"]
+        python_types = ["list[str]", "str"]
         validators.append("AfterValidator(comma_separated_post_validator)")
         validators.append("BeforeValidator(multiple_choice_validator)")
         validators.append("BeforeValidator(comma_separated_pre_validator)")
@@ -625,7 +625,7 @@ def get_types_and_validators(
     elif filter_type == "NumberFilter":
         python_types = ["int"]
     elif filter_type == "RelativeDateFilter":
-        python_types = ["str | date"]
+        python_types = ["str", "date"]
         validators.append("BeforeValidator(relative_date_validator)")
 
     if "in" in lookup_types:

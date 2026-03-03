@@ -3,6 +3,7 @@ import json
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
+from courtlistener.mcp_tools.utils import prepare_count_str, prepare_query_id
 from courtlistener.models import ENDPOINTS
 
 
@@ -43,13 +44,23 @@ class CallEndpointTool(MCPTool):
                 with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
+
+                    query_id = prepare_query_id(response, session)
+                    outputs = [f"Query ID: {query_id}"]
+
+                    count_str = prepare_count_str(
+                        response.current_page.count, query_id
+                    )
+                    outputs.append(count_str)
+
+                    results_str = json.dumps(response.results, indent=2)
+                    outputs.append(results_str)
+
+                    outputs_str = "\n\n".join(
+                        [x for x in outputs if x]
+                    ).strip()
                     return CallToolResult(
-                        content=[
-                            TextContent(
-                                type="text",
-                                text=json.dumps(response.results, indent=2),
-                            )
-                        ]
+                        content=[TextContent(type="text", text=outputs_str)]
                     )
         return CallToolResult(
             content=[

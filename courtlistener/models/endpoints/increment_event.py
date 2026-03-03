@@ -23,7 +23,7 @@ class IncrementEventEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Increment Event"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",

@@ -3,6 +3,18 @@ import json
 import tiktoken
 
 
+def prepare_query_id(response, session: dict) -> int:
+    if "queries" not in session:
+        session["queries"] = {}
+    queries = session["queries"]
+    if len(queries) == 0:
+        query_id = 1
+    else:
+        query_id = max(queries.keys()) + 1
+    queries[query_id] = response.current_page.model_dump()
+    return query_id
+
+
 def prepare_choices_str(
     choices,
     endpoint_id: str = "",
@@ -45,3 +57,16 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
         if key in filter:
             del filter[key]
     return filter
+
+
+def prepare_count_str(count: int | str | None, query_id: int) -> str:
+    if isinstance(count, int):
+        count_str = f"Total count: {count}"
+    elif isinstance(count, str):
+        count_str = (
+            f"To get the count use the `get_counts` tool with "
+            f'query_id="{query_id}".'
+        )
+    else:
+        count_str = ""
+    return count_str
