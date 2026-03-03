@@ -53,9 +53,7 @@ class SearchTool(MCPTool):
             "required": ["type"],
         }
 
-    def __call__(
-        self, arguments: dict, session: dict
-    ) -> list[TextContent] | CallToolResult:
+    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         """Call the search tool."""
         with self.get_client() as client:
             fields = arguments.pop("fields", None)
@@ -79,4 +77,6 @@ class SearchTool(MCPTool):
                     f"Available fields: {', '.join(results[0].keys())}\n\n"
                 ) + text
 
-            return [TextContent(type="text", text=text)]
+            return CallToolResult(
+                content=[TextContent(type="text", text=text)]
+            )

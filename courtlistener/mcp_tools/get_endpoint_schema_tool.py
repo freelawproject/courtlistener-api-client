@@ -37,9 +37,7 @@ class GetEndpointSchemaTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: dict
-    ) -> list[TextContent] | CallToolResult:
+    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         """Call the get_endpoint_schema tool."""
         endpoint_id = arguments.get("endpoint_id")
         for endpoint in ENDPOINTS.values():
@@ -56,7 +54,9 @@ class GetEndpointSchemaTool(MCPTool):
                     "properties": updated_properties,
                 }
                 schema_str = json.dumps(schema, indent=2)
-                return [TextContent(type="text", text=schema_str)]
+                return CallToolResult(
+                    content=[TextContent(type="text", text=schema_str)]
+                )
         return CallToolResult(
             content=[
                 TextContent(
