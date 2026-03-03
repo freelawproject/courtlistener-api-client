@@ -57,3 +57,16 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
         if key in filter:
             del filter[key]
     return filter
+
+
+def prepare_count_str(count: int | str | None, query_id: int) -> str:
+    if isinstance(count, int):
+        count_str = f"Total count: {count}"
+    elif isinstance(count, str):
+        count_str = (
+            f"To get the count use the `get_counts` tool with "
+            f'query_id="{query_id}".'
+        )
+    else:
+        count_str = ""
+    return count_str
