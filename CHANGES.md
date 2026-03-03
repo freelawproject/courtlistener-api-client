@@ -2,12 +2,14 @@
 
 ## Current
 
-### 0.0.4 - 2026-02-24
+### 0.0.4 - 2026-03-03
 
 - Add `get_endpoint_schema` and `call_endpoint` tools to MCP server.
 - Add `fields` filters to non-search endpoints and add client-side fields filtering to the `search` tool.
 - Add `get_choices` tool for long choice lists.
 - Add `get_counts` tool for retrieving lazy counts from a previous query.
+- Support Python 3.10+
+- Fix setuptools package discovery.
 
 ## Past
 
