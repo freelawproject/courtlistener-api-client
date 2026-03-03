@@ -1,0 +1,92 @@
+name: PyPI Namespace Monitor
+
+on:
+  schedule:
+    # Run nightly at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual runs
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Checkout results branch
+        uses: actions/checkout@v4
+        with:
+          ref: pypi-scan-results
+          path: scan-data
+        continue-on-error: true  # Branch may not exist on first run
+
+      - name: Initialize results branch if needed
+        run: |
+          if [ ! -d "scan-data/.git" ]; then
+            mkdir -p scan-data
+            cd scan-data
+            git init
+            git checkout -b pypi-scan-results
+            echo "# PyPI Scan Results" > README.md
+            echo "This branch stores nightly PyPI namespace scan results." >> README.md
+            echo "Managed automatically by the PyPI Namespace Monitor workflow." >> README.md
+            git add README.md
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Initialize scan results branch"
+          fi
+
+      - name: Restore previous results
+        run: |
+          mkdir -p results
+          if [ -f "scan-data/pypi_packages.json" ]; then
+            cp scan-data/pypi_packages.json results/pypi_packages.json
+            echo "Restored previous scan results"
+          else
+            echo "No previous results found (first run)"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+
+
+      - name: Run PyPI scan
+        id: scan
+        env:
+          SCAN_DATE: ${{ github.event.schedule && github.event.schedule || github.event.head_commit.timestamp || '' }}
+        run: |
+          export SCAN_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          python scan_pypi.py
+        continue-on-error: true
+
+      - name: Store results in branch
+        run: |
+          cp results/pypi_packages.json scan-data/pypi_packages.json
+          cd scan-data
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pypi_packages.json
+          # Only commit if there are changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Scan results $(date -u +%Y-%m-%d)"
+          fi
+
+      - name: Push results branch
+        run: |
+          cd scan-data
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:pypi-scan-results --force
+
+      - name: Fail if scan detected changes
+        if: steps.scan.outcome == 'failure'
+        run: |
+          echo "🚨 PyPI namespace changes detected! Check the scan output above."
+          exit 1
