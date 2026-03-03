@@ -7,6 +7,7 @@
 - Add `get_endpoint_schema` and `call_endpoint` tools to MCP server.
 - Add `fields` filters to non-search endpoints and add client-side fields filtering to the `search` tool.
 - Add `get_choices` tool for long choice lists.
+- Add `get_counts` tool for retrieving lazy counts from a previous query.
 
 ## Past
 
