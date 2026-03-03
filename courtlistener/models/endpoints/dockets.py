@@ -30,7 +30,7 @@ class DocketsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Dockets"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",
@@ -124,6 +124,10 @@ class DocketsEndpoint(Endpoint):
                     {
                         "value": "docket_number_raw",
                         "display_name": "Docket number raw",
+                    },
+                    {
+                        "value": "docket_number_source",
+                        "display_name": "Docket number source",
                     },
                     {
                         "value": "federal_dn_office_code",

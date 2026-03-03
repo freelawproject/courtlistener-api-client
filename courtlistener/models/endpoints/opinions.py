@@ -27,7 +27,7 @@ class OpinionsEndpoint(Endpoint):
     endpoint_name: ClassVar[str] = "Opinions"
 
     fields: Annotated[
-        None | list[str],
+        None | str | list[str],
         Field(
             None,
             description="Filter which fields are returned.",
