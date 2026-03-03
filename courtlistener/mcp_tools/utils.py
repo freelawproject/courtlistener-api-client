@@ -14,9 +14,7 @@ def prepare_choices_str(
         return ""
 
     choices_str = json.dumps(choices, indent=2)
-    num_tokens = len(
-        tiktoken.get_encoding("cl100k_base").encode(choices_str)
-    )
+    num_tokens = len(tiktoken.get_encoding("cl100k_base").encode(choices_str))
     if num_tokens > max_tokens:
         snippet = ", ".join(
             f"{c['value']} ({c['display_name']})"
