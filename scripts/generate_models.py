@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 from typing import Any
@@ -571,7 +572,23 @@ def get_choices(
         if choice["value"] not in values:
             choices.append(choice)
             values.add(choice["value"])
-    return choices
+
+    # Some choices come in groups, unpack those to a flat list
+    updated_choices = []
+    for choice in choices:
+        display_name = str(choice["display_name"])
+        if display_name.startswith("[") and display_name.endswith("]"):
+            choice_group = ast.literal_eval(display_name)
+            for k, v in choice_group:
+                updated_choices.append(
+                    {
+                        "value": k,
+                        "display_name": str(choice["value"]) + ": " + v,
+                    }
+                )
+        else:
+            updated_choices.append(choice)
+    return updated_choices
 
 
 def get_choice_key_type(choices: list[dict[str, str | int]]) -> str | None:
