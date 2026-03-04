@@ -3,6 +3,7 @@
 ## Upcoming
 
 - Fix generate endpoints script to handle choice groups.
+- Add `get_endpoint_item` tool to MCP server.
 
 ## Current
 
