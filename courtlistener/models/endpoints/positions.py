@@ -156,21 +156,223 @@ class PositionsEndpoint(Endpoint):
             description="If this is a judicial position, this indicates the role the person had. This field may be blank if job_title is complete instead.",
             json_schema_extra={
                 "choices": [
+                    {"value": "jud", "display_name": "Judge: Judge"},
+                    {"value": "jus", "display_name": "Judge: Justice"},
                     {
-                        "value": "Judge",
-                        "display_name": "[('jud', 'Judge'), ('jus', 'Justice'), ('ad-law-jud', 'Administrative Law Judge'), ('act-jud', 'Acting Judge'), ('act-jus', 'Acting Justice'), ('act-pres-jud', 'Acting Presiding Judge'), ('act-c-admin-jus', 'Acting Chief Administrative Justice'), ('ass-jud', 'Associate Judge'), ('ass-jus', 'Associate Justice'), ('ass-c-jud', 'Associate Chief Judge'), ('ass-pres-jud', 'Associate Presiding Judge'), ('asst-pres-jud', 'Assistant Presiding Judge'), ('c-jud', 'Chief Judge'), ('c-jus', 'Chief Justice'), ('c-spec-m', 'Chief Special Master'), ('c-admin-jus', 'Chief Administrative Justice'), ('c-spec-tr-jud', 'Chief Special Trial Judge'), ('pres-jud', 'Presiding Judge'), ('pres-jus', 'Presiding Justice'), ('sup-jud', 'Supervising Judge'), ('ad-pres-jus', 'Administrative Presiding Justice'), ('com', 'Commissioner'), ('com-dep', 'Deputy Commissioner'), ('jud-pt', 'Judge Pro Tem'), ('jus-pt', 'Justice Pro Tem'), ('ref-jud-tr', 'Judge Trial Referee'), ('ref-off', 'Official Referee'), ('ref-state-trial', 'State Trial Referee'), ('ret-act-jus', 'Active Retired Justice'), ('ret-ass-jud', 'Retired Associate Judge'), ('ret-c-jud', 'Retired Chief Judge'), ('ret-jus', 'Retired Justice'), ('ret-senior-jud', 'Senior Judge'), ('mag', 'Magistrate'), ('c-mag', 'Chief Magistrate'), ('pres-mag', 'Presiding Magistrate'), ('mag-pt', 'Magistrate Pro Tem'), ('mag-rc', 'Magistrate (Recalled)'), ('mag-part-time', 'Magistrate (Part-Time)'), ('spec-chair', 'Special Chairman'), ('spec-jud', 'Special Judge'), ('spec-m', 'Special Master'), ('spec-scjcbc', 'Special Superior Court Judge for Complex Business Cases'), ('spec-tr-jud', 'Special Trial Judge'), ('chair', 'Chairman'), ('chan', 'Chancellor'), ('presi-jud', 'President'), ('res-jud', 'Reserve Judge'), ('trial-jud', 'Trial Judge'), ('vice-chan', 'Vice Chancellor'), ('vice-cj', 'Vice Chief Judge')]",
+                        "value": "ad-law-jud",
+                        "display_name": "Judge: Administrative Law Judge",
                     },
                     {
-                        "value": "Attorney General",
-                        "display_name": "[('att-gen', 'Attorney General'), ('att-gen-ass', 'Assistant Attorney General'), ('att-gen-ass-spec', 'Special Assistant Attorney General'), ('sen-counsel', 'Senior Counsel'), ('dep-sol-gen', 'Deputy Solicitor General')]",
+                        "value": "act-jud",
+                        "display_name": "Judge: Acting Judge",
                     },
                     {
-                        "value": "Appointing Authority",
-                        "display_name": "[('pres', 'President of the United States'), ('gov', 'Governor'), ('mayor', 'Mayor')]",
+                        "value": "act-jus",
+                        "display_name": "Judge: Acting Justice",
                     },
                     {
-                        "value": "Clerkships",
-                        "display_name": "[('clerk', 'Clerk'), ('clerk-chief-dep', 'Chief Deputy Clerk'), ('staff-atty', 'Staff Attorney')]",
+                        "value": "act-pres-jud",
+                        "display_name": "Judge: Acting Presiding Judge",
+                    },
+                    {
+                        "value": "act-c-admin-jus",
+                        "display_name": "Judge: Acting Chief Administrative Justice",
+                    },
+                    {
+                        "value": "ass-jud",
+                        "display_name": "Judge: Associate Judge",
+                    },
+                    {
+                        "value": "ass-jus",
+                        "display_name": "Judge: Associate Justice",
+                    },
+                    {
+                        "value": "ass-c-jud",
+                        "display_name": "Judge: Associate Chief Judge",
+                    },
+                    {
+                        "value": "ass-pres-jud",
+                        "display_name": "Judge: Associate Presiding Judge",
+                    },
+                    {
+                        "value": "asst-pres-jud",
+                        "display_name": "Judge: Assistant Presiding Judge",
+                    },
+                    {"value": "c-jud", "display_name": "Judge: Chief Judge"},
+                    {"value": "c-jus", "display_name": "Judge: Chief Justice"},
+                    {
+                        "value": "c-spec-m",
+                        "display_name": "Judge: Chief Special Master",
+                    },
+                    {
+                        "value": "c-admin-jus",
+                        "display_name": "Judge: Chief Administrative Justice",
+                    },
+                    {
+                        "value": "c-spec-tr-jud",
+                        "display_name": "Judge: Chief Special Trial Judge",
+                    },
+                    {
+                        "value": "pres-jud",
+                        "display_name": "Judge: Presiding Judge",
+                    },
+                    {
+                        "value": "pres-jus",
+                        "display_name": "Judge: Presiding Justice",
+                    },
+                    {
+                        "value": "sup-jud",
+                        "display_name": "Judge: Supervising Judge",
+                    },
+                    {
+                        "value": "ad-pres-jus",
+                        "display_name": "Judge: Administrative Presiding Justice",
+                    },
+                    {"value": "com", "display_name": "Judge: Commissioner"},
+                    {
+                        "value": "com-dep",
+                        "display_name": "Judge: Deputy Commissioner",
+                    },
+                    {
+                        "value": "jud-pt",
+                        "display_name": "Judge: Judge Pro Tem",
+                    },
+                    {
+                        "value": "jus-pt",
+                        "display_name": "Judge: Justice Pro Tem",
+                    },
+                    {
+                        "value": "ref-jud-tr",
+                        "display_name": "Judge: Judge Trial Referee",
+                    },
+                    {
+                        "value": "ref-off",
+                        "display_name": "Judge: Official Referee",
+                    },
+                    {
+                        "value": "ref-state-trial",
+                        "display_name": "Judge: State Trial Referee",
+                    },
+                    {
+                        "value": "ret-act-jus",
+                        "display_name": "Judge: Active Retired Justice",
+                    },
+                    {
+                        "value": "ret-ass-jud",
+                        "display_name": "Judge: Retired Associate Judge",
+                    },
+                    {
+                        "value": "ret-c-jud",
+                        "display_name": "Judge: Retired Chief Judge",
+                    },
+                    {
+                        "value": "ret-jus",
+                        "display_name": "Judge: Retired Justice",
+                    },
+                    {
+                        "value": "ret-senior-jud",
+                        "display_name": "Judge: Senior Judge",
+                    },
+                    {"value": "mag", "display_name": "Judge: Magistrate"},
+                    {
+                        "value": "c-mag",
+                        "display_name": "Judge: Chief Magistrate",
+                    },
+                    {
+                        "value": "pres-mag",
+                        "display_name": "Judge: Presiding Magistrate",
+                    },
+                    {
+                        "value": "mag-pt",
+                        "display_name": "Judge: Magistrate Pro Tem",
+                    },
+                    {
+                        "value": "mag-rc",
+                        "display_name": "Judge: Magistrate (Recalled)",
+                    },
+                    {
+                        "value": "mag-part-time",
+                        "display_name": "Judge: Magistrate (Part-Time)",
+                    },
+                    {
+                        "value": "spec-chair",
+                        "display_name": "Judge: Special Chairman",
+                    },
+                    {
+                        "value": "spec-jud",
+                        "display_name": "Judge: Special Judge",
+                    },
+                    {
+                        "value": "spec-m",
+                        "display_name": "Judge: Special Master",
+                    },
+                    {
+                        "value": "spec-scjcbc",
+                        "display_name": "Judge: Special Superior Court Judge for Complex Business Cases",
+                    },
+                    {
+                        "value": "spec-tr-jud",
+                        "display_name": "Judge: Special Trial Judge",
+                    },
+                    {"value": "chair", "display_name": "Judge: Chairman"},
+                    {"value": "chan", "display_name": "Judge: Chancellor"},
+                    {"value": "presi-jud", "display_name": "Judge: President"},
+                    {
+                        "value": "res-jud",
+                        "display_name": "Judge: Reserve Judge",
+                    },
+                    {
+                        "value": "trial-jud",
+                        "display_name": "Judge: Trial Judge",
+                    },
+                    {
+                        "value": "vice-chan",
+                        "display_name": "Judge: Vice Chancellor",
+                    },
+                    {
+                        "value": "vice-cj",
+                        "display_name": "Judge: Vice Chief Judge",
+                    },
+                    {
+                        "value": "att-gen",
+                        "display_name": "Attorney General: Attorney General",
+                    },
+                    {
+                        "value": "att-gen-ass",
+                        "display_name": "Attorney General: Assistant Attorney General",
+                    },
+                    {
+                        "value": "att-gen-ass-spec",
+                        "display_name": "Attorney General: Special Assistant Attorney General",
+                    },
+                    {
+                        "value": "sen-counsel",
+                        "display_name": "Attorney General: Senior Counsel",
+                    },
+                    {
+                        "value": "dep-sol-gen",
+                        "display_name": "Attorney General: Deputy Solicitor General",
+                    },
+                    {
+                        "value": "pres",
+                        "display_name": "Appointing Authority: President of the United States",
+                    },
+                    {
+                        "value": "gov",
+                        "display_name": "Appointing Authority: Governor",
+                    },
+                    {
+                        "value": "mayor",
+                        "display_name": "Appointing Authority: Mayor",
+                    },
+                    {"value": "clerk", "display_name": "Clerkships: Clerk"},
+                    {
+                        "value": "clerk-chief-dep",
+                        "display_name": "Clerkships: Chief Deputy Clerk",
+                    },
+                    {
+                        "value": "staff-atty",
+                        "display_name": "Clerkships: Staff Attorney",
                     },
                     {"value": "prof", "display_name": "Professor"},
                     {"value": "adj-prof", "display_name": "Adjunct Professor"},
@@ -376,16 +578,32 @@ class PositionsEndpoint(Endpoint):
             json_schema_extra={
                 "choices": [
                     {
-                        "value": "Election",
-                        "display_name": "[('e_part', 'Partisan Election'), ('e_non_part', 'Non-Partisan Election')]",
+                        "value": "e_part",
+                        "display_name": "Election: Partisan Election",
                     },
                     {
-                        "value": "Appointment",
-                        "display_name": "[('a_pres', 'Appointment (President)'), ('a_gov', 'Appointment (Governor)'), ('a_legis', 'Appointment (Legislature)'), ('a_judge', 'Appointment (Judge)')]",
+                        "value": "e_non_part",
+                        "display_name": "Election: Non-Partisan Election",
                     },
                     {
-                        "value": "Other",
-                        "display_name": "[('ct_trans', 'Transferred (Court Restructuring)')]",
+                        "value": "a_pres",
+                        "display_name": "Appointment: Appointment (President)",
+                    },
+                    {
+                        "value": "a_gov",
+                        "display_name": "Appointment: Appointment (Governor)",
+                    },
+                    {
+                        "value": "a_legis",
+                        "display_name": "Appointment: Appointment (Legislature)",
+                    },
+                    {
+                        "value": "a_judge",
+                        "display_name": "Appointment: Appointment (Judge)",
+                    },
+                    {
+                        "value": "ct_trans",
+                        "display_name": "Other: Transferred (Court Restructuring)",
                     },
                 ],
             },
