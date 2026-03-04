@@ -1,5 +1,9 @@
 # Change Log
 
+## Upcoming
+
+- Fix generate endpoints script to handle choice groups.
+
 ## Current
 
 ### 0.0.4 - 2026-03-03
