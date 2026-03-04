@@ -32,6 +32,7 @@ PYPI_JSON_URL = "https://pypi.org/pypi/{}/json"
 
 # --- Helpers -----------------------------------------------------------------
 
+
 def fetch_all_package_names() -> list[str]:
     """Fetch the full PyPI simple index as JSON."""
     req = urllib.request.Request(
@@ -97,7 +98,9 @@ def compute_changes(previous: dict | None, current: dict) -> dict:
     prev_count = len(previous["packages"]) if previous else None
     curr_count = len(current["packages"])
 
-    prev_names = {p["name"] for p in previous["packages"]} if previous else set()
+    prev_names = (
+        {p["name"] for p in previous["packages"]} if previous else set()
+    )
     curr_names = {p["name"] for p in current["packages"]}
 
     return {
@@ -106,11 +109,14 @@ def compute_changes(previous: dict | None, current: dict) -> dict:
         "curr_count": curr_count,
         "count_changed": prev_count is not None and prev_count != curr_count,
         "new_packages": sorted(curr_names - prev_names) if previous else [],
-        "removed_packages": sorted(prev_names - curr_names) if previous else [],
+        "removed_packages": sorted(prev_names - curr_names)
+        if previous
+        else [],
     }
 
 
 # --- Main --------------------------------------------------------------------
+
 
 def main():
     print("Starting PyPI namespace scan...")
@@ -166,13 +172,17 @@ def main():
         print("\nFirst run — recording baseline.")
         print(f"Package count: {changes['curr_count']}")
         for pkg in packages:
-            safe = " [KNOWN SAFE]" if pkg.get("is_known_safe") else " [UNKNOWN]"
+            safe = (
+                " [KNOWN SAFE]" if pkg.get("is_known_safe") else " [UNKNOWN]"
+            )
             print(f"  - {pkg['name']} v{pkg.get('version', '?')}{safe}")
             if pkg.get("summary"):
                 print(f"    Summary: {pkg['summary']}")
             if pkg.get("author_email"):
                 print(f"    Author: {pkg['author_email']}")
-        print("\nFailing to ensure baseline is stored. Next run will pass if count is stable.")
+        print(
+            "\nFailing to ensure baseline is stored. Next run will pass if count is stable."
+        )
         return 1
 
     print(f"\nPrevious count: {changes['prev_count']}")
@@ -183,10 +193,12 @@ def main():
         return 0
 
     # Count changed — report details and fail
-    print(f"\n🚨 PACKAGE COUNT CHANGED: {changes['prev_count']} → {changes['curr_count']}")
+    print(
+        f"\n🚨 PACKAGE COUNT CHANGED: {changes['prev_count']} → {changes['curr_count']}"
+    )
 
     if changes["new_packages"]:
-        print(f"\nNew packages:")
+        print("\nNew packages:")
         for name in changes["new_packages"]:
             pkg = next((p for p in packages if p["name"] == name), {})
             safe = " [KNOWN SAFE]" if name in KNOWN_SAFE else " ⚠️  UNKNOWN"
@@ -199,7 +211,7 @@ def main():
                 print(f"    URLs: {pkg['project_urls']}")
 
     if changes["removed_packages"]:
-        print(f"\nRemoved packages:")
+        print("\nRemoved packages:")
         for name in changes["removed_packages"]:
             print(f"  - {name}")
 
@@ -212,7 +224,9 @@ def main():
             if changes["new_packages"]:
                 parts.append(f"New: {', '.join(changes['new_packages'])}")
             if changes["removed_packages"]:
-                parts.append(f"Removed: {', '.join(changes['removed_packages'])}")
+                parts.append(
+                    f"Removed: {', '.join(changes['removed_packages'])}"
+                )
             f.write(f"summary={'; '.join(parts)}\n")
 
     return 1
