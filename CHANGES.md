@@ -1,5 +1,18 @@
 # Change Log
 
+## Upcoming
+
+The following changes are not yet released, but are code complete:
+
+Features:
+- A new workflow monitors PyPi for malicious packages. Incredibly we already have one. This will run nightly to see if any others pop up.
+
+Changes:
+-
+
+Fixes:
+-
+
 ## Current
 
 ### 0.0.4 - 2026-03-03
