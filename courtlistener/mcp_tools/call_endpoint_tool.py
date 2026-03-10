@@ -3,7 +3,11 @@ import json
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
-from courtlistener.mcp_tools.utils import prepare_count_str, prepare_query_id
+from courtlistener.mcp_tools.utils import (
+    collect_results,
+    prepare_count_str,
+    prepare_query_id,
+)
 from courtlistener.models import ENDPOINTS
 
 
@@ -31,6 +35,13 @@ class CallEndpointTool(MCPTool):
                     "description": "Should match the endpoint schema returned by the `get_endpoint_schema` tool.",
                     "additionalProperties": True,
                 },
+                "num_results": {
+                    "type": "integer",
+                    "description": "Number of results to return (1-100). Uses autopagination to fetch across pages.",
+                    "default": 20,
+                    "minimum": 1,
+                    "maximum": 100,
+                },
             },
             "required": ["endpoint_id"],
         }
@@ -39,29 +50,38 @@ class CallEndpointTool(MCPTool):
         """Call the call_endpoint tool."""
         endpoint_id = arguments.get("endpoint_id")
         query = arguments.get("query") or {}
+        num_results = min(arguments.pop("num_results", 20), 100)
+
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
-                with self.get_client() as client:
-                    resource = getattr(client, endpoint_name)
-                    response = resource.list(**query)
+                client = self.get_or_create_client(session)
+                resource = getattr(client, endpoint_name)
+                response = resource.list(**query)
 
-                    query_id = prepare_query_id(response, session)
-                    outputs = [f"Query ID: {query_id}"]
+                query_id = prepare_query_id(response, session)
+                outputs = [f"Query ID: {query_id}"]
 
-                    count_str = prepare_count_str(
-                        response.current_page.count, query_id
-                    )
-                    outputs.append(count_str)
+                count_str = prepare_count_str(
+                    response.current_page.count, query_id
+                )
+                outputs.append(count_str)
 
-                    results_str = json.dumps(response.results, indent=2)
-                    outputs.append(results_str)
+                results = collect_results(session, query_id, num_results)
 
-                    outputs_str = "\n\n".join(
-                        [x for x in outputs if x]
-                    ).strip()
-                    return CallToolResult(
-                        content=[TextContent(type="text", text=outputs_str)]
-                    )
+                outputs.append(
+                    f"Returned {len(results)} result(s). "
+                    f"Use `get_more_results` with query_id={query_id} to get more."
+                )
+
+                results_str = json.dumps(results, indent=2)
+                outputs.append(results_str)
+
+                outputs_str = "\n\n".join(
+                    [x for x in outputs if x]
+                ).strip()
+                return CallToolResult(
+                    content=[TextContent(type="text", text=outputs_str)]
+                )
         return CallToolResult(
             content=[
                 TextContent(

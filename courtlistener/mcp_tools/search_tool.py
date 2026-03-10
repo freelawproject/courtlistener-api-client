@@ -4,6 +4,7 @@ from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
 from courtlistener.mcp_tools.utils import (
+    collect_results,
     prepare_count_str,
     prepare_filter,
     prepare_query_id,
@@ -41,6 +42,13 @@ class SearchTool(MCPTool):
                 ],
                 "description": "Filter which fields are returned.",
             },
+            "num_results": {
+                "type": "integer",
+                "description": "Number of results to return (1-100). Uses autopagination to fetch across pages.",
+                "default": 20,
+                "minimum": 1,
+                "maximum": 100,
+            },
         }
         for filter_name, filter in list(search_properties.items()):
             # Add the valid types to the description
@@ -63,43 +71,50 @@ class SearchTool(MCPTool):
 
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         """Call the search tool."""
-        with self.get_client() as client:
-            fields = arguments.pop("fields", None)
-            response = client.search.list(**arguments)
+        client = self.get_or_create_client(session)
+        fields = arguments.pop("fields", None)
+        num_results = min(arguments.pop("num_results", 20), 100)
 
-            # Prepare the search session
-            query_id = prepare_query_id(response, session)
-            outputs = [f"Query ID: {query_id}"]
+        response = client.search.list(**arguments)
 
-            # Prepare the count string
-            count_str = prepare_count_str(
-                response.current_page.count, query_id
+        # Prepare the search session
+        query_id = prepare_query_id(response, session)
+        outputs = [f"Query ID: {query_id}"]
+
+        # Prepare the count string
+        count_str = prepare_count_str(
+            response.current_page.count, query_id
+        )
+        outputs.append(count_str)
+
+        # Collect results using autopagination
+        results = collect_results(session, query_id, num_results)
+
+        missing_fields = False
+        filtered_results = results
+        if fields:
+            if any(k not in result for result in results for k in fields):
+                missing_fields = True
+            filtered_results = [
+                {k: v for k, v in result.items() if k in fields}
+                for result in results
+            ]
+
+        if missing_fields:
+            outputs.append(
+                f"WARNING: Some fields in {fields} not found in results.\n\n"
+                f"Available fields: {', '.join(results[0].keys())}"
             )
-            outputs.append(count_str)
 
-            # Prepare the results string
-            results = response.results
+        outputs.append(
+            f"Returned {len(filtered_results)} result(s). "
+            f"Use `get_more_results` with query_id={query_id} to get more."
+        )
 
-            missing_fields = False
-            filtered_results = results
-            if fields:
-                if any(k not in result for result in results for k in fields):
-                    missing_fields = True
-                filtered_results = [
-                    {k: v for k, v in result.items() if k in fields}
-                    for result in results
-                ]
+        results_str = json.dumps(filtered_results, indent=2)
+        outputs.append(results_str)
 
-            if missing_fields:
-                outputs.append(
-                    f"WARNING: Some fields in {fields} not found in results.\n\n"
-                    f"Available fields: {', '.join(results[0].keys())}"
-                )
-
-            results_str = json.dumps(filtered_results, indent=2)
-            outputs.append(results_str)
-
-            outputs_str = "\n\n".join([x for x in outputs if x]).strip()
-            return CallToolResult(
-                content=[TextContent(type="text", text=outputs_str)]
-            )
+        outputs_str = "\n\n".join([x for x in outputs if x]).strip()
+        return CallToolResult(
+            content=[TextContent(type="text", text=outputs_str)]
+        )

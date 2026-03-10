@@ -9,6 +9,17 @@ class MCPTool:
     def get_client(self) -> CourtListener:
         return CourtListener()
 
+    def get_or_create_client(self, session: dict) -> CourtListener:
+        """Get a persistent client from the session, or create one.
+
+        Use this instead of get_client() when the resulting
+        ResourceIterator needs to survive beyond the tool call
+        (e.g. for pagination or deferred count resolution).
+        """
+        if "client" not in session:
+            session["client"] = CourtListener()
+        return session["client"]
+
     def get_tool(self) -> Tool:
         if self.name is None:
             raise ValueError("name must be set")
