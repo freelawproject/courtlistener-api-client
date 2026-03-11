@@ -1,5 +1,5 @@
 """Tests for the HealthcareLegalTool MCP tool."""
-import json
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -81,10 +81,16 @@ class TestHealthcareLegalToolCall:
         assert "Unknown scenario" in text
         assert "invalid_scenario" in text
 
-    @patch("courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client")
-    def test_hipaa_whistleblower_search(self, mock_get_client, tool, mock_session):
+    @patch(
+        "courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client"
+    )
+    def test_hipaa_whistleblower_search(
+        self, mock_get_client, tool, mock_session
+    ):
         mock_client = MagicMock()
-        mock_get_client.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_get_client.return_value.__enter__ = MagicMock(
+            return_value=mock_client
+        )
         mock_get_client.return_value.__exit__ = MagicMock(return_value=False)
 
         mock_response = make_mock_response(
@@ -101,14 +107,22 @@ class TestHealthcareLegalToolCall:
         assert "42" in text
 
         call_kwargs = mock_client.search.list.call_args.kwargs
-        assert "HIPAA" in call_kwargs["q"] or "whistleblower" in call_kwargs["q"]
+        assert (
+            "HIPAA" in call_kwargs["q"] or "whistleblower" in call_kwargs["q"]
+        )
         assert call_kwargs["type"] == "o"
         assert call_kwargs["stat_Precedential"] == "on"
 
-    @patch("courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client")
-    def test_custom_query_overrides_scenario(self, mock_get_client, tool, mock_session):
+    @patch(
+        "courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client"
+    )
+    def test_custom_query_overrides_scenario(
+        self, mock_get_client, tool, mock_session
+    ):
         mock_client = MagicMock()
-        mock_get_client.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_get_client.return_value.__enter__ = MagicMock(
+            return_value=mock_client
+        )
         mock_get_client.return_value.__exit__ = MagicMock(return_value=False)
 
         mock_response = make_mock_response(results=[], count=0)
@@ -125,10 +139,16 @@ class TestHealthcareLegalToolCall:
         call_kwargs = mock_client.search.list.call_args.kwargs
         assert call_kwargs["q"] == "my specific custom query"
 
-    @patch("courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client")
-    def test_max_results_capped_at_100(self, mock_get_client, tool, mock_session):
+    @patch(
+        "courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client"
+    )
+    def test_max_results_capped_at_100(
+        self, mock_get_client, tool, mock_session
+    ):
         mock_client = MagicMock()
-        mock_get_client.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_get_client.return_value.__enter__ = MagicMock(
+            return_value=mock_client
+        )
         mock_get_client.return_value.__exit__ = MagicMock(return_value=False)
 
         mock_response = make_mock_response(results=[], count=0)
@@ -139,10 +159,16 @@ class TestHealthcareLegalToolCall:
         call_kwargs = mock_client.search.list.call_args.kwargs
         assert call_kwargs["page_size"] == 100
 
-    @patch("courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client")
-    def test_empty_results_returns_helpful_message(self, mock_get_client, tool, mock_session):
+    @patch(
+        "courtlistener.mcp_tools.healthcare_legal_tool.HealthcareLegalTool.get_client"
+    )
+    def test_empty_results_returns_helpful_message(
+        self, mock_get_client, tool, mock_session
+    ):
         mock_client = MagicMock()
-        mock_get_client.return_value.__enter__ = MagicMock(return_value=mock_client)
+        mock_get_client.return_value.__enter__ = MagicMock(
+            return_value=mock_client
+        )
         mock_get_client.return_value.__exit__ = MagicMock(return_value=False)
 
         mock_response = make_mock_response(results=[], count=0)

@@ -8,12 +8,10 @@ Pre-configured search tool for healthcare law practitioners covering:
 
 Contributed by Recipe Tech Solutions, Inc. (https://recipetechsolutions.ai)
 """
-import json
 
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
-
 
 # Pre-built query templates for common healthcare legal scenarios
 HEALTHCARE_QUERIES = {
@@ -121,10 +119,12 @@ class HealthcareLegalTool(MCPTool):
 
         if scenario not in HEALTHCARE_QUERIES:
             return CallToolResult(
-                content=[TextContent(
-                    type="text",
-                    text=f"Unknown scenario: {scenario}. Available: {', '.join(HEALTHCARE_QUERIES.keys())}"
-                )]
+                content=[
+                    TextContent(
+                        type="text",
+                        text=f"Unknown scenario: {scenario}. Available: {', '.join(HEALTHCARE_QUERIES.keys())}",
+                    )
+                ]
             )
 
         template = HEALTHCARE_QUERIES[scenario]
@@ -151,8 +151,12 @@ class HealthcareLegalTool(MCPTool):
             ]
 
             for i, result in enumerate(results, 1):
-                case_name = result.get("caseName", result.get("case_name", "Unknown Case"))
-                date_filed = result.get("dateFiled", result.get("date_filed", "N/A"))
+                case_name = result.get(
+                    "caseName", result.get("case_name", "Unknown Case")
+                )
+                date_filed = result.get(
+                    "dateFiled", result.get("date_filed", "N/A")
+                )
                 court = result.get("court_id", result.get("court", "N/A"))
                 citation = result.get("citation", "")
                 absolute_url = result.get("absolute_url", "")
@@ -163,13 +167,17 @@ class HealthcareLegalTool(MCPTool):
                 if citation:
                     outputs.append(f"     Citation: {citation}")
                 if absolute_url:
-                    outputs.append(f"     URL: https://www.courtlistener.com{absolute_url}")
+                    outputs.append(
+                        f"     URL: https://www.courtlistener.com{absolute_url}"
+                    )
                 if snippet:
                     outputs.append(f"     ...{snippet[:200]}...")
                 outputs.append("")
 
             if not results:
-                outputs.append("No results found. Try a custom_query for more specific searches.")
+                outputs.append(
+                    "No results found. Try a custom_query for more specific searches."
+                )
 
             return CallToolResult(
                 content=[TextContent(type="text", text="\n".join(outputs))]
