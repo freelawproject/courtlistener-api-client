@@ -25,43 +25,36 @@ class GetCountsTool(MCPTool):
         }
 
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
-        with self.get_client() as client:
-            query_id = arguments["query_id"]
-            query = session["queries"].get(query_id)
-            if query is None:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=(
-                                f"Query ID {query_id} not found. "
-                                "The session may have expired, please redo the query first."
-                            ),
-                        )
-                    ],
-                    isError=True,
-                )
-            count_url = query.get("count")
-            if count_url is None:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=(
-                                f"Query ID {query_id} does not have a count URL. "
-                                "The session may have expired, please redo the query first."
-                            ),
-                        )
-                    ],
-                    isError=True,
-                )
-            response = client._request("GET", count_url)
-            count = response.get("count")
-            if count is None:
-                return CallToolResult(
-                    content=[TextContent(type="text", text="No count found")],
-                    isError=True,
-                )
+        query_id = arguments["query_id"]
+        query_entry = session.get("queries", {}).get(query_id)
+        if query_entry is None:
             return CallToolResult(
-                content=[TextContent(type="text", text=str(count))]
+                content=[
+                    TextContent(
+                        type="text",
+                        text=(
+                            f"Query ID {query_id} not found. "
+                            "The session may have expired, please redo the query first."
+                        ),
+                    )
+                ],
+                isError=True,
             )
+
+        iterator = query_entry["iterator"]
+        try:
+            count = iterator.count
+        except (ValueError, Exception) as e:
+            return CallToolResult(
+                content=[
+                    TextContent(
+                        type="text",
+                        text=f"Could not retrieve count: {e}",
+                    )
+                ],
+                isError=True,
+            )
+
+        return CallToolResult(
+            content=[TextContent(type="text", text=str(count))]
+        )

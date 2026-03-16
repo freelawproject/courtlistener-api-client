@@ -1,18 +1,28 @@
 import json
+from itertools import islice
 
 import tiktoken
 
+from courtlistener.resource import ResourceIterator
 
-def prepare_query_id(response, session: dict) -> int:
+
+def prepare_query_id(response: ResourceIterator, session: dict) -> int:
     if "queries" not in session:
         session["queries"] = {}
     queries = session["queries"]
-    if len(queries) == 0:
-        query_id = 1
-    else:
-        query_id = max(queries.keys()) + 1
-    queries[query_id] = response.current_page.model_dump()
+    query_id = max(queries.keys(), default=0) + 1
+    queries[query_id] = {
+        "iterator": response,
+        "iter": iter(response),
+        "returned_count": 0,
+    }
     return query_id
+
+
+def collect_results(query_entry: dict, num_results: int) -> list[dict]:
+    results = list(islice(query_entry["iter"], num_results))
+    query_entry["returned_count"] += len(results)
+    return results
 
 
 def prepare_choices_str(

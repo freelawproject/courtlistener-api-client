@@ -9,6 +9,11 @@ class MCPTool:
     def get_client(self) -> CourtListener:
         return CourtListener()
 
+    def get_shared_client(self, session: dict) -> CourtListener:
+        if "_client" not in session:
+            session["_client"] = CourtListener()
+        return session["_client"]
+
     def get_tool(self) -> Tool:
         if self.name is None:
             raise ValueError("name must be set")
