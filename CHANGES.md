@@ -2,6 +2,8 @@
 
 ## Upcoming
 
+- Add `num_results` parameter to `search` and `call_endpoint` tools for controlling result count.
+- Add `get_more_results` tool for paginating through previous query results.
 - Add `dump` and `load` helpers to `ResourceIterator` with iteration index tracking.
 - Fix generate endpoints script to handle choice groups.
 - Add `get_endpoint_item` tool to MCP server.

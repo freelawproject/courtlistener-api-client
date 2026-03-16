@@ -3,7 +3,14 @@ import json
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
-from courtlistener.mcp_tools.utils import prepare_count_str, prepare_query_id
+from courtlistener.mcp_tools.utils import (
+    DEFAULT_NUM_RESULTS,
+    MAX_NUM_RESULTS,
+    collect_results,
+    prepare_count_str,
+    prepare_has_more_str,
+    prepare_query_id,
+)
 from courtlistener.models import ENDPOINTS
 
 
@@ -31,6 +38,16 @@ class CallEndpointTool(MCPTool):
                     "description": "Should match the endpoint schema returned by the `get_endpoint_schema` tool.",
                     "additionalProperties": True,
                 },
+                "num_results": {
+                    "type": "integer",
+                    "description": (
+                        f"Number of results to return (1-{MAX_NUM_RESULTS}). "
+                        f"Defaults to {DEFAULT_NUM_RESULTS}."
+                    ),
+                    "minimum": 1,
+                    "maximum": MAX_NUM_RESULTS,
+                    "default": DEFAULT_NUM_RESULTS,
+                },
             },
             "required": ["endpoint_id"],
         }
@@ -39,11 +56,16 @@ class CallEndpointTool(MCPTool):
         """Call the call_endpoint tool."""
         endpoint_id = arguments.get("endpoint_id")
         query = arguments.get("query") or {}
+        num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
                 with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
+
+                    # Collect results first so page_result_index is
+                    # updated before we dump state.
+                    results = collect_results(response, num_results)
 
                     query_id = prepare_query_id(response, session)
                     outputs = [f"Query ID: {query_id}"]
@@ -53,8 +75,11 @@ class CallEndpointTool(MCPTool):
                     )
                     outputs.append(count_str)
 
-                    results_str = json.dumps(response.results, indent=2)
+                    results_str = json.dumps(results, indent=2)
                     outputs.append(results_str)
+
+                    has_more_str = prepare_has_more_str(response, query_id)
+                    outputs.append(has_more_str)
 
                     outputs_str = "\n\n".join(
                         [x for x in outputs if x]
