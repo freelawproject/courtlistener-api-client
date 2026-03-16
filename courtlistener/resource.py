@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from urllib.parse import urlparse
@@ -17,13 +19,15 @@ class ResourceIterator:
 
     def __init__(
         self,
-        resource: "Resource[EndpointModelT]",
+        resource: Resource[EndpointModelT],
         filters: dict[str, Any],
     ) -> None:
-        self._resource = resource
+        self._client = resource._client
+        self._endpoint = resource._endpoint
         self._filters = filters
         self._current_page: Page | None = None
         self._count: int | None = None
+        self._index: int = 0
 
     def _fetch_page(self, url: str | None = None) -> Page:
         """Fetch a page of results."""
@@ -32,10 +36,10 @@ class ResourceIterator:
             path = parsed.path
             if parsed.query:
                 path = f"{path}?{parsed.query}"
-            data = self._resource._client._request("GET", path)
+            data = self._client._request("GET", path)
         else:
-            data = self._resource._client._request(
-                "GET", self._resource._endpoint, params=self._filters
+            data = self._client._request(
+                "GET", self._endpoint, params=self._filters
             )
         return Page(**data)
 
@@ -67,9 +71,24 @@ class ResourceIterator:
         self._current_page = self._fetch_page(self.current_page.previous)
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
-        """Iterate over all results across pages."""
+        """Iterate over all results across pages, respecting the current index."""
+        yielded = 0
         while True:
-            yield from self.current_page.results
+            results = self.current_page.results
+            page_size = len(results)
+            if yielded + page_size <= self._index:
+                # Skip this entire page
+                yielded += page_size
+                if not self.has_next():
+                    break
+                self.next()
+                continue
+            # Yield results from the offset within this page
+            start = self._index - yielded
+            for item in results[start:]:
+                self._index += 1
+                yield item
+            yielded = self._index
             if not self.has_next():
                 break
             self.next()
@@ -87,7 +106,7 @@ class ResourceIterator:
                 path = parsed.path
                 if parsed.query:
                     path = f"{path}?{parsed.query}"
-                data = self._resource._client._request("GET", path)
+                data = self._client._request("GET", path)
                 self._count = int(data.get("count", 0))
         return self._count
 
@@ -103,12 +122,36 @@ class ResourceIterator:
         """Results from the current page."""
         return self.current_page.results
 
+    def dump(self) -> dict[str, Any]:
+        """Serialize the iterator state to a dict for later restoration."""
+        return {
+            "current_page": self.current_page.model_dump(),
+            "filters": self._filters,
+            "endpoint": self._endpoint,
+            "index": self._index,
+            "count": self._count,
+        }
+
+    @classmethod
+    def load(
+        cls, client: CourtListener, data: dict[str, Any]
+    ) -> ResourceIterator:
+        """Restore a ResourceIterator from a previously dumped state."""
+        iterator = cls.__new__(cls)
+        iterator._client = client
+        iterator._endpoint = data["endpoint"]
+        iterator._filters = data["filters"]
+        iterator._current_page = Page(**data["current_page"])
+        iterator._index = data["index"]
+        iterator._count = data["count"]
+        return iterator
+
 
 class Resource(Generic[EndpointModelT]):
     """Resource class for API endpoints."""
 
     def __init__(
-        self, client: "CourtListener", model: type[EndpointModelT]
+        self, client: CourtListener, model: type[EndpointModelT]
     ) -> None:
         self._client = client
         self._model = model
