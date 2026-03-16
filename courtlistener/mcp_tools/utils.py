@@ -1,6 +1,24 @@
 import json
+from itertools import islice
 
 import tiktoken
+
+from courtlistener.resource import ResourceIterator
+
+DEFAULT_NUM_RESULTS = 20
+MAX_NUM_RESULTS = 100
+
+
+def collect_results(
+    response: ResourceIterator, num_results: int = DEFAULT_NUM_RESULTS
+) -> list[dict]:
+    """Consume up to *num_results* items from a ResourceIterator.
+
+    Uses the iterator protocol so ``_page_result_index`` is kept in sync,
+    which means a subsequent ``dump()`` will capture the correct resume
+    point.
+    """
+    return list(islice(response, num_results))
 
 
 def prepare_query_id(response, session: dict) -> int:
@@ -70,3 +88,20 @@ def prepare_count_str(count: int | str | None, query_id: int) -> str:
     else:
         count_str = ""
     return count_str
+
+
+def has_more_results(response: ResourceIterator) -> bool:
+    """Check whether a ResourceIterator has unconsumed results."""
+    page = response.current_page
+    if response._page_result_index < len(page.results):
+        return True
+    return response.has_next()
+
+
+def prepare_has_more_str(response: ResourceIterator, query_id: int) -> str:
+    if has_more_results(response):
+        return (
+            f"More results are available. Use the `get_more_results` "
+            f"tool with query_id={query_id} to retrieve them."
+        )
+    return ""
