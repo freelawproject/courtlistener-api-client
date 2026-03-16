@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from courtlistener.models.page import Page
 from courtlistener.resource import ResourceIterator
 
