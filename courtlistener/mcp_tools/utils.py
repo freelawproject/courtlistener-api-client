@@ -11,7 +11,7 @@ def prepare_query_id(response, session: dict) -> int:
         query_id = 1
     else:
         query_id = max(queries.keys()) + 1
-    queries[query_id] = response.current_page.model_dump()
+    queries[query_id] = response.dump()
     return query_id
 
 
