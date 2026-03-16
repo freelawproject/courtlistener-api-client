@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 from urllib.parse import urlparse
 
 from courtlistener.models import Endpoint, Page
@@ -36,10 +36,13 @@ class ResourceIterator:
             path = parsed.path
             if parsed.query:
                 path = f"{path}?{parsed.query}"
-            data = self._client._request("GET", path)
+            data = cast(dict[str, Any], self._client._request("GET", path))
         else:
-            data = self._client._request(
-                "GET", self._endpoint, params=self._filters
+            data = cast(
+                dict[str, Any],
+                self._client._request(
+                    "GET", self._endpoint, params=self._filters
+                ),
             )
         return Page(**data)
 
@@ -95,7 +98,7 @@ class ResourceIterator:
                 path = parsed.path
                 if parsed.query:
                     path = f"{path}?{parsed.query}"
-                data = self._client._request("GET", path)
+                data = cast(dict[str, Any], self._client._request("GET", path))
                 self._count = int(data.get("count", 0))
         return self._count
 
@@ -154,7 +157,10 @@ class Resource(Generic[EndpointModelT]):
 
     def get(self, id: int | str) -> dict[str, Any]:
         """Get a resource by its ID."""
-        return self._client._request("GET", f"{self._endpoint}{id}/")
+        return cast(
+            dict[str, Any],
+            self._client._request("GET", f"{self._endpoint}{id}/"),
+        )
 
     def list(self, **filters: Any) -> ResourceIterator:
         """List resources with optional filtering."""
