@@ -7,6 +7,7 @@ from courtlistener.mcp_tools.utils import (
     DEFAULT_NUM_RESULTS,
     MAX_NUM_RESULTS,
     collect_results,
+    filter_fields,
     prepare_count_str,
     prepare_filter,
     prepare_has_more_str,
@@ -86,7 +87,7 @@ class SearchTool(MCPTool):
             # before we dump state via prepare_query_id.
             results = collect_results(response, num_results)
 
-            query_id = prepare_query_id(response, session)
+            query_id = prepare_query_id(response, session, fields=fields)
             outputs = [f"Query ID: {query_id}"]
 
             count_str = prepare_count_str(
@@ -94,15 +95,7 @@ class SearchTool(MCPTool):
             )
             outputs.append(count_str)
 
-            missing_fields = False
-            filtered_results = results
-            if fields:
-                if any(k not in result for result in results for k in fields):
-                    missing_fields = True
-                filtered_results = [
-                    {k: v for k, v in result.items() if k in fields}
-                    for result in results
-                ]
+            filtered_results, missing_fields = filter_fields(results, fields)
 
             if missing_fields:
                 outputs.append(

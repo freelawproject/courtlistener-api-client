@@ -21,7 +21,11 @@ def collect_results(
     return list(islice(response, num_results))
 
 
-def prepare_query_id(response, session: dict) -> int:
+def prepare_query_id(
+    response: ResourceIterator,
+    session: dict,
+    fields: list[str] | None = None,
+) -> int:
     if "queries" not in session:
         session["queries"] = {}
     queries = session["queries"]
@@ -29,8 +33,23 @@ def prepare_query_id(response, session: dict) -> int:
         query_id = 1
     else:
         query_id = max(queries.keys()) + 1
-    queries[query_id] = response.dump()
+    queries[query_id] = {"response": response.dump(), "fields": fields}
     return query_id
+
+
+def filter_fields(
+    results: list[dict], fields: list[str] | None
+) -> tuple[list[dict], bool]:
+    """Apply client-side field filtering to a list of result dicts.
+
+    Returns the (possibly filtered) results and a boolean indicating
+    whether any requested fields were missing from the data.
+    """
+    if not fields:
+        return results, False
+    missing = any(k not in result for result in results for k in fields)
+    filtered = [{k: v for k, v in r.items() if k in fields} for r in results]
+    return filtered, missing
 
 
 def prepare_choices_str(

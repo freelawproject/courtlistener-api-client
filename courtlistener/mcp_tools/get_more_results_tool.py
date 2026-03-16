@@ -7,6 +7,7 @@ from courtlistener.mcp_tools.utils import (
     DEFAULT_NUM_RESULTS,
     MAX_NUM_RESULTS,
     collect_results,
+    filter_fields,
     has_more_results,
     prepare_has_more_str,
 )
@@ -64,7 +65,7 @@ class GetMoreResultsTool(MCPTool):
             )
 
         with self.get_client() as client:
-            response = ResourceIterator.load(client, data)
+            response = ResourceIterator.load(client, data["response"])
 
             if not has_more_results(response):
                 return CallToolResult(
@@ -79,10 +80,13 @@ class GetMoreResultsTool(MCPTool):
             results = collect_results(response, num_results)
 
             # Update the stored state with the new page_result_index.
-            session["queries"][query_id] = response.dump()
+            session["queries"][query_id]["response"] = response.dump()
+
+            fields = data.get("fields")
+            filtered_results, _ = filter_fields(results, fields)
 
             outputs = [f"Query ID: {query_id}"]
-            results_str = json.dumps(results, indent=2)
+            results_str = json.dumps(filtered_results, indent=2)
             outputs.append(results_str)
 
             has_more_str = prepare_has_more_str(response, query_id)
