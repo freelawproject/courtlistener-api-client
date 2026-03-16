@@ -1,6 +1,7 @@
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
+from courtlistener.resource import ResourceIterator
 
 
 class GetCountsTool(MCPTool):
@@ -27,8 +28,8 @@ class GetCountsTool(MCPTool):
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         with self.get_client() as client:
             query_id = arguments["query_id"]
-            query = session["queries"].get(query_id)
-            if query is None:
+            data = session.get("queries", {}).get(query_id)
+            if data is None:
                 return CallToolResult(
                     content=[
                         TextContent(
@@ -41,23 +42,10 @@ class GetCountsTool(MCPTool):
                     ],
                     isError=True,
                 )
-            count_url = query.get("count")
-            if count_url is None:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=(
-                                f"Query ID {query_id} does not have a count URL. "
-                                "The session may have expired, please redo the query first."
-                            ),
-                        )
-                    ],
-                    isError=True,
-                )
-            response = client._request("GET", count_url)
-            count = response.get("count")
-            if count is None:
+            response = ResourceIterator.load(client, data)
+            try:
+                count = response.count
+            except ValueError:
                 return CallToolResult(
                     content=[TextContent(type="text", text="No count found")],
                     isError=True,

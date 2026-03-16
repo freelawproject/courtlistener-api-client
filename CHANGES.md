@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Add `dump` and `load` helpers to `ResourceIterator` with iteration index tracking.
 - Fix generate endpoints script to handle choice groups.
 - Add `get_endpoint_item` tool to MCP server.
 
