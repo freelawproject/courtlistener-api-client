@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from courtlistener.models import ENDPOINTS
 from courtlistener.resource import Resource
+
+if TYPE_CHECKING:
+    from courtlistener.citation_lookup import CitationLookup
 
 DEFAULT_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
 
@@ -38,6 +43,15 @@ class CourtListener:
         self._http_client: httpx.Client | None = None
         self._resources: dict[str, Resource[Any]] = {}
 
+    @property
+    def citation_lookup(self) -> CitationLookup:
+        """Access the citation lookup and verification API."""
+        if not hasattr(self, "_citation_lookup"):
+            from courtlistener.citation_lookup import CitationLookup
+
+            self._citation_lookup = CitationLookup(self)
+        return self._citation_lookup
+
     def __getattr__(self, name: str) -> Resource[Any]:
         """Dynamically create resource accessors based on registered endpoints."""
         if not name.startswith("_"):
@@ -61,7 +75,6 @@ class CourtListener:
                 base_url=self.base_url,
                 headers={
                     "Authorization": f"Token {self.api_token}",
-                    "Content-Type": "application/json",
                 },
                 timeout=self.timeout,
             )
@@ -73,7 +86,7 @@ class CourtListener:
             self._http_client.close()
             self._http_client = None
 
-    def __enter__(self) -> "CourtListener":
+    def __enter__(self) -> CourtListener:
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -81,7 +94,7 @@ class CourtListener:
 
     def _request(
         self, method: str, path: str, **kwargs: Any
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | list[Any]:
         """Make an HTTP request to the API.
 
         Args:
@@ -90,7 +103,7 @@ class CourtListener:
             **kwargs: Additional arguments to pass to httpx
 
         Returns:
-            JSON response as a dictionary
+            Parsed JSON response (dict or list)
         """
 
         overlap = max(
@@ -100,4 +113,4 @@ class CourtListener:
             path = path[overlap:]
         response = self.client.request(method, path, **kwargs)
         response.raise_for_status()
-        return dict(response.json())
+        return response.json()
