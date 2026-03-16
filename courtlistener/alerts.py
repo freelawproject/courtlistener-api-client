@@ -59,9 +59,7 @@ class SearchAlerts(Resource[AlertsEndpoint]):
         if alert_type is not None:
             body["alert_type"] = alert_type
 
-        result = self._client._request(
-            "POST", self._endpoint, json=body
-        )
+        result = self._client._request("POST", self._endpoint, json=body)
         assert isinstance(result, dict)
         return result
 
@@ -109,9 +107,7 @@ class DocketAlerts(Resource[DocketAlertsEndpoint]):
     def __init__(self, client: CourtListener) -> None:
         super().__init__(client, DocketAlertsEndpoint)
 
-    def create(
-        self, docket: int, alert_type: int = 1
-    ) -> dict[str, Any]:
+    def create(self, docket: int, alert_type: int = 1) -> dict[str, Any]:
         """Create a new docket alert.
 
         Args:
