@@ -27,7 +27,7 @@ class ResourceIterator:
         self._filters = filters
         self._current_page: Page | None = None
         self._count: int | None = None
-        self._index: int = 0
+        self._page_result_index: int = 0
 
     def _fetch_page(self, url: str | None = None) -> Page:
         """Fetch a page of results."""
@@ -63,32 +63,21 @@ class ResourceIterator:
         if not self.has_next():
             raise ValueError("No next page")
         self._current_page = self._fetch_page(self.current_page.next)
+        self._page_result_index = 0
 
     def previous(self) -> None:
         """Get the previous page."""
         if not self.has_previous():
             raise ValueError("No previous page")
         self._current_page = self._fetch_page(self.current_page.previous)
+        self._page_result_index = 0
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
-        """Iterate over all results across pages, respecting the current index."""
-        yielded = 0
+        """Iterate over all results across pages, respecting the page result index."""
         while True:
-            results = self.current_page.results
-            page_size = len(results)
-            if yielded + page_size <= self._index:
-                # Skip this entire page
-                yielded += page_size
-                if not self.has_next():
-                    break
-                self.next()
-                continue
-            # Yield results from the offset within this page
-            start = self._index - yielded
-            for item in results[start:]:
-                self._index += 1
+            for item in self.current_page.results[self._page_result_index :]:
+                self._page_result_index += 1
                 yield item
-            yielded = self._index
             if not self.has_next():
                 break
             self.next()
@@ -128,7 +117,7 @@ class ResourceIterator:
             "current_page": self.current_page.model_dump(),
             "filters": self._filters,
             "endpoint": self._endpoint,
-            "index": self._index,
+            "page_result_index": self._page_result_index,
             "count": self._count,
         }
 
@@ -142,7 +131,7 @@ class ResourceIterator:
         iterator._endpoint = data["endpoint"]
         iterator._filters = data["filters"]
         iterator._current_page = Page(**data["current_page"])
-        iterator._index = data["index"]
+        iterator._page_result_index = data["page_result_index"]
         iterator._count = data["count"]
         return iterator
 
