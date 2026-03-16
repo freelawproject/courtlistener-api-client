@@ -87,15 +87,11 @@ class SearchTool(MCPTool):
         outputs = [f"Query ID: {query_id}"]
 
         # Prepare the count string
-        count_str = prepare_count_str(
-            response.current_page.count, query_id
-        )
+        count_str = prepare_count_str(response.current_page.count, query_id)
         outputs.append(count_str)
 
         # Collect results using autopagination
-        results = collect_results(
-            session["queries"][query_id], num_results
-        )
+        results = collect_results(session["queries"][query_id], num_results)
 
         missing_fields = False
         filtered_results = results

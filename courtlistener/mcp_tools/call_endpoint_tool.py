@@ -83,9 +83,7 @@ class CallEndpointTool(MCPTool):
                         f"to retrieve additional results."
                     )
 
-                outputs_str = "\n\n".join(
-                    [x for x in outputs if x]
-                ).strip()
+                outputs_str = "\n\n".join([x for x in outputs if x]).strip()
                 return CallToolResult(
                     content=[TextContent(type="text", text=outputs_str)]
                 )
