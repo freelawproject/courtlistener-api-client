@@ -1,9 +1,31 @@
 import json
+from itertools import islice
 
 import tiktoken
 
+from courtlistener.resource import ResourceIterator
 
-def prepare_query_id(response, session: dict) -> int:
+DEFAULT_NUM_RESULTS = 20
+MAX_NUM_RESULTS = 100
+
+
+def collect_results(
+    response: ResourceIterator, num_results: int = DEFAULT_NUM_RESULTS
+) -> list[dict]:
+    """Consume up to *num_results* items from a ResourceIterator.
+
+    Uses the iterator protocol so ``_page_result_index`` is kept in sync,
+    which means a subsequent ``dump()`` will capture the correct resume
+    point.
+    """
+    return list(islice(response, num_results))
+
+
+def prepare_query_id(
+    response: ResourceIterator,
+    session: dict,
+    fields: list[str] | None = None,
+) -> int:
     if "queries" not in session:
         session["queries"] = {}
     queries = session["queries"]
@@ -11,8 +33,23 @@ def prepare_query_id(response, session: dict) -> int:
         query_id = 1
     else:
         query_id = max(queries.keys()) + 1
-    queries[query_id] = response.dump()
+    queries[query_id] = {"response": response.dump(), "fields": fields}
     return query_id
+
+
+def filter_fields(
+    results: list[dict], fields: list[str] | None
+) -> tuple[list[dict], bool]:
+    """Apply client-side field filtering to a list of result dicts.
+
+    Returns the (possibly filtered) results and a boolean indicating
+    whether any requested fields were missing from the data.
+    """
+    if not fields:
+        return results, False
+    missing = any(k not in result for result in results for k in fields)
+    filtered = [{k: v for k, v in r.items() if k in fields} for r in results]
+    return filtered, missing
 
 
 def prepare_choices_str(
@@ -70,3 +107,20 @@ def prepare_count_str(count: int | str | None, query_id: int) -> str:
     else:
         count_str = ""
     return count_str
+
+
+def has_more_results(response: ResourceIterator) -> bool:
+    """Check whether a ResourceIterator has unconsumed results."""
+    page = response.current_page
+    if response._page_result_index < len(page.results):
+        return True
+    return response.has_next()
+
+
+def prepare_has_more_str(response: ResourceIterator, query_id: int) -> str:
+    if has_more_results(response):
+        return (
+            f"More results are available. Use the `get_more_results` "
+            f"tool with query_id={query_id} to retrieve them."
+        )
+    return ""

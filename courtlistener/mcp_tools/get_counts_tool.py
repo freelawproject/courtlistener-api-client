@@ -42,7 +42,7 @@ class GetCountsTool(MCPTool):
                     ],
                     isError=True,
                 )
-            response = ResourceIterator.load(client, data)
+            response = ResourceIterator.load(client, data["response"])
             try:
                 count = response.count
             except ValueError:
