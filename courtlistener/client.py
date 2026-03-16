@@ -75,7 +75,6 @@ class CourtListener:
                 base_url=self.base_url,
                 headers={
                     "Authorization": f"Token {self.api_token}",
-                    "Content-Type": "application/json",
                 },
                 timeout=self.timeout,
             )

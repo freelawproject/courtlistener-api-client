@@ -56,9 +56,7 @@ class TestLookupText:
 class TestLookupCitation:
     def test_direct_lookup(self, client):
         """Direct volume/reporter/page lookup returns a match."""
-        results = client.citation_lookup.lookup_citation(
-            576, "U.S.", "644"
-        )
+        results = client.citation_lookup.lookup_citation(576, "U.S.", "644")
         assert len(results) >= 1
         assert results[0]["status"] == 200
         assert len(results[0]["clusters"]) >= 1
