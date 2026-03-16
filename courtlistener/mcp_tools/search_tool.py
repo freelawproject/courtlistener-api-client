@@ -4,8 +4,12 @@ from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp_tools.mcp_tool import MCPTool
 from courtlistener.mcp_tools.utils import (
+    DEFAULT_NUM_RESULTS,
+    MAX_NUM_RESULTS,
+    collect_results,
     prepare_count_str,
     prepare_filter,
+    prepare_has_more_str,
     prepare_query_id,
 )
 from courtlistener.models import ENDPOINTS
@@ -41,6 +45,16 @@ class SearchTool(MCPTool):
                 ],
                 "description": "Filter which fields are returned.",
             },
+            "num_results": {
+                "type": "integer",
+                "description": (
+                    f"Number of results to return (1-{MAX_NUM_RESULTS}). "
+                    f"Defaults to {DEFAULT_NUM_RESULTS}."
+                ),
+                "minimum": 1,
+                "maximum": MAX_NUM_RESULTS,
+                "default": DEFAULT_NUM_RESULTS,
+            },
         }
         for filter_name, filter in list(search_properties.items()):
             # Add the valid types to the description
@@ -65,20 +79,20 @@ class SearchTool(MCPTool):
         """Call the search tool."""
         with self.get_client() as client:
             fields = arguments.pop("fields", None)
+            num_results = arguments.pop("num_results", DEFAULT_NUM_RESULTS)
             response = client.search.list(**arguments)
 
-            # Prepare the search session
+            # Collect results first so page_result_index is updated
+            # before we dump state via prepare_query_id.
+            results = collect_results(response, num_results)
+
             query_id = prepare_query_id(response, session)
             outputs = [f"Query ID: {query_id}"]
 
-            # Prepare the count string
             count_str = prepare_count_str(
                 response.current_page.count, query_id
             )
             outputs.append(count_str)
-
-            # Prepare the results string
-            results = response.results
 
             missing_fields = False
             filtered_results = results
@@ -98,6 +112,9 @@ class SearchTool(MCPTool):
 
             results_str = json.dumps(filtered_results, indent=2)
             outputs.append(results_str)
+
+            has_more_str = prepare_has_more_str(response, query_id)
+            outputs.append(has_more_str)
 
             outputs_str = "\n\n".join([x for x in outputs if x]).strip()
             return CallToolResult(
