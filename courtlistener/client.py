@@ -9,6 +9,7 @@ from courtlistener.models import ENDPOINTS
 from courtlistener.resource import Resource
 
 if TYPE_CHECKING:
+    from courtlistener.alerts import DocketAlerts, SearchAlerts
     from courtlistener.citation_lookup import CitationLookup
 
 DEFAULT_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
@@ -42,6 +43,24 @@ class CourtListener:
         self.timeout = timeout
         self._http_client: httpx.Client | None = None
         self._resources: dict[str, Resource[Any]] = {}
+
+    @property
+    def alerts(self) -> SearchAlerts:
+        """Access the search alerts API."""
+        if not hasattr(self, "_alerts"):
+            from courtlistener.alerts import SearchAlerts
+
+            self._alerts = SearchAlerts(self)
+        return self._alerts
+
+    @property
+    def docket_alerts(self) -> DocketAlerts:
+        """Access the docket alerts API."""
+        if not hasattr(self, "_docket_alerts"):
+            from courtlistener.alerts import DocketAlerts
+
+            self._docket_alerts = DocketAlerts(self)
+        return self._docket_alerts
 
     @property
     def citation_lookup(self) -> CitationLookup:
@@ -113,4 +132,6 @@ class CourtListener:
             path = path[overlap:]
         response = self.client.request(method, path, **kwargs)
         response.raise_for_status()
+        if response.status_code == 204:
+            return {}
         return response.json()
