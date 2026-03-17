@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Any, cast
+from urllib.parse import parse_qs, urlencode
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
@@ -9,7 +10,12 @@ from courtlistener.models.endpoints.docket_alerts import (
     DocketAlertsEndpoint,
 )
 from courtlistener.resource import Resource
-from courtlistener.utils import choice_validator
+from courtlistener.utils import (
+    choice_validator,
+    flatten_filters,
+    search_model_validator,
+    unflatten_filters,
+)
 
 if TYPE_CHECKING:
     from courtlistener.client import CourtListener
@@ -37,13 +43,71 @@ _DOCKET_ALERT_TYPE_CHOICES = [
 ]
 
 
+def _parse_query_string(query: str) -> dict[str, Any]:
+    """Parse a URL query string into a dict suitable for validation.
+
+    Handles multi-valued params by collapsing single-element lists.
+    """
+    parsed = parse_qs(query, keep_blank_values=True)
+    return {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+
+
+def normalize_search_query(query: str | dict[str, Any]) -> str:
+    """Normalize and validate a search query, returning a URL query string.
+
+    Accepts either a URL query string (e.g. ``"q=test&court=scotus"``)
+    or a structured dict (e.g. ``{"q": "test", "court": "scotus"}``).
+    In both cases the query is validated against the ``SearchEndpoint``
+    model via ``search_model_validator`` and serialized back to a
+    canonical query string.
+    """
+    if isinstance(query, str):
+        params = _parse_query_string(query)
+    else:
+        params = dict(query)
+
+    # Unflatten double-underscore keys so the model can validate them
+    params = unflatten_filters(params)
+
+    # Ensure a search type is present (defaults to opinions)
+    params.setdefault("type", "o")
+
+    # Validate through the search endpoint model
+    validated = search_model_validator(params)
+
+    # Flatten back and strip None values
+    flat = flatten_filters(validated)
+    flat = {k: v for k, v in flat.items() if v is not None}
+
+    return urlencode(flat, doseq=True)
+
+
+def _normalize_query_validator(
+    value: str | dict[str, Any],
+) -> str:
+    """BeforeValidator wrapper for the ``query`` field."""
+    return normalize_search_query(value)
+
+
+def _normalize_query_optional_validator(
+    value: str | dict[str, Any] | None,
+) -> str | None:
+    """BeforeValidator wrapper that allows ``None`` for update models."""
+    if value is None:
+        return None
+    return normalize_search_query(value)
+
+
 class SearchAlertCreate(BaseModel):
     """Validation model for creating a search alert."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    query: str
+    query: Annotated[
+        str | dict[str, Any],
+        BeforeValidator(_normalize_query_validator),
+    ]
     rate: Annotated[
         str,
         Field(json_schema_extra={"choices": _RATE_CHOICES}),
@@ -65,7 +129,11 @@ class SearchAlertUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: Annotated[str | None, Field(None)]
-    query: Annotated[str | None, Field(None)]
+    query: Annotated[
+        str | dict[str, Any] | None,
+        Field(None),
+        BeforeValidator(_normalize_query_optional_validator),
+    ]
     rate: Annotated[
         str | None,
         Field(
@@ -133,7 +201,7 @@ class SearchAlerts(Resource[AlertsEndpoint]):
     def create(
         self,
         name: str,
-        query: str,
+        query: str | dict[str, Any],
         rate: str,
         alert_type: str | None = None,
     ) -> dict[str, Any]:
@@ -141,7 +209,11 @@ class SearchAlerts(Resource[AlertsEndpoint]):
 
         Args:
             name: A descriptive name for the alert.
-            query: The search query string.
+            query: A search query as a URL query string
+                (e.g. ``"q=test&court=scotus"``) or a structured dict
+                (e.g. ``{"q": "test", "court": "scotus"}``).  The query
+                is validated against the ``SearchEndpoint`` model and
+                normalized to a canonical URL query string.
             rate: Notification rate (rt, dly, wly, mly, off).
             alert_type: Optional alert type (d or r).
 
