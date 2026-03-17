@@ -2,7 +2,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool
 
-from courtlistener.mcp_tools import MCP_TOOLS
+from courtlistener.mcp.tools import MCP_TOOLS
 
 server = Server("courtlistener")
 

@@ -38,11 +38,14 @@ urls."Organisation Homepage" = "https://free.law/"
 dependencies = [
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
-    "mcp>=1.0.0",
-    "tiktoken>=0.12.0",
 ]
 
 [project.optional-dependencies]
+mcp = [
+    "eyecite>=2.6.0",
+    "mcp>=1.0.0",
+    "tiktoken>=0.12.0",
+]
 dev = [
     "click>=8.0.0",
     "jinja2>=3.0.0",
@@ -56,7 +59,7 @@ dev = [
 ]
 
 [project.scripts]
-courtlistener-mcp = "courtlistener.mcp_server:main"
+courtlistener-mcp = "courtlistener.mcp.server:main"
 
 [tool.setuptools.packages.find]
 include = ["courtlistener*"]
