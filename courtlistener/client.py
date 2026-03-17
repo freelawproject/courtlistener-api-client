@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
 from courtlistener.resource import Resource
 
@@ -131,7 +132,18 @@ class CourtListener:
         if overlap:
             path = path[overlap:]
         response = self.client.request(method, path, **kwargs)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError:
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            raise CourtListenerAPIError(
+                status_code=response.status_code,
+                detail=detail,
+                response=response,
+            ) from None
         if response.status_code == 204:
             return {}
         return response.json()

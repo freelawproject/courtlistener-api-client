@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Add `CourtListenerAPIError` with parsed response details for more informative error messages.
 - Add `SearchAlerts` and `DocketAlerts` helper classes for managing alerts via the API.
 - Add `CitationLookup` helper for the citation lookup and verification API.
 - Add `num_results` parameter to `search` and `call_endpoint` tools for controlling result count.
