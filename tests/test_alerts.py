@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 from courtlistener.alerts import DocketAlerts, SearchAlerts
 
@@ -15,13 +16,13 @@ class TestSearchAlertsValidation:
     def test_invalid_rate_raises(self):
         mock_client = MagicMock()
         alerts = SearchAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid rate"):
+        with pytest.raises(ValidationError):
             alerts.create(name="test", query="q=test", rate="invalid")
 
     def test_invalid_alert_type_raises(self):
         mock_client = MagicMock()
         alerts = SearchAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid alert_type"):
+        with pytest.raises(ValidationError):
             alerts.create(
                 name="test",
                 query="q=test",
@@ -32,28 +33,40 @@ class TestSearchAlertsValidation:
     def test_update_invalid_rate_raises(self):
         mock_client = MagicMock()
         alerts = SearchAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid rate"):
+        with pytest.raises(ValidationError):
             alerts.update(1, rate="bad")
 
     def test_update_invalid_alert_type_raises(self):
         mock_client = MagicMock()
         alerts = SearchAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid alert_type"):
+        with pytest.raises(ValidationError):
             alerts.update(1, alert_type="z")
+
+    def test_update_rejects_unknown_fields(self):
+        mock_client = MagicMock()
+        alerts = SearchAlerts(mock_client)
+        with pytest.raises(ValidationError):
+            alerts.update(1, unknown_field="value")
 
 
 class TestDocketAlertsValidation:
     def test_docket_alert_invalid_alert_type_raises(self):
         mock_client = MagicMock()
         da = DocketAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid alert_type"):
+        with pytest.raises(ValidationError):
             da.create(docket=1, alert_type=99)
 
     def test_update_invalid_alert_type_raises(self):
         mock_client = MagicMock()
         da = DocketAlerts(mock_client)
-        with pytest.raises(ValueError, match="Invalid alert_type"):
+        with pytest.raises(ValidationError):
             da.update(1, alert_type=99)
+
+    def test_update_rejects_unknown_fields(self):
+        mock_client = MagicMock()
+        da = DocketAlerts(mock_client)
+        with pytest.raises(ValidationError):
+            da.update(1, unknown_field="value")
 
 
 # ---------------------------------------------------------------------------
@@ -163,8 +176,12 @@ class TestDocketAlertsIntegration:
                 client.docket_alerts.delete(alert["id"])
 
     def test_unsubscribe(self, client):
-        alert = client.docket_alerts.create(docket=self.DOCKET_ID)
-        client.docket_alerts.unsubscribe(alert["id"])
+        client.docket_alerts.subscribe(docket=self.DOCKET_ID)
+        client.docket_alerts.unsubscribe(docket=self.DOCKET_ID)
+
+    def test_unsubscribe_not_found(self, client):
+        with pytest.raises(ValueError, match="No docket alert found"):
+            client.docket_alerts.unsubscribe(docket=0)
 
     def test_update_docket_alert(self, client):
         alert = None
