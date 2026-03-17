@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Add `CourtListenerAPIError` with parsed response details for more informative error messages.
 - Move MCP server and tools into dedicated `courtlistener.mcp` submodule.
 - Add `mcp` optional dependency extra with `eyecite`, `mcp`, and `tiktoken`.
 - Add `SearchAlerts` and `DocketAlerts` helper classes for managing alerts via the API.
