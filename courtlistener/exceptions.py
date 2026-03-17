@@ -24,9 +24,4 @@ class CourtListenerAPIError(Exception):
         self.detail = detail
         self.response = response
 
-        if isinstance(detail, dict):
-            msg = detail.get("detail", detail)
-        else:
-            msg = detail
-
-        super().__init__(f"HTTP {status_code}: {msg}")
+        super().__init__(f"HTTP {status_code}: {detail}")

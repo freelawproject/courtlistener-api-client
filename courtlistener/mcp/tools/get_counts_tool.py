@@ -1,6 +1,6 @@
 from mcp.types import CallToolResult, TextContent
 
-from courtlistener.mcp_tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.resource import ResourceIterator
 
 
