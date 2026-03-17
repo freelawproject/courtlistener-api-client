@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Add `SearchAlerts` and `DocketAlerts` helper classes for managing alerts via the API.
 - Add `CitationLookup` helper for the citation lookup and verification API.
 - Add `num_results` parameter to `search` and `call_endpoint` tools for controlling result count.
 - Add `get_more_results` tool for paginating through previous query results.
