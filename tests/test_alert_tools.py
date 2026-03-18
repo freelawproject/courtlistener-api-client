@@ -138,9 +138,7 @@ class TestCreateSearchAlertToolCall:
         mock_get_client.return_value = mock_client
 
         tool = CreateSearchAlertTool()
-        result = tool(
-            {"name": "Test", "query": "q=test", "rate": "dly"}, {}
-        )
+        result = tool({"name": "Test", "query": "q=test", "rate": "dly"}, {})
 
         assert not result.isError
         data = json.loads(result.content[0].text)
@@ -159,9 +157,7 @@ class TestCreateSearchAlertToolCall:
         mock_get_client.return_value = mock_client
 
         tool = CreateSearchAlertTool()
-        result = tool(
-            {"name": "Test", "query": "q=test", "rate": "dly"}, {}
-        )
+        result = tool({"name": "Test", "query": "q=test", "rate": "dly"}, {})
 
         assert result.isError
         assert "400" in result.content[0].text
