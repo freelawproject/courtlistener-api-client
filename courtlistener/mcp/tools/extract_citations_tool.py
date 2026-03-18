@@ -6,7 +6,7 @@ from eyecite import get_citations, resolve_citations
 from mcp.types import CallToolResult, TextContent
 
 from courtlistener.mcp.tools.citation_utils import (
-    format_flat_citations,
+    citation_type_label,
     format_resolved_citations,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -57,7 +57,14 @@ class ExtractCitationsTool(MCPTool):
             )
 
         if not resolve:
-            output = format_flat_citations(cites)
+            if not cites:
+                output = "No citations found."
+            else:
+                lines = [f"Found {len(cites)} citation(s):\n"]
+                for i, cite in enumerate(cites, 1):
+                    label = citation_type_label(cite)
+                    lines.append(f'  {i}. [{label}] "{cite.matched_text()}"')
+                output = "\n".join(lines)
         else:
             resolutions = resolve_citations(cites)
             output = format_resolved_citations(cites, resolutions)

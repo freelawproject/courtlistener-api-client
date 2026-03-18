@@ -7,16 +7,21 @@ from eyecite.models import (
     FullCaseCitation,
     FullLawCitation,
     IdCitation,
-    Resource,
     ShortCaseCitation,
     SupraCitation,
     UnknownCitation,
+)
+from eyecite.models import (
+    Resource as CitationResource,
 )
 
 # Delimiter used between citations in the compact string sent to the
 # citation-lookup API.  Semicolon-space is a natural Bluebook list
 # separator that eyecite reliably parses without cleanup.
 CITATION_DELIMITER = "; "
+
+# Maximum citations per API request before 429 throttling.
+MAX_CITATIONS_PER_REQUEST = 250
 
 
 def citation_type_label(cite: CitationBase) -> str:
@@ -32,39 +37,19 @@ def citation_type_label(cite: CitationBase) -> str:
     return labels.get(type(cite), type(cite).__name__)
 
 
-def format_case_name(cite: FullCaseCitation) -> str:
-    """Build a short case name from metadata, if available."""
-    meta = cite.metadata
-    if meta.plaintiff and meta.defendant:
-        return f"{meta.plaintiff} v. {meta.defendant}"
-    return ""
-
-
 def canonical_key(cite: FullCaseCitation) -> str:
     """Canonical key for deduplication: 'volume reporter page'."""
     g = cite.groups
     return f"{g['volume']} {g['reporter']} {g['page']}"
 
 
-def format_flat_citations(cites: list[CitationBase]) -> str:
-    """Format a flat list of citations (no resolution)."""
-    if not cites:
-        return "No citations found."
-    lines = [f"Found {len(cites)} citation(s):\n"]
-    for i, cite in enumerate(cites, 1):
-        label = citation_type_label(cite)
-        text = cite.matched_text()
-        lines.append(f'  {i}. [{label}] "{text}"')
-    return "\n".join(lines)
-
-
 def format_resolved_citations(
     cites: list[CitationBase],
-    resolutions: dict[Resource, list[CitationBase]],
+    resolutions: dict[CitationResource, list[CitationBase]],
 ) -> str:
     """Format citations grouped by resolved resource."""
-    cases: list[tuple[Resource, list[CitationBase]]] = []
-    statutes: list[tuple[Resource, list[CitationBase]]] = []
+    cases: list[tuple[CitationResource, list[CitationBase]]] = []
+    statutes: list[tuple[CitationResource, list[CitationBase]]] = []
 
     for resource, cite_list in resolutions.items():
         primary = resource.citation
@@ -101,8 +86,11 @@ def format_resolved_citations(
         for i, (resource, cite_list) in enumerate(cases, 1):
             primary = resource.citation
             key = canonical_key(primary)
-            name = format_case_name(primary)
-            year = primary.metadata.year or ""
+            meta = primary.metadata
+            name = ""
+            if meta.plaintiff and meta.defendant:
+                name = f"{meta.plaintiff} v. {meta.defendant}"
+            year = meta.year or ""
             header = f"  {i}. {key}"
             if name:
                 header += f" ({name}"
@@ -140,55 +128,72 @@ def format_resolved_citations(
 
 
 def build_compact_string(unique_citations: list[str]) -> str:
-    """Join unique citation strings with our delimiter for the API.
-
-    Uses ``'; '`` (semicolon-space) which is the standard Bluebook
-    citation list separator and is parsed reliably by eyecite.
-    """
+    """Join unique citation strings with our delimiter for the API."""
     return CITATION_DELIMITER.join(unique_citations)
 
 
-def extract_unique_case_citations(
-    resolutions: dict[Resource, list[CitationBase]],
-) -> list[str]:
-    """Get deduplicated canonical citation strings for all case resources."""
-    unique: list[str] = []
-    seen: set[str] = set()
-    for resource in resolutions:
-        primary = resource.citation
-        if isinstance(primary, FullCaseCitation):
-            key = canonical_key(primary)
-            if key not in seen:
-                seen.add(key)
-                unique.append(key)
-    return unique
+def process_api_results(
+    results: list[dict],
+    batch: list[str],
+    verified: dict[str, dict],
+    pending: list[str],
+) -> None:
+    """Process API results, updating verified and pending dicts.
 
+    Each API result is matched back to the batch citation it belongs
+    to by comparing the citation text. Results with status 429 are
+    left in pending for later retry.
+    """
+    for result in results:
+        citation_text = result.get("citation", "")
+        status = result.get("status")
 
-def summarize_cluster(cluster: dict) -> dict:
-    """Extract useful fields from a CourtListener cluster object."""
-    return {
-        "cluster_id": cluster.get("id"),
-        "case_name": cluster.get("case_name"),
-        "case_name_short": cluster.get("case_name_short"),
-        "date_filed": cluster.get("date_filed"),
-        "citation_count": cluster.get("citation_count"),
-        "precedential_status": cluster.get("precedential_status"),
-        "absolute_url": cluster.get("absolute_url"),
-        "docket_id": cluster.get("docket"),
-        "citations": [
-            f"{c['volume']} {c['reporter']} {c['page']}"
-            for c in cluster.get("citations", [])
-            if c.get("volume") and c.get("reporter") and c.get("page")
-        ],
-    }
+        # Match this result to a batch citation
+        matched_key = None
+        if citation_text in batch:
+            matched_key = citation_text
+        else:
+            normalized = citation_text.strip().lower()
+            for key in batch:
+                if key.strip().lower() == normalized:
+                    matched_key = key
+                    break
 
+        if matched_key is None:
+            continue
 
-def next_analysis_id(session: dict) -> int:
-    """Get the next auto-incrementing analysis ID."""
-    analyses = session.get("citation_analyses", {})
-    if not analyses:
-        return 1
-    return max(analyses.keys()) + 1
+        if status == 429:
+            # Rate-limited — leave in pending
+            continue
+
+        # Summarize clusters to reduce stored data
+        clusters = [
+            {
+                "cluster_id": cluster.get("id"),
+                "case_name": cluster.get("case_name"),
+                "case_name_short": cluster.get("case_name_short"),
+                "date_filed": cluster.get("date_filed"),
+                "citation_count": cluster.get("citation_count"),
+                "precedential_status": cluster.get("precedential_status"),
+                "absolute_url": cluster.get("absolute_url"),
+                "docket_id": cluster.get("docket"),
+                "citations": [
+                    f"{c['volume']} {c['reporter']} {c['page']}"
+                    for c in cluster.get("citations", [])
+                    if c.get("volume") and c.get("reporter") and c.get("page")
+                ],
+            }
+            for cluster in result.get("clusters", [])
+        ]
+
+        verified[matched_key] = {
+            "status": status,
+            "citation": citation_text,
+            "clusters": clusters,
+            "error_message": result.get("error_message"),
+        }
+        if matched_key in pending:
+            pending.remove(matched_key)
 
 
 def format_verification_result(
@@ -258,14 +263,148 @@ def format_verification_result(
         )
 
 
-def build_ref_breakdown(
-    cite_list: list[CitationBase],
-) -> tuple[int, str]:
-    """Count references by type and return (total, breakdown_string)."""
-    counts: dict[str, int] = {}
-    for c in cite_list:
-        label = citation_type_label(c)
-        counts[label] = counts.get(label, 0) + 1
-    total = sum(counts.values())
-    parts = [f"{v} {k}" for k, v in counts.items()]
-    return total, ", ".join(parts)
+def format_analysis(
+    analysis_id: int,
+    cites: list[CitationBase],
+    resolutions: dict[CitationResource, list[CitationBase]],
+    resource_refs: dict[str, dict],
+    unique_citations: list[str],
+    verified: dict[str, dict],
+    pending: list[str],
+) -> str:
+    """Format the full analysis output."""
+    # Count by type
+    case_count = sum(
+        1 for r in resolutions if isinstance(r.citation, FullCaseCitation)
+    )
+    statute_count = sum(
+        1 for r in resolutions if not isinstance(r.citation, FullCaseCitation)
+    )
+    # Find unresolved
+    resolved_ids = set()
+    for cite_list in resolutions.values():
+        for c in cite_list:
+            resolved_ids.add(id(c))
+    unresolved = [c for c in cites if id(c) not in resolved_ids]
+
+    parts = [f"Citation Analysis (Job ID: {analysis_id})\n"]
+
+    # Summary line
+    extraction_parts = [f"{len(cites)} citation(s) found"]
+    if case_count:
+        extraction_parts.append(f"{case_count} unique case(s)")
+    if statute_count:
+        extraction_parts.append(f"{statute_count} statute(s)")
+    if unresolved:
+        extraction_parts.append(f"{len(unresolved)} unresolved")
+    parts.append("Extraction: " + ", ".join(extraction_parts) + ".")
+
+    verified_count = len(verified)
+    total_unique = len(unique_citations)
+    pending_count = len(pending)
+    verification_line = (
+        f"Verification: {verified_count} of {total_unique} verified."
+    )
+    if pending_count:
+        verification_line += (
+            f" ({pending_count} pending — use resume_citation_analysis "
+            f"with job_id={analysis_id})"
+        )
+    parts.append(verification_line)
+
+    # Verified cases
+    if verified or pending:
+        parts.append("\nCases:")
+        idx = 1
+        for key in unique_citations:
+            refs = resource_refs.get(key, {})
+            ref_count = refs.get("ref_count", 1)
+            ref_breakdown = refs.get("ref_breakdown", "")
+
+            if key in verified:
+                parts.append(
+                    format_verification_result(
+                        key,
+                        verified[key],
+                        ref_count,
+                        ref_breakdown,
+                        idx,
+                    )
+                )
+            else:
+                parts.append(f"  {idx}. {key}\n     Status: PENDING")
+            idx += 1
+
+    # Statutes
+    statute_resources = [
+        (r, cl)
+        for r, cl in resolutions.items()
+        if not isinstance(r.citation, FullCaseCitation)
+    ]
+    if statute_resources:
+        parts.append("\nStatutes:")
+        for i, (resource, cite_list) in enumerate(statute_resources, 1):
+            primary = resource.citation
+            count = len(cite_list)
+            parts.append(
+                f'  {i}. "{primary.matched_text()}" — {count} reference(s)'
+            )
+
+    # Unresolved
+    if unresolved:
+        parts.append("\nUnresolved:")
+        for i, c in enumerate(unresolved, 1):
+            label = citation_type_label(c)
+            parts.append(f'  {i}. [{label}] "{c.matched_text()}"')
+
+    return "\n".join(parts)
+
+
+def format_resume(
+    job_id: int,
+    job: dict,
+    newly_verified: set[str],
+) -> str:
+    """Format the resume output showing newly verified citations."""
+    verified = job["verified"]
+    pending = job["pending"]
+    unique = job["unique_citations"]
+    resource_refs = job["resource_refs"]
+    total = len(unique)
+
+    parts = [f"Citation Analysis (Job ID: {job_id}) — Resumed\n"]
+
+    parts.append(f"Verification: {len(verified)} of {total} verified.")
+    if pending:
+        parts.append(
+            f"({len(pending)} still pending — call "
+            f"resume_citation_analysis again with job_id={job_id})"
+        )
+    else:
+        parts.append("All citations verified!")
+
+    if newly_verified:
+        parts.append(f"\nNewly verified ({len(newly_verified)}):")
+        idx = 1
+        for key in unique:
+            if key in newly_verified:
+                refs = resource_refs.get(key, {})
+                ref_count = refs.get("ref_count", 1)
+                ref_breakdown = refs.get("ref_breakdown", "")
+                parts.append(
+                    format_verification_result(
+                        key,
+                        verified[key],
+                        ref_count,
+                        ref_breakdown,
+                        idx,
+                    )
+                )
+                idx += 1
+    elif pending:
+        parts.append(
+            "\nNo new citations verified in this batch "
+            "(may still be rate-limited)."
+        )
+
+    return "\n".join(parts)

@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from mcp.types import CallToolResult, TextContent
 
-from courtlistener.mcp.tools.analyze_citations_tool import (
-    MAX_CITATIONS_PER_REQUEST,
-    _process_api_results,
-)
 from courtlistener.mcp.tools.citation_utils import (
+    MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
-    format_verification_result,
+    format_resume,
+    process_api_results,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
@@ -80,59 +78,9 @@ class ResumeCitationAnalysisTool(MCPTool):
             results = client.citation_lookup.lookup_text(compact_text)
 
         previously_verified = set(job["verified"].keys())
-        _process_api_results(results, batch, job["verified"], job["pending"])
+        process_api_results(results, batch, job["verified"], job["pending"])
         newly_verified = set(job["verified"].keys()) - previously_verified
 
         # Format output
-        output = _format_resume(job_id, job, newly_verified)
+        output = format_resume(job_id, job, newly_verified)
         return CallToolResult(content=[TextContent(type="text", text=output)])
-
-
-def _format_resume(
-    job_id: int,
-    job: dict,
-    newly_verified: set[str],
-) -> str:
-    """Format the resume output showing newly verified citations."""
-    verified = job["verified"]
-    pending = job["pending"]
-    unique = job["unique_citations"]
-    resource_refs = job["resource_refs"]
-    total = len(unique)
-
-    parts = [f"Citation Analysis (Job ID: {job_id}) — Resumed\n"]
-
-    parts.append(f"Verification: {len(verified)} of {total} verified.")
-    if pending:
-        parts.append(
-            f"({len(pending)} still pending — call "
-            f"resume_citation_analysis again with job_id={job_id})"
-        )
-    else:
-        parts.append("All citations verified!")
-
-    if newly_verified:
-        parts.append(f"\nNewly verified ({len(newly_verified)}):")
-        idx = 1
-        for key in unique:
-            if key in newly_verified:
-                refs = resource_refs.get(key, {})
-                ref_count = refs.get("ref_count", 1)
-                ref_breakdown = refs.get("ref_breakdown", "")
-                parts.append(
-                    format_verification_result(
-                        key,
-                        verified[key],
-                        ref_count,
-                        ref_breakdown,
-                        idx,
-                    )
-                )
-                idx += 1
-    elif pending:
-        parts.append(
-            "\nNo new citations verified in this batch "
-            "(may still be rate-limited)."
-        )
-
-    return "\n".join(parts)
