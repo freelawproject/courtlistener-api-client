@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 from urllib.parse import parse_qs, urlencode
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict
 
 from courtlistener.models.endpoints.alerts import AlertsEndpoint
 from courtlistener.models.endpoints.docket_alerts import (
@@ -11,7 +11,6 @@ from courtlistener.models.endpoints.docket_alerts import (
 )
 from courtlistener.resource import Resource
 from courtlistener.utils import (
-    choice_validator,
     flatten_filters,
     search_model_validator,
     unflatten_filters,
@@ -24,35 +23,12 @@ if TYPE_CHECKING:
 # Pydantic models for create/update validation
 # ---------------------------------------------------------------------------
 
-_RATE_CHOICES = [
-    {"value": "rt", "display_name": "Real Time"},
-    {"value": "dly", "display_name": "Daily"},
-    {"value": "wly", "display_name": "Weekly"},
-    {"value": "mly", "display_name": "Monthly"},
-    {"value": "off", "display_name": "Off"},
-]
-
-_SEARCH_ALERT_TYPE_CHOICES = [
-    {"value": "d", "display_name": "Dockets only"},
-    {"value": "r", "display_name": "Dockets and filings"},
-]
-
-_DOCKET_ALERT_TYPE_CHOICES = [
-    {"value": 0, "display_name": "Unsubscription"},
-    {"value": 1, "display_name": "Subscription"},
-]
+RateType = Literal["rt", "dly", "wly", "mly", "off"]
+SearchAlertType = Literal["d", "r"]
+DocketAlertType = Literal[0, 1]
 
 
-def _parse_query_string(query: str) -> dict[str, Any]:
-    """Parse a URL query string into a dict suitable for validation.
-
-    Handles multi-valued params by collapsing single-element lists.
-    """
-    parsed = parse_qs(query, keep_blank_values=True)
-    return {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
-
-
-def normalize_search_query(query: str | dict[str, Any]) -> str:
+def normalize_search_query(query: str | dict[str, Any] | None) -> str | None:
     """Normalize and validate a search query, returning a URL query string.
 
     Accepts either a URL query string (e.g. ``"q=test&court=scotus"``)
@@ -61,41 +37,21 @@ def normalize_search_query(query: str | dict[str, Any]) -> str:
     model via ``search_model_validator`` and serialized back to a
     canonical query string.
     """
+    if query is None:
+        return None
     if isinstance(query, str):
-        params = _parse_query_string(query)
+        parsed = parse_qs(query, keep_blank_values=True)
+        params = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
     else:
         params = dict(query)
 
-    # Unflatten double-underscore keys so the model can validate them
     params = unflatten_filters(params)
-
-    # Ensure a search type is present (defaults to opinions)
     params.setdefault("type", "o")
-
-    # Validate through the search endpoint model
     validated = search_model_validator(params)
-
-    # Flatten back and strip None values
     flat = flatten_filters(validated)
     flat = {k: v for k, v in flat.items() if v is not None}
 
     return urlencode(flat, doseq=True)
-
-
-def _normalize_query_validator(
-    value: str | dict[str, Any],
-) -> str:
-    """BeforeValidator wrapper for the ``query`` field."""
-    return normalize_search_query(value)
-
-
-def _normalize_query_optional_validator(
-    value: str | dict[str, Any] | None,
-) -> str | None:
-    """BeforeValidator wrapper that allows ``None`` for update models."""
-    if value is None:
-        return None
-    return normalize_search_query(value)
 
 
 class SearchAlertCreate(BaseModel):
@@ -105,22 +61,11 @@ class SearchAlertCreate(BaseModel):
 
     name: str
     query: Annotated[
-        str | dict[str, Any],
-        BeforeValidator(_normalize_query_validator),
+        str | dict[str, Any] | None,
+        BeforeValidator(normalize_search_query),
     ]
-    rate: Annotated[
-        str,
-        Field(json_schema_extra={"choices": _RATE_CHOICES}),
-        BeforeValidator(choice_validator),
-    ]
-    alert_type: Annotated[
-        str | None,
-        Field(
-            None,
-            json_schema_extra={"choices": _SEARCH_ALERT_TYPE_CHOICES},
-        ),
-        BeforeValidator(choice_validator),
-    ]
+    rate: RateType
+    alert_type: SearchAlertType | None = None
 
 
 class SearchAlertUpdate(BaseModel):
@@ -128,28 +73,13 @@ class SearchAlertUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: Annotated[str | None, Field(None)]
+    name: str | None = None
     query: Annotated[
         str | dict[str, Any] | None,
-        Field(None),
-        BeforeValidator(_normalize_query_optional_validator),
-    ]
-    rate: Annotated[
-        str | None,
-        Field(
-            None,
-            json_schema_extra={"choices": _RATE_CHOICES},
-        ),
-        BeforeValidator(choice_validator),
-    ]
-    alert_type: Annotated[
-        str | None,
-        Field(
-            None,
-            json_schema_extra={"choices": _SEARCH_ALERT_TYPE_CHOICES},
-        ),
-        BeforeValidator(choice_validator),
-    ]
+        BeforeValidator(normalize_search_query),
+    ] = None
+    rate: RateType | None = None
+    alert_type: SearchAlertType | None = None
 
 
 class DocketAlertCreate(BaseModel):
@@ -158,14 +88,7 @@ class DocketAlertCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     docket: int
-    alert_type: Annotated[
-        int,
-        Field(
-            1,
-            json_schema_extra={"choices": _DOCKET_ALERT_TYPE_CHOICES},
-        ),
-        BeforeValidator(choice_validator),
-    ]
+    alert_type: DocketAlertType = 1
 
 
 class DocketAlertUpdate(BaseModel):
@@ -173,14 +96,7 @@ class DocketAlertUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    alert_type: Annotated[
-        int | None,
-        Field(
-            None,
-            json_schema_extra={"choices": _DOCKET_ALERT_TYPE_CHOICES},
-        ),
-        BeforeValidator(choice_validator),
-    ]
+    alert_type: DocketAlertType | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -189,11 +105,7 @@ class DocketAlertUpdate(BaseModel):
 
 
 class SearchAlerts(Resource[AlertsEndpoint]):
-    """Helper for managing search alerts.
-
-    Provides CRUD operations on the /alerts/ endpoint with
-    client-side validation via pydantic models.
-    """
+    """Helper for managing search alerts."""
 
     def __init__(self, client: CourtListener) -> None:
         super().__init__(client, AlertsEndpoint)
@@ -202,27 +114,10 @@ class SearchAlerts(Resource[AlertsEndpoint]):
         self,
         name: str,
         query: str | dict[str, Any],
-        rate: str,
-        alert_type: str | None = None,
+        rate: RateType,
+        alert_type: SearchAlertType | None = None,
     ) -> dict[str, Any]:
-        """Create a new search alert.
-
-        Args:
-            name: A descriptive name for the alert.
-            query: A search query as a URL query string
-                (e.g. ``"q=test&court=scotus"``) or a structured dict
-                (e.g. ``{"q": "test", "court": "scotus"}``).  The query
-                is validated against the ``SearchEndpoint`` model and
-                normalized to a canonical URL query string.
-            rate: Notification rate (rt, dly, wly, mly, off).
-            alert_type: Optional alert type (d or r).
-
-        Returns:
-            The created alert as a dictionary.
-
-        Raises:
-            ValidationError: If any field value is invalid.
-        """
+        """Create a new search alert."""
         validated = SearchAlertCreate(
             name=name, query=query, rate=rate, alert_type=alert_type
         )
@@ -233,19 +128,7 @@ class SearchAlerts(Resource[AlertsEndpoint]):
         )
 
     def update(self, id: int, **data: Any) -> dict[str, Any]:
-        """Update an existing search alert.
-
-        Args:
-            id: The alert ID.
-            **data: Fields to update (e.g. name, query, rate,
-                alert_type).
-
-        Returns:
-            The updated alert as a dictionary.
-
-        Raises:
-            ValidationError: If any field value is invalid.
-        """
+        """Update an existing search alert."""
         validated = SearchAlertUpdate(**data)
         body = validated.model_dump(exclude_none=True)
         return cast(
@@ -256,37 +139,20 @@ class SearchAlerts(Resource[AlertsEndpoint]):
         )
 
     def delete(self, id: int) -> None:
-        """Delete a search alert.
-
-        Args:
-            id: The alert ID to delete.
-        """
+        """Delete a search alert."""
         self._client._request("DELETE", f"{self._endpoint}{id}/")
 
 
 class DocketAlerts(Resource[DocketAlertsEndpoint]):
-    """Helper for managing docket alerts (subscriptions).
-
-    Provides CRUD operations on the /docket-alerts/ endpoint with
-    client-side validation via pydantic models.
-    """
+    """Helper for managing docket alerts (subscriptions)."""
 
     def __init__(self, client: CourtListener) -> None:
         super().__init__(client, DocketAlertsEndpoint)
 
-    def create(self, docket: int, alert_type: int = 1) -> dict[str, Any]:
-        """Create a new docket alert.
-
-        Args:
-            docket: The docket ID to subscribe to.
-            alert_type: 0 for unsubscription, 1 for subscription.
-
-        Returns:
-            The created docket alert as a dictionary.
-
-        Raises:
-            ValidationError: If *alert_type* is invalid.
-        """
+    def create(
+        self, docket: int, alert_type: DocketAlertType = 1
+    ) -> dict[str, Any]:
+        """Create a new docket alert."""
         validated = DocketAlertCreate(docket=docket, alert_type=alert_type)
         return cast(
             dict[str, Any],
@@ -296,18 +162,7 @@ class DocketAlerts(Resource[DocketAlertsEndpoint]):
         )
 
     def update(self, id: int, **data: Any) -> dict[str, Any]:
-        """Update an existing docket alert.
-
-        Args:
-            id: The docket alert ID.
-            **data: Fields to update (e.g. alert_type).
-
-        Returns:
-            The updated docket alert as a dictionary.
-
-        Raises:
-            ValidationError: If *alert_type* in *data* is invalid.
-        """
+        """Update an existing docket alert."""
         validated = DocketAlertUpdate(**data)
         body = validated.model_dump(exclude_none=True)
         return cast(
@@ -318,22 +173,11 @@ class DocketAlerts(Resource[DocketAlertsEndpoint]):
         )
 
     def delete(self, id: int) -> None:
-        """Delete a docket alert.
-
-        Args:
-            id: The docket alert ID to delete.
-        """
+        """Delete a docket alert."""
         self._client._request("DELETE", f"{self._endpoint}{id}/")
 
     def subscribe(self, docket: int) -> dict[str, Any]:
-        """Subscribe to a docket (convenience for create with type=1).
-
-        Args:
-            docket: The docket ID to subscribe to.
-
-        Returns:
-            The created subscription as a dictionary.
-        """
+        """Subscribe to a docket (convenience for create with type=1)."""
         return self.create(docket, alert_type=1)
 
     def unsubscribe(self, docket: int) -> None:
@@ -341,12 +185,6 @@ class DocketAlerts(Resource[DocketAlertsEndpoint]):
 
         Looks up the alert for the given docket and deletes it.
         Symmetric with :meth:`subscribe`.
-
-        Args:
-            docket: The docket ID to unsubscribe from.
-
-        Raises:
-            ValueError: If no alert exists for the given docket.
         """
         results = self.list(docket=docket)
         for alert in results:
