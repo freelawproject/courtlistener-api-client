@@ -1,6 +1,8 @@
 # Change Log
 
-## Upcoming
+## Upcomming
+
+### 0.0.5 - 2026-03-18
 
 - Add MCP citation tools: `extract_citations` (local eyecite extraction), `analyze_citations` (extraction + API verification), and `resume_citation_analysis` (session-based resumption for rate-limited verification).
 - Add MCP tools for managing alerts: `create_search_alert`, `delete_search_alert`, `subscribe_to_docket_alert`, and `unsubscribe_from_docket_alert`.
@@ -15,8 +17,6 @@
 - Add `dump` and `load` helpers to `ResourceIterator` with iteration index tracking.
 - Fix generate endpoints script to handle choice groups.
 - Add `get_endpoint_item` tool to MCP server.
-
-## Current
 
 ### 0.0.4 - 2026-03-03
 
