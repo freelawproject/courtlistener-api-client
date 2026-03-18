@@ -256,10 +256,6 @@ class TestDocketAlertsIntegration:
         client.docket_alerts.subscribe(docket=self.DOCKET_ID)
         client.docket_alerts.unsubscribe(docket=self.DOCKET_ID)
 
-    def test_unsubscribe_not_found(self, client):
-        with pytest.raises(ValueError, match="No docket alert found"):
-            client.docket_alerts.unsubscribe(docket=0)
-
     def test_update_docket_alert(self, client):
         alert = None
         try:

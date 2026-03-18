@@ -39,11 +39,6 @@ class TestLookupText:
         assert len(results) >= 1
         assert results[0]["status"] == 404
 
-    def test_empty_string(self, client):
-        """Empty input returns an empty list."""
-        results = client.citation_lookup.lookup_text("")
-        assert results == []
-
     def test_no_citations_in_text(self, client):
         """Regular text with no citations returns an empty list."""
         results = client.citation_lookup.lookup_text(

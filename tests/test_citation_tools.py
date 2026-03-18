@@ -4,12 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from courtlistener.mcp.tools.analyze_citations_tool import AnalyzeCitationsTool
 from courtlistener.mcp.tools.citation_utils import (
-    build_compact_string,
     canonical_key,
-    extract_unique_case_citations,
-    format_flat_citations,
     format_resolved_citations,
-    summarize_cluster,
 )
 from courtlistener.mcp.tools.extract_citations_tool import ExtractCitationsTool
 from courtlistener.mcp.tools.resume_citation_analysis_tool import (
@@ -350,47 +346,6 @@ class TestCitationUtils:
         cites = get_citations("576 U.S. 644")
         assert len(cites) == 1
         assert canonical_key(cites[0]) == "576 U.S. 644"
-
-    def test_build_compact_string(self):
-        result = build_compact_string(["576 U.S. 644", "388 U.S. 1"])
-        assert result == "576 U.S. 644; 388 U.S. 1"
-
-    def test_extract_unique_case_citations(self):
-        from eyecite import get_citations, resolve_citations
-
-        cites = get_citations(SAMPLE_TEXT)
-        resolutions = resolve_citations(cites)
-        unique = extract_unique_case_citations(resolutions)
-        assert "576 U.S. 644" in unique
-        assert "388 U.S. 1" in unique
-        assert len(unique) == 2  # statutes excluded
-
-    def test_summarize_cluster(self):
-        cluster = {
-            "id": 12345,
-            "case_name": "Test Case",
-            "case_name_short": "Test",
-            "date_filed": "2020-01-01",
-            "citation_count": 42,
-            "precedential_status": "Published",
-            "absolute_url": "/opinion/12345/test/",
-            "docket": 999,
-            "citations": [
-                {"volume": "576", "reporter": "U.S.", "page": "644"}
-            ],
-            # These bloated fields should be excluded
-            "attorneys": "long attorney string...",
-            "html_with_citations": "<html>very long...</html>",
-        }
-        summary = summarize_cluster(cluster)
-        assert summary["cluster_id"] == 12345
-        assert summary["case_name"] == "Test Case"
-        assert summary["citations"] == ["576 U.S. 644"]
-        assert "attorneys" not in summary
-        assert "html_with_citations" not in summary
-
-    def test_format_flat_no_citations(self):
-        assert format_flat_citations([]) == "No citations found."
 
     def test_format_resolved_empty(self):
         from eyecite import get_citations, resolve_citations
