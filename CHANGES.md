@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Add MCP citation tools: `extract_citations` (local eyecite extraction), `analyze_citations` (extraction + API verification), and `resume_citation_analysis` (session-based resumption for rate-limited verification).
 - Add MCP tools for managing alerts: `create_search_alert`, `delete_search_alert`, `subscribe_to_docket_alert`, and `unsubscribe_from_docket_alert`.
 - Allow search alerts to accept structured dict queries in addition to raw query strings, with validation via the `SearchEndpoint` model.
 - Add `CourtListenerAPIError` with parsed response details for more informative error messages.
