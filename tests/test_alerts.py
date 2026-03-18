@@ -1,14 +1,76 @@
 """Tests for SearchAlerts and DocketAlerts helpers."""
 
 from unittest.mock import MagicMock
+from urllib.parse import parse_qs
 
 import pytest
 from pydantic import ValidationError
 
-from courtlistener.alerts import DocketAlerts, SearchAlerts
+from courtlistener.alerts import (
+    DocketAlerts,
+    SearchAlerts,
+    normalize_search_query,
+)
 
 # ---------------------------------------------------------------------------
-# Unit tests (no API calls, no integration marker)
+# Unit tests – normalize_search_query
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeSearchQuery:
+    """Unit tests for the query normalization helper."""
+
+    def test_dict_query_returns_query_string(self):
+        result = normalize_search_query({"q": "test"})
+        parsed = parse_qs(result)
+        assert parsed["q"] == ["test"]
+
+    def test_string_query_roundtrips(self):
+        result = normalize_search_query("q=test")
+        parsed = parse_qs(result)
+        assert parsed["q"] == ["test"]
+
+    def test_dict_with_court_filter(self):
+        result = normalize_search_query({"q": "copyright", "court": "scotus"})
+        parsed = parse_qs(result)
+        assert parsed["q"] == ["copyright"]
+        assert parsed["court"] == ["scotus"]
+
+    def test_string_with_multiple_params(self):
+        result = normalize_search_query("q=copyright&court=scotus")
+        parsed = parse_qs(result)
+        assert parsed["q"] == ["copyright"]
+        assert parsed["court"] == ["scotus"]
+
+    def test_explicit_type_preserved(self):
+        result = normalize_search_query({"q": "test", "type": "r"})
+        parsed = parse_qs(result)
+        assert parsed["q"] == ["test"]
+
+    def test_invalid_field_raises(self):
+        with pytest.raises((ValidationError, ValueError, TypeError)):
+            normalize_search_query({"not_a_real_field": "bad"})
+
+    def test_update_with_none_passes_through(self):
+        """SearchAlertUpdate allows None for query."""
+        mock_client = MagicMock()
+        alerts = SearchAlerts(mock_client)
+        # Should not raise – query=None is valid for updates
+        alerts.update(1, name="new name")
+
+    def test_update_with_dict_query(self):
+        mock_client = MagicMock()
+        mock_client._request.return_value = {"id": 1, "query": "q=test"}
+        alerts = SearchAlerts(mock_client)
+        alerts.update(1, query={"q": "test"})
+        call_args = mock_client._request.call_args
+        body = call_args[1]["json"]
+        parsed = parse_qs(body["query"])
+        assert parsed["q"] == ["test"]
+
+
+# ---------------------------------------------------------------------------
+# Unit tests – validation (no API calls, no integration marker)
 # ---------------------------------------------------------------------------
 
 
@@ -139,6 +201,21 @@ class TestSearchAlertsIntegration:
             )
             results = client.alerts.list()
             assert len(results.results) >= 1
+        finally:
+            if alert and "id" in alert:
+                client.alerts.delete(alert["id"])
+
+    def test_create_search_alert_with_dict_query(self, client):
+        alert = None
+        try:
+            alert = client.alerts.create(
+                name="SDK Dict Query Test",
+                query={"q": "test", "type": "o"},
+                rate="off",
+            )
+            assert isinstance(alert, dict)
+            assert alert["name"] == "SDK Dict Query Test"
+            assert "id" in alert
         finally:
             if alert and "id" in alert:
                 client.alerts.delete(alert["id"])

@@ -2,6 +2,7 @@
 
 ## Upcoming
 
+- Allow search alerts to accept structured dict queries in addition to raw query strings, with validation via the `SearchEndpoint` model.
 - Add `CourtListenerAPIError` with parsed response details for more informative error messages.
 - Move MCP server and tools into dedicated `courtlistener.mcp` submodule.
 - Add `mcp` optional dependency extra with `eyecite`, `mcp`, and `tiktoken`.
