@@ -20,7 +20,7 @@ their MCP client config. No local Python install, no pip, no env vars.
 
 ---
 
-## Three-Stage Deployment Plan
+## Two-Stage Deployment Plan
 
 ### Stage 1: Streamable HTTP + Token Passthrough ✅ IMPLEMENTED
 
@@ -52,57 +52,30 @@ their CourtListener API token via the `Authorization: Token <token>` header.
 }
 ```
 
-### Stage 2: Staging OAuth with Mock CL Django App
+### Stage 2: CourtListener OAuth + Production Hardening
 
-Stand up a **tiny Django app** that mimics CourtListener's auth system and
-acts as an OAuth 2.1 authorization server. This lets us build and test the
-full OAuth flow with no risk to real CL infrastructure.
-
-**Why a staging OAuth app:**
-- Practice adding OAuth to a CL-like Django stack (same user model,
-  same `django-oauth-toolkit`)
-- Define the exact scopes and claims the MCP server needs — this becomes
-  the spec CL implements against
-- Test the MCP SDK's `token_verifier` / `AuthSettings` integration against
-  a real OAuth server (known rough edges: SDK issues #750, #1063, #1414)
-- End-to-end test the browser-based OAuth consent flow that remote MCP
-  clients use (Claude Desktop, Cursor, etc.)
-- Explicitly disposable — delete when CL ships real OAuth
-
-**What the staging Django app needs:**
-- Django + `django-oauth-toolkit` (DOT)
-- Same user model pattern as CL (username + API token)
-- OAuth authorization / token / introspection endpoints
-- A minimal consent screen
-- Runs as a service in the same k8s namespace as the MCP server
+Once CourtListener adds OAuth support (via `django-oauth-toolkit`), the MCP
+server switches to standard OAuth 2.1 with PKCE. Users authenticate through
+their browser — no tokens in config files.
 
 **What changes on the MCP server:**
 - Add SDK-native OAuth support via `token_verifier` parameter
-- Add `AuthSettings` with the staging app as the `issuer_url`
+- Add `AuthSettings` with CL as the `issuer_url`
 - Keep header passthrough as a fallback for non-OAuth clients
 - Tool code stays identical — same `request_api_token` contextvar
 
-**Staging app scope (intentionally minimal):**
-```
-staging-oauth-app/
-├── manage.py
-├── Dockerfile
-├── k8s/
-│   ├── deployment.yaml
-│   └── service.yaml
-└── oauth_staging/
-    ├── settings.py      # Django + DOT config
-    ├── urls.py           # OAuth endpoints
-    ├── models.py         # User + API token model
-    └── views.py          # Consent screen
-```
+**What CL needs to provide:**
+- OAuth authorization / token / introspection endpoints (via DOT)
+- PKCE support (required by MCP spec)
+- Token introspection response that includes the user's CL API token
+  (so the MCP server can make upstream API calls on their behalf)
+- Scopes: `read` (API read access), `write` (alerts, subscriptions)
 
-### Stage 3: Real CourtListener OAuth
-
-Once CL adds OAuth support (using the spec defined in Stage 2):
-- Point `issuer_url` from the staging app to CL's real OAuth endpoints
-- Remove the staging Django app
-- This should be a **config change, not a code change**
+**Production hardening (shipped alongside or after OAuth):**
+- Redis-backed session store for horizontal scaling
+- Rate limiting and abuse detection
+- Monitoring and alerting
+- Usage analytics
 
 **End-state client config:**
 ```json
@@ -122,8 +95,8 @@ CL in their browser, grants consent, done.
 
 ## Deployment: Kubernetes
 
-The MCP server and staging OAuth app deploy to the existing Free Law Project
-k8s cluster alongside CourtListener itself.
+The MCP server deploys to the existing Free Law Project k8s cluster alongside
+CourtListener itself.
 
 ### Architecture
 
@@ -133,20 +106,20 @@ k8s cluster alongside CourtListener itself.
 ┌─────────────┐     HTTPS     ┌────┴────────┐                               │
 │  MCP Client │ ─────────────►│   Ingress   │                               │
 │  (Claude,   │  Streamable   │  Controller │                               │
-│   Cursor)   │  HTTP + Auth  └──┬──────┬───┘                               │
-└─────────────┘                  │      │                                    │
-                                 │      │                                    │
-                    ┌────────────▼──┐ ┌─▼────────────────┐    ┌────────────┐│
-                    │  MCP Server   │ │ Staging OAuth App │    │   Redis    ││
-                    │  (Deployment) │ │ (Deployment)      │    │ (optional) ││
-                    │  Port 8000    │ │ Stage 2 only      │    │            ││
-                    └───────┬───────┘ └──────────────────-┘    └────────────┘│
-                            │                                                │
-                            │ HTTPS                                          │
-                    ┌───────▼───────┐                                        │
-                    │ CourtListener │                                        │
-                    │ API           │                                        │
-                    └───────────────┘                                        │
+│   Cursor)   │  HTTP + Auth  └──────┬──────┘                               │
+└─────────────┘                      │                                       │
+                                     │                                       │
+                        ┌────────────▼──┐    ┌────────────┐                  │
+                        │  MCP Server   │    │   Redis    │                  │
+                        │  (Deployment) │    │ (Stage 2)  │                  │
+                        │  Port 8000    │    │            │                  │
+                        └───────┬───────┘    └────────────┘                  │
+                                │                                            │
+                                │ HTTPS                                      │
+                        ┌───────▼───────┐                                    │
+                        │ CourtListener │                                    │
+                        │ API + OAuth   │                                    │
+                        └───────────────┘                                    │
                                     └────────────────────────────────────────┘
 ```
 
@@ -154,7 +127,6 @@ k8s cluster alongside CourtListener itself.
 
 - **Same infrastructure** as CL — no new vendor, billing, or deploy tooling
 - **Ingress already solved** — adding `mcp.courtlistener.com` is one rule
-- **Staging OAuth app** is just another service in the same namespace
 - **Readiness/liveness probes** work with the `/health` endpoint
 - **HPA** for autoscaling if needed later
 
@@ -166,12 +138,7 @@ k8s cluster alongside CourtListener itself.
 - `Ingress` — TLS termination, routes `mcp.courtlistener.com/mcp`
 - `ConfigMap` — `MCP_TRANSPORT`, `MCP_PORT`, etc.
 
-**Staging OAuth App (Stage 2):**
-- `Deployment` — small Django app
-- `Service` (ClusterIP) — internal only, not exposed to internet
-- `ConfigMap` / `Secret` — Django settings, OAuth keys
-
-**Optional (Stage 3 / production hardening):**
+**Stage 2 additions:**
 - `Redis` — shared session store for horizontal scaling
 - `NetworkPolicy` — restrict traffic between pods
 - `PodDisruptionBudget` — maintain availability during rollouts
@@ -182,7 +149,7 @@ k8s cluster alongside CourtListener itself.
 |-------|----------|----------|
 | 1 | In-memory dict, single replica | Simple, loses state on restart |
 | 1+ | Session affinity in ingress | Allows multiple replicas, no shared state |
-| 3 | Redis-backed sessions | Full horizontal scaling, state survives restarts |
+| 2 | Redis-backed sessions | Full horizontal scaling, state survives restarts |
 
 ---
 
@@ -215,20 +182,12 @@ k8s cluster alongside CourtListener itself.
 - [ ] Deploy to k8s cluster
 - [ ] Update README with remote connection instructions
 
-### Stage 2: Staging OAuth Environment
-- [ ] Scaffold staging Django OAuth app with `django-oauth-toolkit`
-- [ ] Implement user model + API token binding
-- [ ] Add OAuth authorization / token / introspection endpoints
-- [ ] Add minimal consent screen
-- [ ] Add k8s manifests for the staging app
+### Stage 2: CourtListener OAuth + Production Hardening
+- [ ] Coordinate with CL on OAuth endpoint implementation (DOT)
+- [ ] Define scopes/claims spec for CL's OAuth server
 - [ ] Update MCP server to support `token_verifier` (SDK-native OAuth)
-- [ ] Add `AuthSettings` pointing to staging app
+- [ ] Add `AuthSettings` pointing to CL's OAuth endpoints
 - [ ] End-to-end test OAuth flow with Claude Desktop and Cursor
-- [ ] Document the scopes/claims spec for CL to implement
-
-### Stage 3: Production OAuth + Hardening
-- [ ] Point `issuer_url` to real CL OAuth endpoints
-- [ ] Remove staging Django app
 - [ ] Add Redis-backed session store for horizontal scaling
 - [ ] Add rate limiting and abuse detection
 - [ ] Add monitoring and alerting
@@ -240,7 +199,7 @@ k8s cluster alongside CourtListener itself.
 ## Open Questions
 
 1. **CourtListener OAuth timeline**: When does CL plan to add OAuth? This
-   determines how long Stage 2 lives.
+   determines when Stage 2 can begin.
 
 2. **Subdomain**: Is `mcp.courtlistener.com` available?
 
@@ -249,8 +208,5 @@ k8s cluster alongside CourtListener itself.
 4. **Session state urgency**: Is session affinity sufficient for launch, or
    do we need Redis from day one?
 
-5. **Staging OAuth app location**: Separate repo, or a directory in this
-   repo (e.g., `staging/oauth-app/`)?
-
-6. **Who operates this?**: Free Law Project infra team? This affects the
-   complexity budget for Stage 2/3.
+5. **Who operates this?**: Free Law Project infra team? This affects the
+   complexity budget for Stage 2.
