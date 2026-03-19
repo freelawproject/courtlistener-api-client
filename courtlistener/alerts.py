@@ -104,7 +104,7 @@ class DocketAlertUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class SearchAlerts(Resource[AlertsEndpoint]):
+class SearchAlerts(Resource):
     """Helper for managing search alerts."""
 
     def __init__(self, client: CourtListener) -> None:
@@ -143,7 +143,7 @@ class SearchAlerts(Resource[AlertsEndpoint]):
         self._client._request("DELETE", f"{self._endpoint}{id}/")
 
 
-class DocketAlerts(Resource[DocketAlertsEndpoint]):
+class DocketAlerts(Resource):
     """Helper for managing docket alerts (subscriptions)."""
 
     def __init__(self, client: CourtListener) -> None:

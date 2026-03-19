@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from courtlistener.models import Endpoint, Page
@@ -11,15 +11,12 @@ if TYPE_CHECKING:
     from courtlistener.client import CourtListener
 
 
-EndpointModelT = TypeVar("EndpointModelT", bound=Endpoint)
-
-
 class ResourceIterator:
     """Iterator for paginated API results."""
 
     def __init__(
         self,
-        resource: Resource[EndpointModelT],
+        resource: Resource,
         filters: dict[str, Any],
     ) -> None:
         self._client = resource._client
@@ -139,11 +136,13 @@ class ResourceIterator:
         return iterator
 
 
-class Resource(Generic[EndpointModelT]):
+class Resource:
     """Resource class for API endpoints."""
 
     def __init__(
-        self, client: CourtListener, model: type[EndpointModelT]
+        self,
+        client: CourtListener,
+        model: type[Endpoint],
     ) -> None:
         self._client = client
         self._model = model

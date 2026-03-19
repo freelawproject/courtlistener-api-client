@@ -43,7 +43,7 @@ class CourtListener:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._http_client: httpx.Client | None = None
-        self._resources: dict[str, Resource[Any]] = {}
+        self._resources: dict[str, Resource] = {}
 
     @property
     def alerts(self) -> SearchAlerts:
@@ -72,14 +72,14 @@ class CourtListener:
             self._citation_lookup = CitationLookup(self)
         return self._citation_lookup
 
-    def __getattr__(self, name: str) -> Resource[Any]:
+    def __getattr__(self, name: str) -> Resource:
         """Dynamically create resource accessors based on registered endpoints."""
         if not name.startswith("_"):
             if name in self._resources:
                 return self._resources[name]
 
             if name in ENDPOINTS:
-                resource: Resource[Any] = Resource(self, ENDPOINTS[name])
+                resource: Resource = Resource(self, ENDPOINTS[name])
                 self._resources[name] = resource
                 return resource
 
