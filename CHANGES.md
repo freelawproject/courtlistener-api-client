@@ -5,14 +5,18 @@
 The following changes are not yet released, but are code complete:
 
 Features:
-- A `fields` parameter for `get` methods on resources and for `get_endpoint_item` tool.
-- Allow `analyze_citations` tool to pull text from an opinion ID instead of a text string.
+- 
 
 Changes:
 -
 
 Fixes:
 -
+
+### 0.0.6 - 2026-03-19
+
+- A `fields` parameter for `get` methods on resources and for `get_endpoint_item` tool.
+- Allow `analyze_citations` tool to pull text from an opinion ID instead of a text string.
 
 ### 0.0.5 - 2026-03-18
 
