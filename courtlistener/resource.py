@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from courtlistener.models import Endpoint, Page
-from courtlistener.utils import flatten_filters
+from courtlistener.utils import flatten_filters, validate_model_fields
 
 if TYPE_CHECKING:
     from courtlistener.client import CourtListener
@@ -154,11 +154,18 @@ class Resource:
         filters = {k: v for k, v in filters.items() if v is not None}
         return filters
 
-    def get(self, id: int | str) -> dict[str, Any]:
+    def get(
+        self, id: int | str, fields: list[str] | str | None = None
+    ) -> dict[str, Any]:
         """Get a resource by its ID."""
+        path = f"{self._endpoint}{id}/"
+        if fields:
+            fields = validate_model_fields(self._model, fields)
+            fields_str = ",".join(fields)
+            path = f"{path}?fields={fields_str}"
         return cast(
             dict[str, Any],
-            self._client._request("GET", f"{self._endpoint}{id}/"),
+            self._client._request("GET", path),
         )
 
     def list(self, **filters: Any) -> ResourceIterator:

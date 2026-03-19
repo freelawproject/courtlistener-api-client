@@ -505,8 +505,8 @@ def get_options() -> dict[str, Any]:
             options[endpoint_id] = client._request(
                 "OPTIONS", f"/{endpoint_id}/"
             )
-        except Exception as e:
-            print(f"Error getting options for {endpoint_id}: {e}")
+        except Exception as exc:
+            print(f"Error getting options for {endpoint_id}: {exc}")
             continue
     return options
 
