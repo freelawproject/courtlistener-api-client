@@ -27,7 +27,7 @@ class GetCountsTool(MCPTool):
         }
 
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
-        with self.get_client() as client:
+        with self.get_client(session) as client:
             query_id = arguments["query_id"]
             data = session.get("queries", {}).get(query_id)
             if data is None:

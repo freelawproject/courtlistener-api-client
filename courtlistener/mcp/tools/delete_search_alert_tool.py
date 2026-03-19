@@ -28,7 +28,7 @@ class DeleteSearchAlertTool(MCPTool):
         alert_id = arguments["id"]
 
         try:
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 client.alerts.delete(alert_id)
                 return CallToolResult(
                     content=[

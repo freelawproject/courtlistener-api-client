@@ -31,7 +31,7 @@ class SubscribeToDocketAlertTool(MCPTool):
         docket = arguments["docket"]
 
         try:
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 alert = client.docket_alerts.subscribe(docket)
                 return CallToolResult(
                     content=[

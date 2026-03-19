@@ -85,7 +85,7 @@ class SearchTool(MCPTool):
 
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
         """Call the search tool."""
-        with self.get_client() as client:
+        with self.get_client(session) as client:
             fields = arguments.pop("fields", None)
             num_results = arguments.pop("num_results", DEFAULT_NUM_RESULTS)
             response = client.search.list(**arguments)

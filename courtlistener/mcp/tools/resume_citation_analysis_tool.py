@@ -74,7 +74,7 @@ class ResumeCitationAnalysisTool(MCPTool):
         batch = pending[:MAX_CITATIONS_PER_REQUEST]
         compact_text = build_compact_string(batch)
 
-        with self.get_client() as client:
+        with self.get_client(session) as client:
             results = client.citation_lookup.lookup_text(compact_text)
 
         previously_verified = set(job["verified"].keys())

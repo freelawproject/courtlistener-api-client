@@ -59,7 +59,7 @@ class CallEndpointTool(MCPTool):
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
-                with self.get_client() as client:
+                with self.get_client(session) as client:
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
 

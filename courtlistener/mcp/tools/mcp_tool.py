@@ -1,13 +1,18 @@
 from mcp.types import CallToolResult, Tool
 
 from courtlistener import CourtListener
+from courtlistener.mcp.auth import request_api_token
 
 
 class MCPTool:
     name: str | None = None
 
-    def get_client(self) -> CourtListener:
-        return CourtListener()
+    def get_client(self, session: dict | None = None) -> CourtListener:
+        # Priority: HTTP header token > session token > env var (in CourtListener.__init__)
+        token = request_api_token.get(None)
+        if not token and session:
+            token = session.get("api_token")
+        return CourtListener(api_token=token) if token else CourtListener()
 
     def get_tool(self) -> Tool:
         if self.name is None:

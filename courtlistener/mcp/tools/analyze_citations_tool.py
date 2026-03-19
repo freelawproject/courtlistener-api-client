@@ -73,7 +73,7 @@ class AnalyzeCitationsTool(MCPTool):
             )
 
         if opinion_id is not None:
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 try:
                     opinion = client.opinions.get(opinion_id)
                 except CourtListenerAPIError as exc:
@@ -141,7 +141,7 @@ class AnalyzeCitationsTool(MCPTool):
             batch = pending[:MAX_CITATIONS_PER_REQUEST]
             compact_text = build_compact_string(batch)
 
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 results = client.citation_lookup.lookup_text(compact_text)
 
             process_api_results(results, batch, verified, pending)

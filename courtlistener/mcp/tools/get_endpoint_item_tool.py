@@ -57,7 +57,7 @@ class GetEndpointItemTool(MCPTool):
 
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
-                with self.get_client() as client:
+                with self.get_client(session) as client:
                     resource = getattr(client, endpoint_name)
                     try:
                         item = resource.get(item_id, fields=fields)

@@ -64,7 +64,7 @@ class GetMoreResultsTool(MCPTool):
                 isError=True,
             )
 
-        with self.get_client() as client:
+        with self.get_client(session) as client:
             response = ResourceIterator.load(client, data["response"])
 
             if not has_more_results(response):

@@ -32,7 +32,7 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
         docket = arguments["docket"]
 
         try:
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 client.docket_alerts.unsubscribe(docket)
                 return CallToolResult(
                     content=[

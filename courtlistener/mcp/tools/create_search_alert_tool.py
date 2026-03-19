@@ -57,7 +57,7 @@ class CreateSearchAlertTool(MCPTool):
         alert_type = arguments.get("alert_type")
 
         try:
-            with self.get_client() as client:
+            with self.get_client(session) as client:
                 alert = client.alerts.create(
                     name=name,
                     query=query,
