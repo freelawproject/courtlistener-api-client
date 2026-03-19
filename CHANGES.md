@@ -6,6 +6,7 @@ The following changes are not yet released, but are code complete:
 
 Features:
 - A `fields` parameter for `get` methods on resources and for `get_endpoint_item` tool.
+- Allow `analyze_citations` tool to pull text from an opinion ID instead of a text string.
 
 Changes:
 -
