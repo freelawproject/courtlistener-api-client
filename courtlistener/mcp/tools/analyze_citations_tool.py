@@ -4,6 +4,7 @@ from eyecite import get_citations, resolve_citations
 from eyecite.models import FullCaseCitation
 from mcp.types import CallToolResult, TextContent
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -46,14 +47,54 @@ class AnalyzeCitationsTool(MCPTool):
                         "CourtListener."
                     ),
                 },
+                "opinion_id": {
+                    "type": "integer",
+                    "description": (
+                        "Alternatively, if the opinion is available "
+                        "in CourtListener, you can provide the opinion ID"
+                    ),
+                },
             },
-            "required": ["text"],
+            "required": [],
         }
 
     def __call__(self, arguments: dict, session: dict) -> CallToolResult:
-        text = arguments["text"]
+        text = arguments.get("text")
+        opinion_id = arguments.get("opinion_id")
+        if (text is not None) == (opinion_id is not None):
+            return CallToolResult(
+                content=[
+                    TextContent(
+                        type="text",
+                        text="Exactly one of text or opinion ID must be provided.",
+                    )
+                ],
+                isError=True,
+            )
+
+        if opinion_id is not None:
+            with self.get_client() as client:
+                try:
+                    opinion = client.opinions.get(opinion_id)
+                except CourtListenerAPIError as exc:
+                    return CallToolResult(
+                        content=[TextContent(type="text", text=str(exc))],
+                        isError=True,
+                    )
+                text = opinion.get("plain_text")
+                if not text:
+                    return CallToolResult(
+                        content=[
+                            TextContent(
+                                type="text",
+                                text="Text not available for opinion ID.",
+                            )
+                        ],
+                        isError=True,
+                    )
 
         # Step 1: Local extraction and resolution
+        assert text is not None  # for mypy
         cites = get_citations(text)
         if not cites:
             return CallToolResult(
