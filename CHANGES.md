@@ -1,6 +1,17 @@
 # Change Log
 
-## Upcomming
+## Upcoming
+
+The following changes are not yet released, but are code complete:
+
+Features:
+- A `fields` parameter for `get` methods on resources and for `get_endpoint_item` tool.
+
+Changes:
+-
+
+Fixes:
+-
 
 ### 0.0.5 - 2026-03-18
 
