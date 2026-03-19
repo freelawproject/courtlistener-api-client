@@ -76,9 +76,9 @@ class AnalyzeCitationsTool(MCPTool):
             with self.get_client() as client:
                 try:
                     opinion = client.opinions.get(opinion_id)
-                except CourtListenerAPIError as e:
+                except CourtListenerAPIError as exc:
                     return CallToolResult(
-                        content=[TextContent(type="text", text=str(e))],
+                        content=[TextContent(type="text", text=str(exc))],
                         isError=True,
                     )
                 text = opinion.get("plain_text")
