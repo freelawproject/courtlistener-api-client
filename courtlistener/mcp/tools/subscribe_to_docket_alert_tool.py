@@ -41,7 +41,7 @@ class SubscribeToDocketAlertTool(MCPTool):
                         )
                     ]
                 )
-        except CourtListenerAPIError as exc:
+        except (ValueError, CourtListenerAPIError) as exc:
             return CallToolResult(
                 content=[TextContent(type="text", text=str(exc))],
                 isError=True,

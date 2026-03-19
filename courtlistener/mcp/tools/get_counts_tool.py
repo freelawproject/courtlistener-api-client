@@ -1,5 +1,6 @@
 from mcp.types import CallToolResult, TextContent
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.resource import ResourceIterator
 
@@ -45,9 +46,9 @@ class GetCountsTool(MCPTool):
             response = ResourceIterator.load(client, data["response"])
             try:
                 count = response.count
-            except ValueError:
+            except (ValueError, CourtListenerAPIError) as exc:
                 return CallToolResult(
-                    content=[TextContent(type="text", text="No count found")],
+                    content=[TextContent(type="text", text=str(exc))],
                     isError=True,
                 )
             return CallToolResult(

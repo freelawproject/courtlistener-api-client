@@ -56,6 +56,30 @@ def unflatten_filters(filters: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def validate_model_fields(
+    model: type["Endpoint"], fields: str | list[str]
+) -> list[str]:
+    if isinstance(fields, str):
+        fields = fields.split(",")
+    # Don't enforce choices if no `fields` field.
+    if "fields" in model.model_fields:
+        extra = model.model_fields["fields"].json_schema_extra
+        if isinstance(extra, dict):
+            choices = extra.get("choices")
+            if isinstance(choices, list):
+                values = []
+                for choice in choices:
+                    if isinstance(choice, dict):
+                        values.append(choice["value"])
+                invalid_fields = [f for f in fields if f not in values]
+                if invalid_fields:
+                    raise ValueError(
+                        f"Invalid fields: {invalid_fields}\n"
+                        f"Fields must be one of: {values}"
+                    )
+    return fields
+
+
 def get_endpoint_model_from_info(info: ValidationInfo) -> type["Endpoint"]:
     from courtlistener.models import ENDPOINTS
 

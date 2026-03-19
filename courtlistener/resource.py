@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from courtlistener.models import Endpoint, Page
-from courtlistener.utils import flatten_filters
+from courtlistener.utils import flatten_filters, validate_model_fields
 
 if TYPE_CHECKING:
     from courtlistener.client import CourtListener
-
-
-EndpointModelT = TypeVar("EndpointModelT", bound=Endpoint)
 
 
 class ResourceIterator:
@@ -19,7 +16,7 @@ class ResourceIterator:
 
     def __init__(
         self,
-        resource: Resource[EndpointModelT],
+        resource: Resource,
         filters: dict[str, Any],
     ) -> None:
         self._client = resource._client
@@ -139,11 +136,13 @@ class ResourceIterator:
         return iterator
 
 
-class Resource(Generic[EndpointModelT]):
+class Resource:
     """Resource class for API endpoints."""
 
     def __init__(
-        self, client: CourtListener, model: type[EndpointModelT]
+        self,
+        client: CourtListener,
+        model: type[Endpoint],
     ) -> None:
         self._client = client
         self._model = model
@@ -155,11 +154,20 @@ class Resource(Generic[EndpointModelT]):
         filters = {k: v for k, v in filters.items() if v is not None}
         return filters
 
-    def get(self, id: int | str) -> dict[str, Any]:
+    def get(
+        self, id: int | str, fields: list[str] | str | None = None
+    ) -> dict[str, Any]:
         """Get a resource by its ID."""
+        params = {}
+        if fields:
+            fields = validate_model_fields(self._model, fields)
+            fields_str = ",".join(fields)
+            params["fields"] = fields_str
         return cast(
             dict[str, Any],
-            self._client._request("GET", f"{self._endpoint}{id}/"),
+            self._client._request(
+                "GET", f"{self._endpoint}{id}/", params=params
+            ),
         )
 
     def list(self, **filters: Any) -> ResourceIterator:

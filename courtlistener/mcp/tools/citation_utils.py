@@ -5,6 +5,7 @@ from __future__ import annotations
 from eyecite.models import (
     CitationBase,
     FullCaseCitation,
+    FullCitation,
     FullLawCitation,
     IdCitation,
     ShortCaseCitation,
@@ -37,7 +38,7 @@ def citation_type_label(cite: CitationBase) -> str:
     return labels.get(type(cite), type(cite).__name__)
 
 
-def canonical_key(cite: FullCaseCitation) -> str:
+def canonical_key(cite: FullCitation) -> str:
     """Canonical key for deduplication: 'volume reporter page'."""
     g = cite.groups
     return f"{g['volume']} {g['reporter']} {g['page']}"
