@@ -59,11 +59,9 @@ def unflatten_filters(filters: dict[str, Any]) -> dict[str, Any]:
 def validate_model_fields(
     model: type["Endpoint"], fields: str | list[str]
 ) -> list[str]:
-    assert isinstance(fields, str | list), (
-        "`fields` must be a comma separated string or a list of strings"
-    )
     if isinstance(fields, str):
         fields = fields.split(",")
+    # Don't enforce choices if no `fields` field.
     if "fields" in model.model_fields:
         extra = model.model_fields["fields"].json_schema_extra
         if isinstance(extra, dict):

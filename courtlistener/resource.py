@@ -158,14 +158,16 @@ class Resource:
         self, id: int | str, fields: list[str] | str | None = None
     ) -> dict[str, Any]:
         """Get a resource by its ID."""
-        path = f"{self._endpoint}{id}/"
+        params = {}
         if fields:
             fields = validate_model_fields(self._model, fields)
             fields_str = ",".join(fields)
-            path = f"{path}?fields={fields_str}"
+            params["fields"] = fields_str
         return cast(
             dict[str, Any],
-            self._client._request("GET", path),
+            self._client._request(
+                "GET", f"{self._endpoint}{id}/", params=params
+            ),
         )
 
     def list(self, **filters: Any) -> ResourceIterator:

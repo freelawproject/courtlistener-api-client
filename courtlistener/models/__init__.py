@@ -8,7 +8,7 @@ try:
     from courtlistener.models.filters import FILTERS
 except Exception as exc:
     logging.warning(
-        f"Error importing filters and endpoints: {exc}"
+        f"Error importing filters and endpoints: {exc}\n"
         "You may need to run `scripts/generate_models.py` to generate them."
     )
     ENDPOINTS = {}
