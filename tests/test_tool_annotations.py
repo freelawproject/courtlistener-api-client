@@ -110,9 +110,7 @@ class TestToolTitles:
         """Every registered tool must have a non-empty title."""
         for name, tool in MCP_TOOLS.items():
             t = tool.get_tool()
-            assert t.annotations is not None, (
-                f"{name} missing annotations"
-            )
+            assert t.annotations is not None, f"{name} missing annotations"
             assert t.annotations.title, f"{name} missing title"
 
     def test_titles_are_human_readable(self):
