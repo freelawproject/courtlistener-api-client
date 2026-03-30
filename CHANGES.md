@@ -5,7 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
--
+- Add session abstraction for MCP server and implement in-memory and redis-based sessions.
 
 Changes:
 -
