@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
@@ -22,6 +22,11 @@ class ResumeCitationAnalysisTool(MCPTool):
     """
 
     name: str = "resume_citation_analysis"
+    annotations = ToolAnnotations(
+        title="Resuming Citation Analysis",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {

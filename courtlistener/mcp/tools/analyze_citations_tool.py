@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from eyecite import get_citations, resolve_citations
 from eyecite.models import FullCaseCitation
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.citation_utils import (
@@ -34,6 +34,11 @@ class AnalyzeCitationsTool(MCPTool):
     """
 
     name: str = "analyze_citations"
+    annotations = ToolAnnotations(
+        title="Analyzing Citations",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {

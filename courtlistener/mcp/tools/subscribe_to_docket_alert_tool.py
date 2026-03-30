@@ -15,6 +15,7 @@ class SubscribeToDocketAlertTool(MCPTool):
 
     name: str = "subscribe_to_docket_alert"
     annotations = ToolAnnotations(
+        title="Subscribing to Docket Alert",
         readOnlyHint=False,
         destructiveHint=False,
         idempotentHint=False,

@@ -1,4 +1,4 @@
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -13,6 +13,11 @@ class GetCountsTool(MCPTool):
     """
 
     name: str = "get_counts"
+    annotations = ToolAnnotations(
+        title="Getting Result Count",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {

@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -11,6 +11,11 @@ class GetEndpointItemTool(MCPTool):
     """Get an item by ID from a CourtListener API endpoint."""
 
     name: str = "get_endpoint_item"
+    annotations = ToolAnnotations(
+        title="Getting Item by ID",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         """Get the input schema for the get_endpoint_item tool."""

@@ -17,6 +17,7 @@ class GetEndpointSchemaTool(MCPTool):
 
     name: str = "get_endpoint_schema"
     annotations = ToolAnnotations(
+        title="Getting Endpoint Schema",
         readOnlyHint=True,
         openWorldHint=False,
     )

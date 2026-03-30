@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
@@ -23,6 +23,11 @@ class CallEndpointTool(MCPTool):
     """
 
     name: str = "call_endpoint"
+    annotations = ToolAnnotations(
+        title="Calling API Endpoint",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         """Get the input schema for the call_endpoint tool."""

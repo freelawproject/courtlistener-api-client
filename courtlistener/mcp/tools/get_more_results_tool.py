@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
@@ -22,6 +22,11 @@ class GetMoreResultsTool(MCPTool):
     """
 
     name: str = "get_more_results"
+    annotations = ToolAnnotations(
+        title="Getting More Results",
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {
