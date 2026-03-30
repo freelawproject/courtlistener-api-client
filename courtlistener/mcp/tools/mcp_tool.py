@@ -9,10 +9,7 @@ from courtlistener.mcp.session import SessionStore
 
 class MCPTool:
     name: str | None = None
-    annotations: ToolAnnotations | None = ToolAnnotations(
-        readOnlyHint=True,
-        openWorldHint=True,
-    )
+    annotations: ToolAnnotations | None = None
 
     def get_client(self) -> CourtListener:
         """Get a CourtListener client with the appropriate API token.
@@ -42,6 +39,8 @@ class MCPTool:
     def get_tool(self) -> Tool:
         if self.name is None:
             raise ValueError("name must be set")
+        if self.annotations is None:
+            raise ValueError("annotations must be set")
         return Tool(
             name=self.name,
             description=self.get_description(),
