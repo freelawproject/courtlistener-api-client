@@ -7,11 +7,13 @@ from dotenv import load_dotenv
 
 from courtlistener import CourtListener
 
-# Stub out native-build MCP deps so tests can run without [mcp] extras.
-# eyecite requires fast-diff-match-patch which needs a native wheel build.
-# This must run before any test module that imports courtlistener.mcp.tools.
+# Stub native-build MCP deps only when they are not installed, so
+# tests that don't need them (e.g. test_auth) can still be collected.
+# When the real packages ARE installed, they are used as-is.
 for _mod in ("eyecite", "eyecite.models", "tiktoken"):
-    if _mod not in sys.modules:
+    try:
+        __import__(_mod)
+    except ImportError:
         sys.modules[_mod] = MagicMock()
 
 load_dotenv()
