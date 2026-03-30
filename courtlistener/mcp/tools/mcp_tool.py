@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import hashlib
-
 from mcp.types import CallToolResult, Tool
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import request_api_token
+from courtlistener.mcp.session import SessionStore
 
 
 class MCPTool:
@@ -33,8 +32,7 @@ class MCPTool:
         """
         token = request_api_token.get()
         if token:
-            # TODO: use SessionStore.hash_token() after #76 merges
-            return hashlib.sha256(token.encode()).hexdigest()[:16]
+            return SessionStore.hash_token(token)
         return "local"
 
     def get_tool(self) -> Tool:
