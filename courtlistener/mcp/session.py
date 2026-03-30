@@ -4,7 +4,11 @@ import hashlib
 import json
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any
+from copy import deepcopy
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from redis import Redis
 
 
 class SessionStore(ABC):
@@ -50,7 +54,7 @@ class InMemorySessionStore(SessionStore):
         self._data: dict[str, dict] = {}
 
     def store_query(self, user_id: str, query_id: str, data: dict) -> None:
-        self._data[f"{user_id}:query:{query_id}"] = data
+        self._data[f"{user_id}:query:{query_id}"] = deepcopy(data)
 
     def get_query(self, user_id: str, query_id: str) -> dict | None:
         return self._data.get(f"{user_id}:query:{query_id}")
@@ -75,7 +79,7 @@ class RedisSessionStore(SessionStore):
     QUERY_TTL = 3600  # 1 hour
     CITATION_TTL = 7200  # 2 hours
 
-    def __init__(self, redis_client: Any) -> None:
+    def __init__(self, redis_client: Redis) -> None:
         self._redis = redis_client
 
     def store_query(self, user_id: str, query_id: str, data: dict) -> None:
