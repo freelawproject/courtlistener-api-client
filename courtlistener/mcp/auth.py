@@ -34,7 +34,7 @@ class AuthMiddleware:
             auth = headers.get(b"authorization", b"").decode()
             token = None
             if auth.startswith("Token "):
-                token = auth[len("Token ") :]
+                token = auth[len("Token ") :] or None
             reset = request_api_token.set(token)
             try:
                 await self.app(scope, receive, send)

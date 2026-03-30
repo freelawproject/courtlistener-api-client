@@ -2,30 +2,20 @@
 
 from __future__ import annotations
 
-# eyecite is an optional MCP dependency that requires a native build
-# (fast-diff-match-patch). Stub it out so tests can run without the
-# full [mcp] extras installed.
-import sys
-from unittest.mock import MagicMock
+import contextvars
+from unittest.mock import patch
 
-for _mod in ("eyecite", "eyecite.models", "tiktoken"):
-    if _mod not in sys.modules:
-        sys.modules[_mod] = MagicMock()
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+from starlette.testclient import TestClient
 
-import contextvars  # noqa: E402
-from unittest.mock import patch  # noqa: E402
-
-from starlette.applications import Starlette  # noqa: E402
-from starlette.requests import Request  # noqa: E402
-from starlette.responses import JSONResponse  # noqa: E402
-from starlette.routing import Route  # noqa: E402
-from starlette.testclient import TestClient  # noqa: E402
-
-from courtlistener.mcp.auth import (  # noqa: E402
+from courtlistener.mcp.auth import (
     AuthMiddleware,
     request_api_token,
 )
-from courtlistener.mcp.tools.mcp_tool import MCPTool  # noqa: E402
+from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
 def _make_app():
@@ -101,13 +91,12 @@ class TestAuthMiddleware:
         assert resp.json()["token"] == token
 
     def test_token_prefix_only(self):
-        """'Token ' with no value -> empty string, not None."""
+        """'Token ' with no value -> normalized to None."""
         resp = self.client.get(
             "/echo",
             headers={"Authorization": "Token "},
         )
-        # "Token " with trailing space produces empty string
-        assert resp.json()["token"] == ""
+        assert resp.json()["token"] is None
 
 
 class TestGetClient:

@@ -33,6 +33,7 @@ class MCPTool:
         """
         token = request_api_token.get()
         if token:
+            # TODO: use SessionStore.hash_token() after #76 merges
             return hashlib.sha256(token.encode()).hexdigest()[:16]
         return "local"
 

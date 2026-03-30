@@ -1,9 +1,18 @@
 import os
+import sys
+from unittest.mock import MagicMock
 
 import pytest
 from dotenv import load_dotenv
 
 from courtlistener import CourtListener
+
+# Stub out native-build MCP deps so tests can run without [mcp] extras.
+# eyecite requires fast-diff-match-patch which needs a native wheel build.
+# This must run before any test module that imports courtlistener.mcp.tools.
+for _mod in ("eyecite", "eyecite.models", "tiktoken"):
+    if _mod not in sys.modules:
+        sys.modules[_mod] = MagicMock()
 
 load_dotenv()
 
