@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp.types import CallToolResult, Tool
+from mcp.types import CallToolResult, Tool, ToolAnnotations
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import request_api_token
@@ -9,6 +9,10 @@ from courtlistener.mcp.session import SessionStore
 
 class MCPTool:
     name: str | None = None
+    annotations: ToolAnnotations | None = ToolAnnotations(
+        readOnlyHint=True,
+        openWorldHint=True,
+    )
 
     def get_client(self) -> CourtListener:
         """Get a CourtListener client with the appropriate API token.
@@ -42,6 +46,7 @@ class MCPTool:
             name=self.name,
             description=self.get_description(),
             inputSchema=self.get_input_schema(),
+            annotations=self.annotations,
         )
 
     def get_description(self) -> str:
