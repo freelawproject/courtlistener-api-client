@@ -44,9 +44,7 @@ class TestToolAnnotations:
         """Every tool must expose a non-None annotations object."""
         for name, tool in MCP_TOOLS.items():
             t = tool.get_tool()
-            assert t.annotations is not None, (
-                f"{name} missing annotations"
-            )
+            assert t.annotations is not None, f"{name} missing annotations"
 
     def test_all_tools_accounted_for(self):
         """READ_ONLY_TOOLS | WRITE_TOOLS must exactly match MCP_TOOLS."""
