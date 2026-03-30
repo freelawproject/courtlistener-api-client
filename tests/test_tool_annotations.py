@@ -124,6 +124,9 @@ class TestToolTitles:
 
     def test_title_values(self):
         """Verify exact title string for every tool."""
+        assert set(EXPECTED_TITLES.keys()) == set(MCP_TOOLS.keys()), (
+            "EXPECTED_TITLES is out of sync with MCP_TOOLS"
+        )
         for name, expected_title in EXPECTED_TITLES.items():
             t = MCP_TOOLS[name].get_tool()
             assert t.annotations.title == expected_title, (
