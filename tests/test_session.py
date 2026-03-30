@@ -90,21 +90,13 @@ class TestInMemorySessionStore:
         """User A cannot see user B's citation analyses."""
         self.store.store_citation_analysis("userA", "j1", {"a": 1})
         self.store.store_citation_analysis("userB", "j1", {"b": 2})
-        assert self.store.get_citation_analysis("userA", "j1") == {
-            "a": 1
-        }
-        assert self.store.get_citation_analysis("userB", "j1") == {
-            "b": 2
-        }
+        assert self.store.get_citation_analysis("userA", "j1") == {"a": 1}
+        assert self.store.get_citation_analysis("userB", "j1") == {"b": 2}
 
     def test_overwrite_citation_analysis(self):
         """Subsequent store_citation_analysis calls overwrite previous data."""
-        self.store.store_citation_analysis(
-            "user1", "j1", {"pending": [1]}
-        )
-        self.store.store_citation_analysis(
-            "user1", "j1", {"pending": []}
-        )
+        self.store.store_citation_analysis("user1", "j1", {"pending": [1]})
+        self.store.store_citation_analysis("user1", "j1", {"pending": []})
         assert self.store.get_citation_analysis("user1", "j1") == {
             "pending": []
         }
@@ -132,9 +124,7 @@ class TestRedisSessionStore:
         data = {"response": "test"}
         self.mock_redis.get.return_value = json.dumps(data)
         result = self.store.get_query("uid", "q1")
-        self.mock_redis.get.assert_called_once_with(
-            "mcp:uid:query:q1"
-        )
+        self.mock_redis.get.assert_called_once_with("mcp:uid:query:q1")
         assert result == data
 
     def test_get_query_returns_none_when_missing(self):
@@ -156,9 +146,7 @@ class TestRedisSessionStore:
         data = {"pending": []}
         self.mock_redis.get.return_value = json.dumps(data)
         result = self.store.get_citation_analysis("uid", "j1")
-        self.mock_redis.get.assert_called_once_with(
-            "mcp:uid:citation:j1"
-        )
+        self.mock_redis.get.assert_called_once_with("mcp:uid:citation:j1")
         assert result == data
 
     def test_get_citation_returns_none_when_missing(self):

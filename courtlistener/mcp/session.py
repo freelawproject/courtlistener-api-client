@@ -15,14 +15,10 @@ class SessionStore(ABC):
         return uuid.uuid4().hex[:8]
 
     @abstractmethod
-    def store_query(
-        self, user_id: str, query_id: str, data: dict
-    ) -> None: ...
+    def store_query(self, user_id: str, query_id: str, data: dict) -> None: ...
 
     @abstractmethod
-    def get_query(
-        self, user_id: str, query_id: str
-    ) -> dict | None: ...
+    def get_query(self, user_id: str, query_id: str) -> dict | None: ...
 
     @abstractmethod
     def store_citation_analysis(
@@ -53,14 +49,10 @@ class InMemorySessionStore(SessionStore):
     def __init__(self) -> None:
         self._data: dict[str, dict] = {}
 
-    def store_query(
-        self, user_id: str, query_id: str, data: dict
-    ) -> None:
+    def store_query(self, user_id: str, query_id: str, data: dict) -> None:
         self._data[f"{user_id}:query:{query_id}"] = data
 
-    def get_query(
-        self, user_id: str, query_id: str
-    ) -> dict | None:
+    def get_query(self, user_id: str, query_id: str) -> dict | None:
         return self._data.get(f"{user_id}:query:{query_id}")
 
     def store_citation_analysis(
@@ -68,9 +60,7 @@ class InMemorySessionStore(SessionStore):
     ) -> None:
         self._data[f"{user_id}:citation:{job_id}"] = data
 
-    def get_citation_analysis(
-        self, user_id: str, job_id: str
-    ) -> dict | None:
+    def get_citation_analysis(self, user_id: str, job_id: str) -> dict | None:
         return self._data.get(f"{user_id}:citation:{job_id}")
 
 
@@ -88,15 +78,11 @@ class RedisSessionStore(SessionStore):
     def __init__(self, redis_client: Any) -> None:
         self._redis = redis_client
 
-    def store_query(
-        self, user_id: str, query_id: str, data: dict
-    ) -> None:
+    def store_query(self, user_id: str, query_id: str, data: dict) -> None:
         key = f"mcp:{user_id}:query:{query_id}"
         self._redis.set(key, json.dumps(data), ex=self.QUERY_TTL)
 
-    def get_query(
-        self, user_id: str, query_id: str
-    ) -> dict | None:
+    def get_query(self, user_id: str, query_id: str) -> dict | None:
         key = f"mcp:{user_id}:query:{query_id}"
         raw = self._redis.get(key)
         return json.loads(raw) if raw else None
@@ -105,13 +91,9 @@ class RedisSessionStore(SessionStore):
         self, user_id: str, job_id: str, data: dict
     ) -> None:
         key = f"mcp:{user_id}:citation:{job_id}"
-        self._redis.set(
-            key, json.dumps(data), ex=self.CITATION_TTL
-        )
+        self._redis.set(key, json.dumps(data), ex=self.CITATION_TTL)
 
-    def get_citation_analysis(
-        self, user_id: str, job_id: str
-    ) -> dict | None:
+    def get_citation_analysis(self, user_id: str, job_id: str) -> dict | None:
         key = f"mcp:{user_id}:citation:{job_id}"
         raw = self._redis.get(key)
         return json.loads(raw) if raw else None
