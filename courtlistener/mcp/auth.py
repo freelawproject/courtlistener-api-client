@@ -4,9 +4,9 @@ import contextvars
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-request_api_token: contextvars.ContextVar[
-    str | None
-] = contextvars.ContextVar("request_api_token", default=None)
+request_api_token: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_api_token", default=None
+)
 
 
 class AuthMiddleware:
@@ -34,7 +34,7 @@ class AuthMiddleware:
             auth = headers.get(b"authorization", b"").decode()
             token = None
             if auth.startswith("Token "):
-                token = auth[len("Token "):]
+                token = auth[len("Token ") :]
             reset = request_api_token.set(token)
             try:
                 await self.app(scope, receive, send)

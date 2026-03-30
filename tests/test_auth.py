@@ -122,9 +122,7 @@ class TestGetClient:
                 "courtlistener.mcp.tools.mcp_tool.CourtListener"
             ) as mock_cl:
                 self.tool.get_client()
-                mock_cl.assert_called_once_with(
-                    api_token="test-token"
-                )
+                mock_cl.assert_called_once_with(api_token="test-token")
         finally:
             request_api_token.reset(reset)
 
@@ -166,9 +164,7 @@ class TestGetUserId:
         try:
             user_id = self.tool.get_user_id()
             assert len(user_id) == 16
-            assert all(
-                c in "0123456789abcdef" for c in user_id
-            )
+            assert all(c in "0123456789abcdef" for c in user_id)
         finally:
             request_api_token.reset(reset)
 
