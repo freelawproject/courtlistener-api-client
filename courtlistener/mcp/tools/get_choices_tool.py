@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.models import ENDPOINTS
@@ -13,6 +13,10 @@ class GetChoicesTool(MCPTool):
     """
 
     name: str = "get_choices"
+    annotations = ToolAnnotations(
+        readOnlyHint=True,
+        openWorldHint=False,
+    )
 
     def get_input_schema(self) -> dict:
         return {

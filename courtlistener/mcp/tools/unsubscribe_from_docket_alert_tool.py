@@ -1,4 +1,4 @@
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -15,6 +15,12 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
     """
 
     name: str = "unsubscribe_from_docket_alert"
+    annotations = ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=True,
+        idempotentHint=True,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {

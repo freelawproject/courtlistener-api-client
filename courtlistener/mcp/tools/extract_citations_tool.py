@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from eyecite import get_citations, resolve_citations
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.citation_utils import (
     citation_type_label,
@@ -24,6 +24,10 @@ class ExtractCitationsTool(MCPTool):
     """
 
     name: str = "extract_citations"
+    annotations = ToolAnnotations(
+        readOnlyHint=True,
+        openWorldHint=False,
+    )
 
     def get_input_schema(self) -> dict:
         return {

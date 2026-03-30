@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -14,6 +14,12 @@ class SubscribeToDocketAlertTool(MCPTool):
     """
 
     name: str = "subscribe_to_docket_alert"
+    annotations = ToolAnnotations(
+        readOnlyHint=False,
+        destructiveHint=False,
+        idempotentHint=False,
+        openWorldHint=True,
+    )
 
     def get_input_schema(self) -> dict:
         return {

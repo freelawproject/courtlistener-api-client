@@ -1,6 +1,6 @@
 import json
 
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import prepare_filter
@@ -16,6 +16,10 @@ class GetEndpointSchemaTool(MCPTool):
     """
 
     name: str = "get_endpoint_schema"
+    annotations = ToolAnnotations(
+        readOnlyHint=True,
+        openWorldHint=False,
+    )
 
     def get_input_schema(self) -> dict:
         """Get the input schema for the get_endpoint_schema tool."""
