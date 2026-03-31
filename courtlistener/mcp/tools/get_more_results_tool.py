@@ -103,9 +103,7 @@ class GetMoreResultsTool(MCPTool):
                 query_id,
                 {
                     "response": response.dump(),
-                    **({
-                        "fields": data["fields"]
-                    } if "fields" in data else {}),
+                    **({"fields": data["fields"]} if "fields" in data else {}),
                 },
             )
 
