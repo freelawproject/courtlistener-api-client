@@ -96,12 +96,16 @@ class GetMoreResultsTool(MCPTool):
             results = collect_results(response, num_results)
 
             # Persist updated page cursor back to the session.
+            # Conditionally include "fields" to stay consistent with
+            # prepare_query_id, which omits the key when fields is None.
             session.store_query(
                 user_id,
                 query_id,
                 {
                     "response": response.dump(),
-                    "fields": data.get("fields"),
+                    **({
+                        "fields": data["fields"]
+                    } if "fields" in data else {}),
                 },
             )
 
