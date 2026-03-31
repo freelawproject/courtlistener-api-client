@@ -2,6 +2,7 @@ import json
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
@@ -33,8 +34,11 @@ class GetMoreResultsTool(MCPTool):
             "type": "object",
             "properties": {
                 "query_id": {
-                    "type": "integer",
-                    "description": "The query ID from a previous search or call_endpoint result.",
+                    "type": "string",
+                    "description": (
+                        "The query ID (short UUID) from a previous "
+                        "search or call_endpoint result."
+                    ),
                 },
                 "num_results": {
                     "type": "integer",
@@ -50,19 +54,23 @@ class GetMoreResultsTool(MCPTool):
             "required": ["query_id"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
+        user_id = self.get_user_id()
         query_id = arguments["query_id"]
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
 
-        data = session.get("queries", {}).get(query_id)
+        data = session.get_query(user_id, query_id)
         if data is None:
             return CallToolResult(
                 content=[
                     TextContent(
                         type="text",
                         text=(
-                            f"Query ID {query_id} not found. "
-                            "The session may have expired, please redo the query first."
+                            f"Query ID {query_id!r} not found. "
+                            "The session may have expired, "
+                            "please redo the query first."
                         ),
                     )
                 ],
@@ -77,15 +85,25 @@ class GetMoreResultsTool(MCPTool):
                     content=[
                         TextContent(
                             type="text",
-                            text=f"No more results available for query {query_id}.",
+                            text=(
+                                f"No more results available for "
+                                f"query {query_id!r}."
+                            ),
                         )
                     ]
                 )
 
             results = collect_results(response, num_results)
 
-            # Update the stored state with the new page_result_index.
-            session["queries"][query_id]["response"] = response.dump()
+            # Persist updated page cursor back to the session.
+            session.store_query(
+                user_id,
+                query_id,
+                {
+                    "response": response.dump(),
+                    "fields": data.get("fields"),
+                },
+            )
 
             fields = data.get("fields")
             filtered_results, _ = filter_fields(results, fields)

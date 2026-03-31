@@ -2,6 +2,7 @@ import json
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.models import ENDPOINTS
 
@@ -35,7 +36,9 @@ class GetChoicesTool(MCPTool):
             "required": ["endpoint_id", "field_name"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         endpoint_id: str = arguments["endpoint_id"]
         field_name: str = arguments["field_name"]
 

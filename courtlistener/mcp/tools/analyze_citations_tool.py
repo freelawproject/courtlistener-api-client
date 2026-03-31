@@ -5,6 +5,7 @@ from eyecite.models import FullCaseCitation
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -63,7 +64,9 @@ class AnalyzeCitationsTool(MCPTool):
             "required": [],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         text = arguments.get("text")
         opinion_id = arguments.get("opinion_id")
         if (text is not None) == (opinion_id is not None):
@@ -152,14 +155,18 @@ class AnalyzeCitationsTool(MCPTool):
             process_api_results(results, batch, verified, pending)
 
         # Step 4: Store in session
-        analyses = session.get("citation_analyses", {})
-        analysis_id = 1 if not analyses else max(analyses.keys()) + 1
-        session.setdefault("citation_analyses", {})[analysis_id] = {
-            "resource_refs": resource_refs,
-            "unique_citations": unique_citations,
-            "verified": verified,
-            "pending": pending,
-        }
+        user_id = self.get_user_id()
+        analysis_id = session.make_id()
+        session.store_citation_analysis(
+            user_id,
+            analysis_id,
+            {
+                "resource_refs": resource_refs,
+                "unique_citations": unique_citations,
+                "verified": verified,
+                "pending": pending,
+            },
+        )
 
         # Step 5: Format output
         output = format_analysis(

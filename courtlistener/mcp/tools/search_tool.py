@@ -2,6 +2,7 @@ import json
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
@@ -88,7 +89,9 @@ class SearchTool(MCPTool):
             "required": ["type"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         """Call the search tool."""
         with self.get_client() as client:
             fields = arguments.pop("fields", None)
@@ -99,7 +102,10 @@ class SearchTool(MCPTool):
             # before we dump state via prepare_query_id.
             results = collect_results(response, num_results)
 
-            query_id = prepare_query_id(response, session, fields=fields)
+            user_id = self.get_user_id()
+            query_id = prepare_query_id(
+                response, session, user_id, fields=fields
+            )
             outputs = [f"Query ID: {query_id}"]
 
             count_str = prepare_count_str(

@@ -265,7 +265,7 @@ def format_verification_result(
 
 
 def format_analysis(
-    analysis_id: int,
+    analysis_id: str,
     cites: list[CitationBase],
     resolutions: dict[CitationResource, list[CitationBase]],
     resource_refs: dict[str, dict],
@@ -309,7 +309,7 @@ def format_analysis(
     if pending_count:
         verification_line += (
             f" ({pending_count} pending — use resume_citation_analysis "
-            f"with job_id={analysis_id})"
+            f'with job_id="{analysis_id}")'
         )
     parts.append(verification_line)
 
@@ -362,7 +362,7 @@ def format_analysis(
 
 
 def format_resume(
-    job_id: int,
+    job_id: str,
     job: dict,
     newly_verified: set[str],
 ) -> str:
@@ -379,7 +379,7 @@ def format_resume(
     if pending:
         parts.append(
             f"({len(pending)} still pending — call "
-            f"resume_citation_analysis again with job_id={job_id})"
+            f'resume_citation_analysis again with job_id="{job_id}")'
         )
     else:
         parts.append("All citations verified!")

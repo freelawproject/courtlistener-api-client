@@ -3,6 +3,7 @@ from itertools import islice
 
 import tiktoken
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.resource import ResourceIterator
 
 DEFAULT_NUM_RESULTS = 20
@@ -23,17 +24,16 @@ def collect_results(
 
 def prepare_query_id(
     response: ResourceIterator,
-    session: dict,
+    session: SessionStore,
+    user_id: str,
     fields: list[str] | None = None,
-) -> int:
-    if "queries" not in session:
-        session["queries"] = {}
-    queries = session["queries"]
-    if len(queries) == 0:
-        query_id = 1
-    else:
-        query_id = max(queries.keys()) + 1
-    queries[query_id] = {"response": response.dump(), "fields": fields}
+) -> str:
+    """Store query response in session and return a short UUID query ID."""
+    query_id = session.make_id()
+    data: dict = {"response": response.dump()}
+    if fields is not None:
+        data["fields"] = fields
+    session.store_query(user_id, query_id, data)
     return query_id
 
 
@@ -96,7 +96,7 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
     return filter
 
 
-def prepare_count_str(count: int | str | None, query_id: int) -> str:
+def prepare_count_str(count: int | str | None, query_id: str) -> str:
     if isinstance(count, int):
         count_str = f"Total count: {count}"
     elif isinstance(count, str):
@@ -117,10 +117,10 @@ def has_more_results(response: ResourceIterator) -> bool:
     return response.has_next()
 
 
-def prepare_has_more_str(response: ResourceIterator, query_id: int) -> str:
+def prepare_has_more_str(response: ResourceIterator, query_id: str) -> str:
     if has_more_results(response):
         return (
             f"More results are available. Use the `get_more_results` "
-            f"tool with query_id={query_id} to retrieve them."
+            f'tool with query_id="{query_id}" to retrieve them.'
         )
     return ""
