@@ -2,6 +2,7 @@ import json
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import prepare_filter
 from courtlistener.models import ENDPOINTS
@@ -42,7 +43,9 @@ class GetEndpointSchemaTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         """Call the get_endpoint_schema tool."""
         endpoint_id = arguments.get("endpoint_id")
         for endpoint in ENDPOINTS.values():

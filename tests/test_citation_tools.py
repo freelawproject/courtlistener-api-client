@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+from courtlistener.mcp.session import InMemorySessionStore
 from courtlistener.mcp.tools.analyze_citations_tool import AnalyzeCitationsTool
 from courtlistener.mcp.tools.citation_utils import (
     canonical_key,
@@ -26,7 +27,7 @@ class TestExtractCitationsTool:
         self.tool = ExtractCitationsTool()
 
     def test_resolved_output(self):
-        session = {}
+        session = InMemorySessionStore()
         result = self.tool({"text": SAMPLE_TEXT}, session)
         text = result.content[0].text
         assert "576 U.S. 644" in text
@@ -35,66 +36,33 @@ class TestExtractCitationsTool:
         assert "unique case(s)" in text
 
     def test_flat_output(self):
-        session = {}
+        session = InMemorySessionStore()
         result = self.tool({"text": SAMPLE_TEXT, "resolve": False}, session)
         text = result.content[0].text
         assert "[full]" in text
         assert "576 U.S. 644" in text
 
     def test_no_citations(self):
-        session = {}
+        session = InMemorySessionStore()
         result = self.tool({"text": "No legal citations here."}, session)
         assert "No citations found" in result.content[0].text
 
     def test_stateless(self):
         """extract_citations should not modify session."""
-        session = {}
+        session = InMemorySessionStore()
         self.tool({"text": SAMPLE_TEXT}, session)
-        assert session == {}
+        # Use _data directly for a comprehensive check covering both
+        # queries and citation_analyses (stronger than a single get_query call).
+        assert session._data == {}
 
 
 class TestAnalyzeCitationsTool:
     def setup_method(self):
         self.tool = AnalyzeCitationsTool()
 
-    def _mock_api_results(self, *citations_and_statuses):
-        """Build mock API results for given (citation, status) pairs."""
-        results = []
-        for citation, status in citations_and_statuses:
-            result = {
-                "citation": citation,
-                "status": status,
-                "start_index": 0,
-                "end_index": len(citation),
-                "clusters": [],
-                "error_message": "",
-            }
-            if status == 200:
-                result["clusters"] = [
-                    {
-                        "id": 12345,
-                        "case_name": f"Test Case for {citation}",
-                        "case_name_short": "Test",
-                        "date_filed": "2020-01-01",
-                        "citation_count": 42,
-                        "precedential_status": "Published",
-                        "absolute_url": "/opinion/12345/test/",
-                        "docket": 999,
-                        "citations": [
-                            {
-                                "volume": citation.split()[0],
-                                "reporter": " ".join(citation.split()[1:-1]),
-                                "page": citation.split()[-1],
-                            }
-                        ],
-                    }
-                ]
-            return results, result
-        return results
-
     def test_stores_in_session(self):
         """analyze_citations should store results in session."""
-        session = {}
+        session = InMemorySessionStore()
         mock_client = MagicMock()
         mock_client.citation_lookup.lookup_text.return_value = [
             {
@@ -131,26 +99,27 @@ class TestAnalyzeCitationsTool:
             },
         ]
 
-        with patch.object(self.tool, "get_client") as mock_get_client:
-            mock_get_client.return_value.__enter__ = lambda s: mock_client
-            mock_get_client.return_value.__exit__ = MagicMock(
-                return_value=False
-            )
-            result = self.tool({"text": SAMPLE_TEXT}, session)
+        with patch.object(session, "make_id", return_value="abcd1234"):
+            with patch.object(self.tool, "get_client") as mock_get_client:
+                mock_get_client.return_value.__enter__ = lambda s: mock_client
+                mock_get_client.return_value.__exit__ = MagicMock(
+                    return_value=False
+                )
+                result = self.tool({"text": SAMPLE_TEXT}, session)
 
         text = result.content[0].text
-        assert "Job ID: 1" in text
-        assert "citation_analyses" in session
-        assert 1 in session["citation_analyses"]
+        assert "Job ID: abcd1234" in text
 
-        job = session["citation_analyses"][1]
+        # get_user_id() returns "local" in test context (no ContextVar)
+        job = session.get_citation_analysis("local", "abcd1234")
+        assert job is not None
         assert "576 U.S. 644" in job["verified"]
         assert "388 U.S. 1" in job["verified"]
         assert len(job["pending"]) == 0
 
     def test_output_contains_case_details(self):
         """Verified cases should show name, date, and URL."""
-        session = {}
+        session = InMemorySessionStore()
         mock_client = MagicMock()
         mock_client.citation_lookup.lookup_text.return_value = [
             {
@@ -186,7 +155,7 @@ class TestAnalyzeCitationsTool:
 
     def test_not_found_citation(self):
         """Citations not in CourtListener should show NOT FOUND."""
-        session = {}
+        session = InMemorySessionStore()
         mock_client = MagicMock()
         mock_client.citation_lookup.lookup_text.return_value = [
             {
@@ -208,13 +177,13 @@ class TestAnalyzeCitationsTool:
         assert "NOT FOUND" in result.content[0].text
 
     def test_no_citations(self):
-        session = {}
+        session = InMemorySessionStore()
         result = self.tool({"text": "No legal citations here."}, session)
         assert "No citations found" in result.content[0].text
 
     def test_pending_citations_on_throttle(self):
         """Citations with 429 status should remain pending."""
-        session = {}
+        session = InMemorySessionStore()
         mock_client = MagicMock()
         mock_client.citation_lookup.lookup_text.return_value = [
             {
@@ -242,17 +211,19 @@ class TestAnalyzeCitationsTool:
             },
         ]
 
-        with patch.object(self.tool, "get_client") as mock_get_client:
-            mock_get_client.return_value.__enter__ = lambda s: mock_client
-            mock_get_client.return_value.__exit__ = MagicMock(
-                return_value=False
-            )
-            result = self.tool({"text": SAMPLE_TEXT}, session)
+        with patch.object(session, "make_id", return_value="abcd1234"):
+            with patch.object(self.tool, "get_client") as mock_get_client:
+                mock_get_client.return_value.__enter__ = lambda s: mock_client
+                mock_get_client.return_value.__exit__ = MagicMock(
+                    return_value=False
+                )
+                result = self.tool({"text": SAMPLE_TEXT}, session)
 
         text = result.content[0].text
         assert "pending" in text.lower()
 
-        job = session["citation_analyses"][1]
+        job = session.get_citation_analysis("local", "abcd1234")
+        assert job is not None
         assert "388 U.S. 1" in job["pending"]
         assert "576 U.S. 644" in job["verified"]
 
@@ -262,49 +233,51 @@ class TestResumeCitationAnalysisTool:
         self.tool = ResumeCitationAnalysisTool()
 
     def test_job_not_found(self):
-        session = {}
-        result = self.tool({"job_id": 99}, session)
+        session = InMemorySessionStore()
+        result = self.tool({"job_id": "nonexistent"}, session)
         assert result.isError
         assert "not found" in result.content[0].text.lower()
 
     def test_already_complete(self):
-        session = {
-            "citation_analyses": {
-                1: {
-                    "resource_refs": {},
-                    "unique_citations": ["576 U.S. 644"],
-                    "verified": {"576 U.S. 644": {"status": 200}},
-                    "pending": [],
-                }
-            }
-        }
-        result = self.tool({"job_id": 1}, session)
+        session = InMemorySessionStore()
+        session.store_citation_analysis(
+            "local",
+            "abcd1234",
+            {
+                "resource_refs": {},
+                "unique_citations": ["576 U.S. 644"],
+                "verified": {"576 U.S. 644": {"status": 200}},
+                "pending": [],
+            },
+        )
+        result = self.tool({"job_id": "abcd1234"}, session)
         assert "complete" in result.content[0].text.lower()
 
     def test_resumes_pending(self):
-        session = {
-            "citation_analyses": {
-                1: {
-                    "resource_refs": {
-                        "388 U.S. 1": {
-                            "ref_count": 1,
-                            "ref_breakdown": "1 full",
-                        }
-                    },
-                    "unique_citations": [
-                        "576 U.S. 644",
-                        "388 U.S. 1",
-                    ],
-                    "verified": {
-                        "576 U.S. 644": {
-                            "status": 200,
-                            "clusters": [],
-                        }
-                    },
-                    "pending": ["388 U.S. 1"],
-                }
-            }
-        }
+        session = InMemorySessionStore()
+        session.store_citation_analysis(
+            "local",
+            "abcd1234",
+            {
+                "resource_refs": {
+                    "388 U.S. 1": {
+                        "ref_count": 1,
+                        "ref_breakdown": "1 full",
+                    }
+                },
+                "unique_citations": [
+                    "576 U.S. 644",
+                    "388 U.S. 1",
+                ],
+                "verified": {
+                    "576 U.S. 644": {
+                        "status": 200,
+                        "clusters": [],
+                    }
+                },
+                "pending": ["388 U.S. 1"],
+            },
+        )
 
         mock_client = MagicMock()
         mock_client.citation_lookup.lookup_text.return_value = [
@@ -331,12 +304,14 @@ class TestResumeCitationAnalysisTool:
             mock_get_client.return_value.__exit__ = MagicMock(
                 return_value=False
             )
-            result = self.tool({"job_id": 1}, session)
+            result = self.tool({"job_id": "abcd1234"}, session)
 
         text = result.content[0].text
         assert "Resumed" in text
         assert "Loving v. Virginia" in text
-        assert len(session["citation_analyses"][1]["pending"]) == 0
+
+        job = session.get_citation_analysis("local", "abcd1234")
+        assert len(job["pending"]) == 0
 
 
 class TestCitationUtils:

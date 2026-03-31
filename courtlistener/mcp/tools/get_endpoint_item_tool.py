@@ -3,6 +3,7 @@ import json
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.models import ENDPOINTS
 
@@ -44,7 +45,9 @@ class GetEndpointItemTool(MCPTool):
             "required": ["endpoint_id", "item_id"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         """Call the get_endpoint_item tool."""
         endpoint_id = arguments.get("endpoint_id")
         item_id = arguments.get("item_id")

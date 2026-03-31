@@ -5,6 +5,7 @@ from __future__ import annotations
 from eyecite import get_citations, resolve_citations
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     citation_type_label,
     format_resolved_citations,
@@ -50,7 +51,9 @@ class ExtractCitationsTool(MCPTool):
             "required": ["text"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         text = arguments["text"]
         resolve = arguments.get("resolve", True)
 
