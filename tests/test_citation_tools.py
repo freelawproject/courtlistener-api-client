@@ -17,7 +17,7 @@ SAMPLE_TEXT = (
     "The Court held in Obergefell v. Hodges, 576 U.S. 644 (2015), "
     "that same-sex couples have a fundamental right. See also "
     "Loving v. Virginia, 388 U.S. 1 (1967). In id. at 12, the "
-    "Court noted the history. The statute at 42 U.S.C. \u00a7 1983 "
+    "Court noted the history. The statute at 42 U.S.C. § 1983 "
     "provides a cause of action."
 )
 
@@ -32,7 +32,7 @@ class TestExtractCitationsTool:
         text = result.content[0].text
         assert "576 U.S. 644" in text
         assert "388 U.S. 1" in text
-        assert "42 U.S.C. \u00a7 1983" in text
+        assert "42 U.S.C. § 1983" in text
         assert "unique case(s)" in text
 
     def test_flat_output(self):
@@ -51,6 +51,8 @@ class TestExtractCitationsTool:
         """extract_citations should not modify session."""
         session = InMemorySessionStore()
         self.tool({"text": SAMPLE_TEXT}, session)
+        # Use _data directly for a comprehensive check covering both
+        # queries and citation_analyses (stronger than a single get_query call).
         assert session._data == {}
 
 
