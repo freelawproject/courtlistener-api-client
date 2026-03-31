@@ -37,18 +37,14 @@ class TestExtractCitationsTool:
 
     def test_flat_output(self):
         session = InMemorySessionStore()
-        result = self.tool(
-            {"text": SAMPLE_TEXT, "resolve": False}, session
-        )
+        result = self.tool({"text": SAMPLE_TEXT, "resolve": False}, session)
         text = result.content[0].text
         assert "[full]" in text
         assert "576 U.S. 644" in text
 
     def test_no_citations(self):
         session = InMemorySessionStore()
-        result = self.tool(
-            {"text": "No legal citations here."}, session
-        )
+        result = self.tool({"text": "No legal citations here."}, session)
         assert "No citations found" in result.content[0].text
 
     def test_stateless(self):
@@ -102,12 +98,8 @@ class TestAnalyzeCitationsTool:
         ]
 
         with patch.object(session, "make_id", return_value="abcd1234"):
-            with patch.object(
-                self.tool, "get_client"
-            ) as mock_get_client:
-                mock_get_client.return_value.__enter__ = (
-                    lambda s: mock_client
-                )
+            with patch.object(self.tool, "get_client") as mock_get_client:
+                mock_get_client.return_value.__enter__ = lambda s: mock_client
                 mock_get_client.return_value.__exit__ = MagicMock(
                     return_value=False
                 )
@@ -184,9 +176,7 @@ class TestAnalyzeCitationsTool:
 
     def test_no_citations(self):
         session = InMemorySessionStore()
-        result = self.tool(
-            {"text": "No legal citations here."}, session
-        )
+        result = self.tool({"text": "No legal citations here."}, session)
         assert "No citations found" in result.content[0].text
 
     def test_pending_citations_on_throttle(self):
@@ -220,12 +210,8 @@ class TestAnalyzeCitationsTool:
         ]
 
         with patch.object(session, "make_id", return_value="abcd1234"):
-            with patch.object(
-                self.tool, "get_client"
-            ) as mock_get_client:
-                mock_get_client.return_value.__enter__ = (
-                    lambda s: mock_client
-                )
+            with patch.object(self.tool, "get_client") as mock_get_client:
+                mock_get_client.return_value.__enter__ = lambda s: mock_client
                 mock_get_client.return_value.__exit__ = MagicMock(
                     return_value=False
                 )

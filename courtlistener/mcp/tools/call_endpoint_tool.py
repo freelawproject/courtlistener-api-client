@@ -76,9 +76,7 @@ class CallEndpointTool(MCPTool):
                     results = collect_results(response, num_results)
 
                     user_id = self.get_user_id()
-                    query_id = prepare_query_id(
-                        response, session, user_id
-                    )
+                    query_id = prepare_query_id(response, session, user_id)
                     outputs = [f"Query ID: {query_id}"]
 
                     count_str = prepare_count_str(
