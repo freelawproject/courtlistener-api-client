@@ -141,11 +141,30 @@ class AnalyzeCitationsTool(MCPTool):
                     seen.add(key)
                     unique_citations.append(key)
 
-        # Step 3: Verify first batch via API
+        # Step 3: Verify via API
         verified: dict[str, dict] = {}
-        pending = list(unique_citations)
 
-        if unique_citations:
+        # Separate out citations with None page numbers (slip opinions).
+        # These produce keys like "586 U. S. None" which the API cannot
+        # resolve.  Mark them as unresolvable upfront rather than sending
+        # them to the API where they'd silently get no result.
+        sendable: list[str] = []
+        for key in unique_citations:
+            if key.endswith(" None"):
+                verified[key] = {
+                    "status": None,
+                    "citation": key,
+                    "clusters": [],
+                    "error_message": (
+                        "Slip opinion citation without page number"
+                    ),
+                }
+            else:
+                sendable.append(key)
+
+        pending = list(sendable)
+
+        if sendable:
             batch = pending[:MAX_CITATIONS_PER_REQUEST]
             compact_text = build_compact_string(batch)
 

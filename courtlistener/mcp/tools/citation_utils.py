@@ -144,7 +144,16 @@ def process_api_results(
     Each API result is matched back to the batch citation it belongs
     to by comparing the citation text. Results with status 429 are
     left in pending for later retry.
+
+    After processing all results, any batch citations that received
+    no API result at all are marked as unresolvable and removed from
+    pending. Without this sweep, citations the API doesn't recognize
+    (e.g. slip opinion cites like "586 U. S. None") would stay in
+    pending forever, causing resume_citation_analysis to loop
+    infinitely.
     """
+    rate_limited_keys: set[str] = set()
+
     for result in results:
         citation_text = result.get("citation", "")
         status = result.get("status")
@@ -164,7 +173,8 @@ def process_api_results(
             continue
 
         if status == 429:
-            # Rate-limited — leave in pending
+            # Rate-limited — leave in pending for retry
+            rate_limited_keys.add(matched_key)
             continue
 
         # Summarize clusters to reduce stored data
@@ -195,6 +205,21 @@ def process_api_results(
         }
         if matched_key in pending:
             pending.remove(matched_key)
+
+    # Sweep: mark batch citations that got no API result as unresolvable.
+    # Only skip citations that were explicitly rate-limited (429), since
+    # those should genuinely be retried.
+    for key in batch:
+        if key in verified or key in rate_limited_keys:
+            continue
+        verified[key] = {
+            "status": None,
+            "citation": key,
+            "clusters": [],
+            "error_message": "No result returned by API",
+        }
+        if key in pending:
+            pending.remove(key)
 
 
 def format_verification_result(
@@ -254,6 +279,14 @@ def format_verification_result(
         return (
             f"  {index}. {citation_key}\n"
             f"     Status: INVALID — could not be parsed by the API\n"
+            f"     References in document: {ref_count} ({ref_breakdown})"
+        )
+    elif status is None:
+        error = result.get("error_message", "")
+        reason = error if error else "citation not recognized by API"
+        return (
+            f"  {index}. {citation_key}\n"
+            f"     Status: UNRESOLVABLE — {reason}\n"
             f"     References in document: {ref_count} ({ref_breakdown})"
         )
     else:
