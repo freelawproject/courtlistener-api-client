@@ -56,5 +56,7 @@ class MCPTool:
             "get_input_schema must be implemented by subclass"
         )
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         raise NotImplementedError("__call__ must be implemented by subclass")

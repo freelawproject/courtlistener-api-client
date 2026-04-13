@@ -2,11 +2,12 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import CallToolResult, TextContent, Tool
 
+from courtlistener.mcp.session import InMemorySessionStore
 from courtlistener.mcp.tools import MCP_TOOLS
 
 server = Server("courtlistener")
 
-session: dict = {}
+session = InMemorySessionStore()
 
 
 @server.list_tools()

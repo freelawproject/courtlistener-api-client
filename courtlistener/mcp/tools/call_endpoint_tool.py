@@ -2,6 +2,7 @@ import json
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
@@ -57,7 +58,9 @@ class CallEndpointTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         """Call the call_endpoint tool."""
         endpoint_id = arguments.get("endpoint_id")
         query = arguments.get("query") or {}
@@ -72,7 +75,8 @@ class CallEndpointTool(MCPTool):
                     # updated before we dump state.
                     results = collect_results(response, num_results)
 
-                    query_id = prepare_query_id(response, session)
+                    user_id = self.get_user_id()
+                    query_id = prepare_query_id(response, session, user_id)
                     outputs = [f"Query ID: {query_id}"]
 
                     count_str = prepare_count_str(
