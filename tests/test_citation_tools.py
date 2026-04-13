@@ -99,13 +99,15 @@ class TestAnalyzeCitationsTool:
             },
         ]
 
-        with patch.object(session, "make_id", return_value="abcd1234"):
-            with patch.object(self.tool, "get_client") as mock_get_client:
-                mock_get_client.return_value.__enter__ = lambda s: mock_client
-                mock_get_client.return_value.__exit__ = MagicMock(
-                    return_value=False
-                )
-                result = self.tool({"text": SAMPLE_TEXT}, session)
+        with (
+            patch.object(session, "make_id", return_value="abcd1234"),
+            patch.object(self.tool, "get_client") as mock_get_client,
+        ):
+            mock_get_client.return_value.__enter__ = lambda s: mock_client
+            mock_get_client.return_value.__exit__ = MagicMock(
+                return_value=False
+            )
+            result = self.tool({"text": SAMPLE_TEXT}, session)
 
         text = result.content[0].text
         assert "Job ID: abcd1234" in text
@@ -211,13 +213,15 @@ class TestAnalyzeCitationsTool:
             },
         ]
 
-        with patch.object(session, "make_id", return_value="abcd1234"):
-            with patch.object(self.tool, "get_client") as mock_get_client:
-                mock_get_client.return_value.__enter__ = lambda s: mock_client
-                mock_get_client.return_value.__exit__ = MagicMock(
-                    return_value=False
-                )
-                result = self.tool({"text": SAMPLE_TEXT}, session)
+        with (
+            patch.object(session, "make_id", return_value="abcd1234"),
+            patch.object(self.tool, "get_client") as mock_get_client,
+        ):
+            mock_get_client.return_value.__enter__ = lambda s: mock_client
+            mock_get_client.return_value.__exit__ = MagicMock(
+                return_value=False
+            )
+            result = self.tool({"text": SAMPLE_TEXT}, session)
 
         text = result.content[0].text
         assert "pending" in text.lower()
