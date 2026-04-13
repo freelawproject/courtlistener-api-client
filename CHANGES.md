@@ -11,7 +11,7 @@ Features:
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 
 Changes:
--
+- Migrete STDIO mode MCP server to use in-memory session store abstraction.
 
 Fixes:
 -
