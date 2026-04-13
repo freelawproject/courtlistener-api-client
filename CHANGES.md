@@ -11,7 +11,7 @@ Features:
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 
 Changes:
--
+- Update pre-commit hooks to latest versions.
 
 Fixes:
 -
