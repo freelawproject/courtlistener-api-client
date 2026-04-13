@@ -7,7 +7,7 @@ ci:
   autoupdate_schedule: quarterly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
      - id: check-added-large-files
      - id: check-ast
@@ -19,13 +19,11 @@ repos:
      - id: debug-statements
      - id: detect-private-key
      - id: fix-byte-order-marker
-     - id: fix-encoding-pragma
-       args: [--remove]
      - id: trailing-whitespace
        args: [--markdown-linebreak-ext=md]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.8
+    rev: v0.15.9
     hooks:
       - id: ruff
         args: [ --fix ]
