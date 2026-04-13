@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -33,19 +34,22 @@ class ResumeCitationAnalysisTool(MCPTool):
             "type": "object",
             "properties": {
                 "job_id": {
-                    "type": "integer",
+                    "type": "string",
                     "description": (
-                        "The job ID from a previous analyze_citations call."
+                        "The job ID (short UUID) from a previous "
+                        "analyze_citations call."
                     ),
                 },
             },
             "required": ["job_id"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
+        user_id = self.get_user_id()
         job_id = arguments["job_id"]
-        analyses = session.get("citation_analyses", {})
-        job = analyses.get(job_id)
+        job = session.get_citation_analysis(user_id, job_id)
 
         if job is None:
             return CallToolResult(
@@ -53,7 +57,7 @@ class ResumeCitationAnalysisTool(MCPTool):
                     TextContent(
                         type="text",
                         text=(
-                            f"Job ID {job_id} not found. "
+                            f"Job ID {job_id!r} not found. "
                             "The session may have expired."
                         ),
                     )
@@ -68,7 +72,7 @@ class ResumeCitationAnalysisTool(MCPTool):
                     TextContent(
                         type="text",
                         text=(
-                            f"Job {job_id} is already complete. "
+                            f"Job {job_id!r} is already complete. "
                             "All citations verified."
                         ),
                     )
@@ -85,6 +89,10 @@ class ResumeCitationAnalysisTool(MCPTool):
         previously_verified = set(job["verified"].keys())
         process_api_results(results, batch, job["verified"], job["pending"])
         newly_verified = set(job["verified"].keys()) - previously_verified
+
+        # Persist updated job state back — required for Redis backend
+        # (which returns a fresh deserialized copy, not a reference).
+        session.store_citation_analysis(user_id, job_id, job)
 
         # Format output
         output = format_resume(job_id, job, newly_verified)

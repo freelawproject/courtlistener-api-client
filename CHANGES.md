@@ -12,6 +12,7 @@ Features:
 
 Changes:
 - Update pre-commit hooks to latest versions.
+- Migrete STDIO mode MCP server to use in-memory session store abstraction.
 
 Fixes:
 -

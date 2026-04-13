@@ -3,6 +3,7 @@ import json
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -57,7 +58,9 @@ class CreateSearchAlertTool(MCPTool):
             "required": ["name", "query", "rate"],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         name = arguments["name"]
         query = arguments["query"]
         rate = arguments["rate"]

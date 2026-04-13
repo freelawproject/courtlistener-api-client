@@ -5,6 +5,7 @@ from eyecite.models import FullCaseCitation
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -63,7 +64,9 @@ class AnalyzeCitationsTool(MCPTool):
             "required": [],
         }
 
-    def __call__(self, arguments: dict, session: dict) -> CallToolResult:
+    def __call__(
+        self, arguments: dict, session: SessionStore
+    ) -> CallToolResult:
         text = arguments.get("text")
         opinion_id = arguments.get("opinion_id")
         if (text is not None) == (opinion_id is not None):
@@ -138,11 +141,30 @@ class AnalyzeCitationsTool(MCPTool):
                     seen.add(key)
                     unique_citations.append(key)
 
-        # Step 3: Verify first batch via API
+        # Step 3: Verify via API
         verified: dict[str, dict] = {}
-        pending = list(unique_citations)
 
-        if unique_citations:
+        # Separate out citations with None page numbers (slip opinions).
+        # These produce keys like "586 U. S. None" which the API cannot
+        # resolve.  Mark them as unresolvable upfront rather than sending
+        # them to the API where they'd silently get no result.
+        sendable: list[str] = []
+        for key in unique_citations:
+            if key.endswith(" None"):
+                verified[key] = {
+                    "status": None,
+                    "citation": key,
+                    "clusters": [],
+                    "error_message": (
+                        "Slip opinion citation without page number"
+                    ),
+                }
+            else:
+                sendable.append(key)
+
+        pending = list(sendable)
+
+        if sendable:
             batch = pending[:MAX_CITATIONS_PER_REQUEST]
             compact_text = build_compact_string(batch)
 
@@ -152,14 +174,18 @@ class AnalyzeCitationsTool(MCPTool):
             process_api_results(results, batch, verified, pending)
 
         # Step 4: Store in session
-        analyses = session.get("citation_analyses", {})
-        analysis_id = 1 if not analyses else max(analyses.keys()) + 1
-        session.setdefault("citation_analyses", {})[analysis_id] = {
-            "resource_refs": resource_refs,
-            "unique_citations": unique_citations,
-            "verified": verified,
-            "pending": pending,
-        }
+        user_id = self.get_user_id()
+        analysis_id = session.make_id()
+        session.store_citation_analysis(
+            user_id,
+            analysis_id,
+            {
+                "resource_refs": resource_refs,
+                "unique_citations": unique_citations,
+                "verified": verified,
+                "pending": pending,
+            },
+        )
 
         # Step 5: Format output
         output = format_analysis(
