@@ -1,7 +1,6 @@
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -32,24 +31,9 @@ class DeleteSearchAlertTool(MCPTool):
             "required": ["id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> str:
         alert_id = arguments["id"]
 
-        try:
-            with self.get_client() as client:
-                client.alerts.delete(alert_id)
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=f"Deleted search alert {alert_id}.",
-                        )
-                    ]
-                )
-        except (ValueError, CourtListenerAPIError) as exc:
-            return CallToolResult(
-                content=[TextContent(type="text", text=str(exc))],
-                isError=True,
-            )
+        with self.get_client() as client:
+            client.alerts.delete(alert_id)
+            return f"Deleted search alert {alert_id}."

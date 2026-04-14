@@ -1,7 +1,6 @@
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -36,27 +35,9 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
             "required": ["docket"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> str:
         docket = arguments["docket"]
 
-        try:
-            with self.get_client() as client:
-                client.docket_alerts.unsubscribe(docket)
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=(
-                                f"Unsubscribed from docket alert "
-                                f"for docket {docket}."
-                            ),
-                        )
-                    ]
-                )
-        except (ValueError, CourtListenerAPIError) as exc:
-            return CallToolResult(
-                content=[TextContent(type="text", text=str(exc))],
-                isError=True,
-            )
+        with self.get_client() as client:
+            client.docket_alerts.unsubscribe(docket)
+            return f"Unsubscribed from docket alert for docket {docket}."

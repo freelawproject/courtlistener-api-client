@@ -1,9 +1,10 @@
 import json
+import uuid
 from itertools import islice
 
 import tiktoken
+from fastmcp.server.context import Context
 
-from courtlistener.mcp.session import SessionStore
 from courtlistener.resource import ResourceIterator
 
 DEFAULT_NUM_RESULTS = 20
@@ -22,22 +23,21 @@ def collect_results(
     return list(islice(response, num_results))
 
 
-def prepare_query_id(
+async def prepare_query_id(
     response: ResourceIterator,
-    session: SessionStore,
-    user_id: str,
+    ctx: Context,
     fields: list[str] | None = None,
 ) -> str:
     """Store query response in session and return a short UUID query ID."""
-    query_id = session.make_id()
+    query_id = make_id()
     data: dict = {"response": response.dump()}
     if fields is not None:
         data["fields"] = fields
-    session.store_query(user_id, query_id, data)
+    await store_session_query(query_id, data, ctx)
     return query_id
 
 
-def filter_fields(
+def filter_results_by_fields(
     results: list[dict], fields: list[str] | None
 ) -> tuple[list[dict], bool]:
     """Apply client-side field filtering to a list of result dicts.
@@ -96,17 +96,15 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
     return filter
 
 
-def prepare_count_str(count: int | str | None, query_id: str) -> str:
+def prepare_count(count: int | str | None, query_id: str) -> int | str | None:
     if isinstance(count, int):
-        count_str = f"Total count: {count}"
+        return count
     elif isinstance(count, str):
-        count_str = (
+        return (
             f"To get the count use the `get_counts` tool with "
             f'query_id="{query_id}".'
         )
-    else:
-        count_str = ""
-    return count_str
+    return None
 
 
 def has_more_results(response: ResourceIterator) -> bool:
@@ -117,10 +115,37 @@ def has_more_results(response: ResourceIterator) -> bool:
     return response.has_next()
 
 
-def prepare_has_more_str(response: ResourceIterator, query_id: str) -> str:
+def prepare_has_more_str(
+    response: ResourceIterator, query_id: str
+) -> str | None:
     if has_more_results(response):
         return (
             f"More results are available. Use the `get_more_results` "
             f'tool with query_id="{query_id}" to retrieve them.'
         )
-    return ""
+    return None
+
+
+# Session store helpers
+def make_id() -> str:
+    return str(uuid.uuid4())[:8]
+
+
+async def get_session_query(query_id: str, ctx: Context) -> dict | None:
+    return await ctx.get_state(f"query:{query_id}")
+
+
+async def store_session_query(query_id: str, data: dict, ctx: Context) -> None:
+    await ctx.set_state(f"query:{query_id}", data)
+
+
+async def get_session_citation_analysis(
+    job_id: str, ctx: Context
+) -> dict | None:
+    return await ctx.get_state(f"citation:{job_id}")
+
+
+async def store_session_citation_analysis(
+    job_id: str, data: dict, ctx: Context
+) -> None:
+    await ctx.set_state(f"citation:{job_id}", data)

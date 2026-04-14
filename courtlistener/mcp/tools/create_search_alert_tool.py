@@ -1,9 +1,6 @@
-import json
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
-
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -58,32 +55,17 @@ class CreateSearchAlertTool(MCPTool):
             "required": ["name", "query", "rate"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict:
         name = arguments["name"]
         query = arguments["query"]
         rate = arguments["rate"]
         alert_type = arguments.get("alert_type")
 
-        try:
-            with self.get_client() as client:
-                alert = client.alerts.create(
-                    name=name,
-                    query=query,
-                    rate=rate,
-                    alert_type=alert_type,
-                )
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=json.dumps(alert, indent=2),
-                        )
-                    ]
-                )
-        except (CourtListenerAPIError, ValueError, TypeError) as exc:
-            return CallToolResult(
-                content=[TextContent(type="text", text=str(exc))],
-                isError=True,
+        with self.get_client() as client:
+            alert = client.alerts.create(
+                name=name,
+                query=query,
+                rate=rate,
+                alert_type=alert_type,
             )
+            return alert

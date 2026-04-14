@@ -1,8 +1,6 @@
-import json
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
-
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import prepare_filter
 from courtlistener.models import ENDPOINTS
@@ -43,9 +41,7 @@ class GetEndpointSchemaTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict:
         """Call the get_endpoint_schema tool."""
         endpoint_id = arguments.get("endpoint_id")
         for endpoint in ENDPOINTS.values():
@@ -63,16 +59,5 @@ class GetEndpointSchemaTool(MCPTool):
                     "type": "object",
                     "properties": updated_properties,
                 }
-                schema_str = json.dumps(schema, indent=2)
-                return CallToolResult(
-                    content=[TextContent(type="text", text=schema_str)]
-                )
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Endpoint '{endpoint_id}' not found",
-                )
-            ],
-            isError=True,
-        )
+                return schema
+        raise ValueError(f"Endpoint '{endpoint_id}' not found")

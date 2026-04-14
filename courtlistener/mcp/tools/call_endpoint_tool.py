@@ -1,14 +1,14 @@
-import json
+from typing import Any
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
     MAX_NUM_RESULTS,
     collect_results,
-    prepare_count_str,
+    prepare_count,
     prepare_has_more_str,
     prepare_query_id,
 )
@@ -58,9 +58,7 @@ class CallEndpointTool(MCPTool):
             "required": ["endpoint_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> Any:
         """Call the call_endpoint tool."""
         endpoint_id = arguments.get("endpoint_id")
         query = arguments.get("query") or {}
@@ -71,37 +69,20 @@ class CallEndpointTool(MCPTool):
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
 
-                    # Collect results first so page_result_index is
-                    # updated before we dump state.
                     results = collect_results(response, num_results)
-
-                    user_id = self.get_user_id()
-                    query_id = prepare_query_id(response, session, user_id)
-                    outputs = [f"Query ID: {query_id}"]
-
-                    count_str = prepare_count_str(
+                    query_id = await prepare_query_id(response, ctx)
+                    count = prepare_count(
                         response.current_page.count, query_id
                     )
-                    outputs.append(count_str)
 
-                    results_str = json.dumps(results, indent=2)
-                    outputs.append(results_str)
+                    outputs = {
+                        "query_id": query_id,
+                        "count": count,
+                        "results": results,
+                    }
 
                     has_more_str = prepare_has_more_str(response, query_id)
-                    outputs.append(has_more_str)
-
-                    outputs_str = "\n\n".join(
-                        [x for x in outputs if x]
-                    ).strip()
-                    return CallToolResult(
-                        content=[TextContent(type="text", text=outputs_str)]
-                    )
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Endpoint '{endpoint_id}' not found",
-                )
-            ],
-            isError=True,
-        )
+                    if has_more_str is not None:
+                        outputs["has_more"] = has_more_str
+                    return outputs
+        raise ValueError(f"Endpoint '{endpoint_id}' not found")

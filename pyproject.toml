@@ -43,7 +43,7 @@ dependencies = [
 [project.optional-dependencies]
 mcp = [
     "eyecite>=2.6.0",
-    "mcp>=1.0.0",
+    "fastmcp>=3.0.0",
     "redis>=5.0.0",
     "tiktoken>=0.12.0",
 ]

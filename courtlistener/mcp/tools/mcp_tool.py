@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from mcp.types import CallToolResult, Tool, ToolAnnotations
+from typing import Any
+
+from fastmcp.server.context import Context
+from fastmcp.tools import Tool
+from mcp.types import ToolAnnotations
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import request_api_token
-from courtlistener.mcp.session import SessionStore
 
 
 class MCPTool:
@@ -25,17 +28,6 @@ class MCPTool:
             return CourtListener(api_token=token)
         return CourtListener()
 
-    def get_user_id(self) -> str:
-        """Derive a user identifier for session key scoping.
-
-        HTTP mode: truncated SHA-256 of the API token.
-        stdio mode: fixed ``"local"`` identifier.
-        """
-        token = request_api_token.get()
-        if token:
-            return SessionStore.hash_token(token)
-        return "local"
-
     def get_tool(self) -> Tool:
         if self.name is None:
             raise ValueError("name must be set")
@@ -44,7 +36,7 @@ class MCPTool:
         return Tool(
             name=self.name,
             description=self.get_description(),
-            inputSchema=self.get_input_schema(),
+            parameters=self.get_input_schema(),
             annotations=self.annotations,
         )
 
@@ -56,7 +48,5 @@ class MCPTool:
             "get_input_schema must be implemented by subclass"
         )
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> Any:
         raise NotImplementedError("__call__ must be implemented by subclass")

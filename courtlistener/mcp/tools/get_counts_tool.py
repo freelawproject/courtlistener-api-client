@@ -1,8 +1,8 @@
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.utils import get_session_query
 from courtlistener.resource import ResourceIterator
 
 
@@ -34,35 +34,15 @@ class GetCountsTool(MCPTool):
             "required": ["query_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
-        user_id = self.get_user_id()
+    async def __call__(self, arguments: dict, ctx: Context) -> int:
         query_id = arguments["query_id"]
-        data = session.get_query(user_id, query_id)
+        data = await get_session_query(query_id, ctx)
         if data is None:
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=(
-                            f"Query ID {query_id!r} not found. "
-                            "The session may have expired, "
-                            "please redo the query first."
-                        ),
-                    )
-                ],
-                isError=True,
+            raise ValueError(
+                f"Query ID {query_id!r} not found. The session may have expired, "
+                "please redo the query first."
             )
         with self.get_client() as client:
             response = ResourceIterator.load(client, data["response"])
-            try:
-                count = response.count
-            except (ValueError, CourtListenerAPIError) as exc:
-                return CallToolResult(
-                    content=[TextContent(type="text", text=str(exc))],
-                    isError=True,
-                )
-            return CallToolResult(
-                content=[TextContent(type="text", text=str(count))]
-            )
+            count = response.count
+            return count

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -12,6 +12,10 @@ from courtlistener.mcp.tools.citation_utils import (
     process_api_results,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.utils import (
+    get_session_citation_analysis,
+    store_session_citation_analysis,
+)
 
 
 class ResumeCitationAnalysisTool(MCPTool):
@@ -44,40 +48,18 @@ class ResumeCitationAnalysisTool(MCPTool):
             "required": ["job_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
-        user_id = self.get_user_id()
+    async def __call__(self, arguments: dict, ctx: Context) -> str:
         job_id = arguments["job_id"]
-        job = session.get_citation_analysis(user_id, job_id)
+        job = await get_session_citation_analysis(job_id, ctx)
 
         if job is None:
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=(
-                            f"Job ID {job_id!r} not found. "
-                            "The session may have expired."
-                        ),
-                    )
-                ],
-                isError=True,
+            raise ValueError(
+                f"Job ID {job_id!r} not found. The session may have expired."
             )
 
         pending = job["pending"]
         if not pending:
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=(
-                            f"Job {job_id!r} is already complete. "
-                            "All citations verified."
-                        ),
-                    )
-                ]
-            )
+            return f"Job {job_id!r} is already complete.  All citations processed."
 
         # Verify next batch
         batch = pending[:MAX_CITATIONS_PER_REQUEST]
@@ -90,10 +72,6 @@ class ResumeCitationAnalysisTool(MCPTool):
         process_api_results(results, batch, job["verified"], job["pending"])
         newly_verified = set(job["verified"].keys()) - previously_verified
 
-        # Persist updated job state back — required for Redis backend
-        # (which returns a fresh deserialized copy, not a reference).
-        session.store_citation_analysis(user_id, job_id, job)
+        await store_session_citation_analysis(job_id, job, ctx)
 
-        # Format output
-        output = format_resume(job_id, job, newly_verified)
-        return CallToolResult(content=[TextContent(type="text", text=output)])
+        return format_resume(job_id, job, newly_verified)
