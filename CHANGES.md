@@ -5,14 +5,13 @@
 The following changes are not yet released, but are code complete:
 
 Features:
-- Add session abstraction for MCP server and implement in-memory and redis-based sessions.
 - Add middleware to extract API token from Authorization header for MCP server.
 - Add tool annotation hints to MCP tools.
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 
 Changes:
 - Update pre-commit hooks to latest versions.
-- Migrete STDIO mode MCP server to use in-memory session store abstraction.
+- Refactor MCP server to use FastMCP.
 
 Fixes:
 -
