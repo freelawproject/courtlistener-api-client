@@ -1,9 +1,6 @@
-import json
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
-
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.models import ENDPOINTS
 
@@ -45,46 +42,20 @@ class GetEndpointItemTool(MCPTool):
             "required": ["endpoint_id", "item_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict:
         """Call the get_endpoint_item tool."""
         endpoint_id = arguments.get("endpoint_id")
         item_id = arguments.get("item_id")
         fields = arguments.get("fields")
 
         if not isinstance(item_id, int | str):
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text", text="Item ID must be a string or integer"
-                    )
-                ],
-                isError=True,
-            )
+            raise ValueError("Item ID must be a string or integer")
 
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
                 with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
-                    try:
-                        item = resource.get(item_id, fields=fields)
-                        item_str = json.dumps(item, indent=2)
-                        return CallToolResult(
-                            content=[TextContent(type="text", text=item_str)]
-                        )
-                    except (ValueError, CourtListenerAPIError) as exc:
-                        return CallToolResult(
-                            content=[TextContent(type="text", text=str(exc))],
-                            isError=True,
-                        )
+                    item = resource.get(item_id, fields=fields)
+                    return item
 
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Endpoint '{endpoint_id}' not found",
-                )
-            ],
-            isError=True,
-        )
+        raise ValueError(f"Endpoint '{endpoint_id}' not found")

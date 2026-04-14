@@ -1,16 +1,16 @@
-import json
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
-
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
     MAX_NUM_RESULTS,
     collect_results,
-    filter_fields,
+    filter_results_by_fields,
+    get_session_query,
     has_more_results,
     prepare_has_more_str,
+    store_session_query,
 )
 from courtlistener.resource import ResourceIterator
 
@@ -54,70 +54,40 @@ class GetMoreResultsTool(MCPTool):
             "required": ["query_id"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
-        user_id = self.get_user_id()
+    async def __call__(self, arguments: dict, ctx: Context) -> str | dict:
         query_id = arguments["query_id"]
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
 
-        data = session.get_query(user_id, query_id)
-        if data is None:
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=(
-                            f"Query ID {query_id!r} not found. "
-                            "The session may have expired, "
-                            "please redo the query first."
-                        ),
-                    )
-                ],
-                isError=True,
+        query = await get_session_query(query_id, ctx)
+        if query is None:
+            raise ValueError(
+                f"Query ID {query_id!r} not found. The session may have expired, "
+                "please redo the query first."
             )
 
         with self.get_client() as client:
-            response = ResourceIterator.load(client, data["response"])
+            response = ResourceIterator.load(client, query["response"])
 
             if not has_more_results(response):
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=(
-                                f"No more results available for "
-                                f"query {query_id!r}."
-                            ),
-                        )
-                    ]
-                )
+                return f"No more results available for query {query_id!r}."
 
             results = collect_results(response, num_results)
 
-            # Persist updated page cursor back to the session.
-            # Conditionally include "fields" to stay consistent with
-            # prepare_query_id, which omits the key when fields is None.
-            session.store_query(
-                user_id,
-                query_id,
-                {
-                    "response": response.dump(),
-                    **({"fields": data["fields"]} if "fields" in data else {}),
-                },
-            )
+            updated_data = {"response": response.dump()}
+            fields = query.get("fields")
+            if fields is not None:
+                updated_data["fields"] = fields
+            await store_session_query(query_id, updated_data, ctx)
 
-            fields = data.get("fields")
-            filtered_results, _ = filter_fields(results, fields)
+            filtered_results, _ = filter_results_by_fields(results, fields)
 
-            outputs = [f"Query ID: {query_id}"]
-            results_str = json.dumps(filtered_results, indent=2)
-            outputs.append(results_str)
+            outputs = {
+                "query_id": query_id,
+                "results": filtered_results,
+            }
 
             has_more_str = prepare_has_more_str(response, query_id)
-            outputs.append(has_more_str)
+            if has_more_str is not None:
+                outputs["has_more"] = has_more_str
 
-            outputs_str = "\n\n".join([x for x in outputs if x]).strip()
-            return CallToolResult(
-                content=[TextContent(type="text", text=outputs_str)]
-            )
+            return outputs

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from eyecite.models import (
     CitationBase,
     FullCaseCitation,
@@ -46,7 +48,7 @@ def canonical_key(cite: FullCitation) -> str:
 
 def format_resolved_citations(
     cites: list[CitationBase],
-    resolutions: dict[CitationResource, list[CitationBase]],
+    resolutions: Any,
 ) -> str:
     """Format citations grouped by resolved resource."""
     cases: list[tuple[CitationResource, list[CitationBase]]] = []
@@ -300,7 +302,7 @@ def format_verification_result(
 def format_analysis(
     analysis_id: str,
     cites: list[CitationBase],
-    resolutions: dict[CitationResource, list[CitationBase]],
+    resolutions: Any,
     resource_refs: dict[str, dict],
     unique_citations: list[str],
     verified: dict[str, dict],

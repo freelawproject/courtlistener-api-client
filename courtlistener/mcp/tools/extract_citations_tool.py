@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from eyecite import get_citations, resolve_citations
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     citation_type_label,
     format_resolved_citations,
@@ -51,18 +51,14 @@ class ExtractCitationsTool(MCPTool):
             "required": ["text"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> str:
         text = arguments["text"]
         resolve = arguments.get("resolve", True)
 
         cites = get_citations(text)
 
         if not cites:
-            return CallToolResult(
-                content=[TextContent(type="text", text="No citations found.")]
-            )
+            return "No citations found."
 
         if not resolve:
             if not cites:
@@ -77,4 +73,4 @@ class ExtractCitationsTool(MCPTool):
             resolutions = resolve_citations(cites)
             output = format_resolved_citations(cites, resolutions)
 
-        return CallToolResult(content=[TextContent(type="text", text=output)])
+        return output

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from eyecite import get_citations, resolve_citations
 from eyecite.models import FullCaseCitation
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
@@ -15,6 +14,10 @@ from courtlistener.mcp.tools.citation_utils import (
     process_api_results,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.utils import (
+    make_id,
+    store_session_citation_analysis,
+)
 
 
 class AnalyzeCitationsTool(MCPTool):
@@ -64,50 +67,26 @@ class AnalyzeCitationsTool(MCPTool):
             "required": [],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> str:
         text = arguments.get("text")
         opinion_id = arguments.get("opinion_id")
         if (text is not None) == (opinion_id is not None):
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text="Exactly one of text or opinion ID must be provided.",
-                    )
-                ],
-                isError=True,
+            raise ValueError(
+                "Exactly one of text or opinion ID must be provided."
             )
 
         if opinion_id is not None:
             with self.get_client() as client:
-                try:
-                    opinion = client.opinions.get(opinion_id)
-                except CourtListenerAPIError as exc:
-                    return CallToolResult(
-                        content=[TextContent(type="text", text=str(exc))],
-                        isError=True,
-                    )
+                opinion = client.opinions.get(opinion_id)
                 text = opinion.get("plain_text")
                 if not text:
-                    return CallToolResult(
-                        content=[
-                            TextContent(
-                                type="text",
-                                text="Text not available for opinion ID.",
-                            )
-                        ],
-                        isError=True,
-                    )
+                    raise ValueError("Text not available for opinion ID.")
 
         # Step 1: Local extraction and resolution
         assert text is not None  # for mypy
         cites = get_citations(text)
         if not cites:
-            return CallToolResult(
-                content=[TextContent(type="text", text="No citations found.")]
-            )
+            return "No citations found."
 
         resolutions = resolve_citations(cites)
 
@@ -134,7 +113,7 @@ class AnalyzeCitationsTool(MCPTool):
         unique_citations: list[str] = []
         seen: set[str] = set()
         for resource in resolutions:
-            primary = resource.citation
+            primary = getattr(resource, "citation", None)
             if isinstance(primary, FullCaseCitation):
                 key = canonical_key(primary)
                 if key not in seen:
@@ -174,10 +153,8 @@ class AnalyzeCitationsTool(MCPTool):
             process_api_results(results, batch, verified, pending)
 
         # Step 4: Store in session
-        user_id = self.get_user_id()
-        analysis_id = session.make_id()
-        session.store_citation_analysis(
-            user_id,
+        analysis_id = make_id()
+        await store_session_citation_analysis(
             analysis_id,
             {
                 "resource_refs": resource_refs,
@@ -185,6 +162,7 @@ class AnalyzeCitationsTool(MCPTool):
                 "verified": verified,
                 "pending": pending,
             },
+            ctx,
         )
 
         # Step 5: Format output
@@ -197,4 +175,4 @@ class AnalyzeCitationsTool(MCPTool):
             verified,
             pending,
         )
-        return CallToolResult(content=[TextContent(type="text", text=output)])
+        return output

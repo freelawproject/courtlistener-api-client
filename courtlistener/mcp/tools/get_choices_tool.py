@@ -1,8 +1,6 @@
-import json
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
-
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.models import ENDPOINTS
 
@@ -36,9 +34,7 @@ class GetChoicesTool(MCPTool):
             "required": ["endpoint_id", "field_name"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict:
         endpoint_id: str = arguments["endpoint_id"]
         field_name: str = arguments["field_name"]
 
@@ -48,44 +44,17 @@ class GetChoicesTool(MCPTool):
 
             field_info = endpoint.model_fields.get(field_name)
             if field_info is None:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=f"Field '{field_name}' not found on endpoint '{endpoint_id}'",
-                        )
-                    ],
-                    isError=True,
+                raise ValueError(
+                    f"Field '{field_name}' not found on endpoint '{endpoint_id}'"
                 )
 
             extra = getattr(field_info, "json_schema_extra", {}) or {}
             choices = extra.get("choices", [])
             if not choices:
-                return CallToolResult(
-                    content=[
-                        TextContent(
-                            type="text",
-                            text=f"Field '{field_name}' on endpoint '{endpoint_id}' has no choices",
-                        )
-                    ],
-                    isError=True,
+                raise ValueError(
+                    f"Field '{field_name}' on endpoint '{endpoint_id}' has no choices"
                 )
 
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text=json.dumps(choices, indent=2),
-                    )
-                ]
-            )
+            return choices
 
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=f"Endpoint '{endpoint_id}' not found",
-                )
-            ],
-            isError=True,
-        )
+        raise ValueError(f"Endpoint '{endpoint_id}' not found")

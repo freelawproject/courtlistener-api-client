@@ -1,15 +1,15 @@
-import json
+from typing import Any
 
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from fastmcp.server.context import Context
+from mcp.types import ToolAnnotations
 
-from courtlistener.mcp.session import SessionStore
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     DEFAULT_NUM_RESULTS,
     MAX_NUM_RESULTS,
     collect_results,
-    filter_fields,
-    prepare_count_str,
+    filter_results_by_fields,
+    prepare_count,
     prepare_filter,
     prepare_has_more_str,
     prepare_query_id,
@@ -89,45 +89,35 @@ class SearchTool(MCPTool):
             "required": ["type"],
         }
 
-    def __call__(
-        self, arguments: dict, session: SessionStore
-    ) -> CallToolResult:
+    async def __call__(self, arguments: dict, ctx: Context) -> Any:
         """Call the search tool."""
         with self.get_client() as client:
             fields = arguments.pop("fields", None)
             num_results = arguments.pop("num_results", DEFAULT_NUM_RESULTS)
-            response = client.search.list(**arguments)
 
-            # Collect results first so page_result_index is updated
-            # before we dump state via prepare_query_id.
+            response = client.search.list(**arguments)
             results = collect_results(response, num_results)
 
-            user_id = self.get_user_id()
-            query_id = prepare_query_id(
-                response, session, user_id, fields=fields
+            query_id = await prepare_query_id(response, ctx, fields=fields)
+            count = prepare_count(response.current_page.count, query_id)
+            filtered_results, missing_fields = filter_results_by_fields(
+                results, fields
             )
-            outputs = [f"Query ID: {query_id}"]
 
-            count_str = prepare_count_str(
-                response.current_page.count, query_id
-            )
-            outputs.append(count_str)
-
-            filtered_results, missing_fields = filter_fields(results, fields)
+            outputs = {
+                "query_id": query_id,
+                "count": count,
+                "results": filtered_results,
+            }
 
             if missing_fields:
-                outputs.append(
+                outputs["missing_fields"] = (
                     f"WARNING: Some fields in {fields} not found in results.\n\n"
                     f"Available fields: {', '.join(results[0].keys())}"
                 )
 
-            results_str = json.dumps(filtered_results, indent=2)
-            outputs.append(results_str)
-
             has_more_str = prepare_has_more_str(response, query_id)
-            outputs.append(has_more_str)
+            if has_more_str is not None:
+                outputs["has_more"] = has_more_str
 
-            outputs_str = "\n\n".join([x for x in outputs if x]).strip()
-            return CallToolResult(
-                content=[TextContent(type="text", text=outputs_str)]
-            )
+            return outputs
