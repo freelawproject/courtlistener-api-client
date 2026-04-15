@@ -59,7 +59,10 @@ plug in:
 
 For clients that only support stdio (for example, some older Claude Desktop
 builds), you can bridge to the remote server with
-[`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
+[`mcp-remote`](https://www.npmjs.com/package/mcp-remote). In Claude Desktop,
+open the config file via **Settings → Developer → Edit Config** (on macOS
+this file lives at `~/Library/Application Support/Claude/claude_desktop_config.json`;
+on Windows at `%APPDATA%\Claude\claude_desktop_config.json`) and add:
 
 ```json
 {
@@ -112,7 +115,10 @@ export COURTLISTENER_API_TOKEN="your-token-here"
 uvx --from 'courtlistener-api-client[mcp]' courtlistener-mcp
 ```
 
-A Claude Desktop–style config entry looks like this:
+A Claude Desktop–style config entry looks like this. In Claude Desktop,
+open the config file via **Settings → Developer → Edit Config** (on macOS
+this file lives at `~/Library/Application Support/Claude/claude_desktop_config.json`;
+on Windows at `%APPDATA%\Claude\claude_desktop_config.json`):
 
 ```json
 {
