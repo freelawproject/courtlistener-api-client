@@ -1,11 +1,45 @@
+import os
+
 from fastmcp import FastMCP
+from key_value.aio.stores.redis import RedisStore
+from starlette.responses import JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 
-mcp = FastMCP("courtlistener")
+REDIS_URL = os.getenv("REDIS_URL")
 
-mcp.add_middleware(ToolHandlerMiddleware())
+
+def create_mcp_server(**kwargs):
+    mcp = FastMCP("courtlistener", **kwargs)
+
+    mcp.add_middleware(ToolHandlerMiddleware())
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(request):
+        services = {"mcp": True}
+
+        redis_store = kwargs.get("session_state_store")
+        if redis_store is not None:
+            services["redis"] = await redis_store._client.ping()
+
+        return JSONResponse(
+            {
+                "status": "healthy" if all(services.values()) else "unhealthy",
+                "services": services,
+            }
+        )
+
+    return mcp
+
+
+def create_http_app():
+    if REDIS_URL is None:
+        raise ValueError("REDIS_URL is required for HTTP mode")
+    redis_store = RedisStore(url=REDIS_URL)
+    mcp = create_mcp_server(session_state_store=redis_store)
+    return mcp.http_app(path="/")
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http", port=8000)
+    mcp = create_mcp_server()
+    mcp.run()
