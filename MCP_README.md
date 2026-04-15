@@ -8,8 +8,8 @@ retrieve dockets, analyze citations, manage alerts, and more.
 
 This document covers three things, in order:
 
-1. [Connecting to the hosted server](#connecting-to-the-hosted-server) at
-   `mcp.courtlistener.com` (the option most users want)
+1. ~~[Connecting to the hosted server](#connecting-to-the-hosted-server) at
+   `mcp.courtlistener.com` (the option most users want)~~ — **Coming Soon**
 2. [Running the server locally](#running-the-server-locally) over stdio or HTTP
 3. [Development and deployment](#development) of the server itself
 
@@ -17,11 +17,8 @@ This document covers three things, in order:
 
 ## Connecting to the hosted server
 
-Free Law Project hosts a public instance of this server at:
-
-```
-https://mcp.courtlistener.com/
-```
+~~Free Law Project hosts a public instance of this server at
+`https://mcp.courtlistener.com/`.~~ **(Coming Soon.)**
 
 It speaks the MCP [Streamable HTTP](https://modelcontextprotocol.io/specification/basic/transports#streamable-http)
 transport. Any MCP client that supports Streamable HTTP with custom headers can
