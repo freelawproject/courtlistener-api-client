@@ -7,6 +7,9 @@ from starlette.responses import JSONResponse
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 
 REDIS_URL = os.getenv("REDIS_URL")
+# Baked into production images by the Makefile via a Docker ARG; defaults
+# to "unknown" for local / unparametrized builds.
+GIT_SHA = os.getenv("GIT_SHA", "unknown")
 
 
 def create_mcp_server(**kwargs):
@@ -25,6 +28,7 @@ def create_mcp_server(**kwargs):
         return JSONResponse(
             {
                 "status": "healthy" if all(services.values()) else "unhealthy",
+                "version": GIT_SHA,
                 "services": services,
             }
         )
