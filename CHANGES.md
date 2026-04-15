@@ -14,6 +14,7 @@ Features:
 Changes:
 - Update pre-commit hooks to latest versions.
 - Refactor MCP server to use FastMCP.
+- Make COURTLISTENER_API_BASE_URL configurable via environment variable.
 
 Fixes:
 -
