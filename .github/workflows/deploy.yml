@@ -1,0 +1,177 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-west-2
+  EKS_CLUSTER_NAME: courtlistener
+  EKS_NAMESPACE: wiki
+
+jobs:
+  get-pr-labels:
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.find_pr.outputs.labels }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Find merged PR by merge_commit_sha
+        id: find_pr
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commitSha = context.sha;
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "closed",
+              sort: "updated",
+              direction: "desc",
+              per_page: 1
+            });
+
+            const pr = prs.find(p => p.merge_commit_sha === commitSha);
+            if (!pr) {
+              core.setOutput("labels", "");
+              core.warning("No merged PR found for this commit.");
+              return;
+            }
+
+            const labels = pr.labels.map(l => l.name);
+            core.setOutput("labels", labels.join(","));
+            console.log(`PR #${pr.number} labels: ${labels.join(", ")}`);
+
+  build:
+    needs: get-pr-labels
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.get-pr-labels.outputs.labels, 'skip-deploy') }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and Push
+        run: |
+          make push-image --file docker/django/Makefile -e VERSION=$(git rev-parse --short HEAD)
+
+  setup-deploy:
+    needs: [get-pr-labels, build]
+    runs-on: ubuntu-latest
+    outputs:
+      sha_short: ${{ steps.vars.outputs.sha_short }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set shortcode
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create Kubeconfig with AWS CLI
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Update Environment Variables
+        env:
+          WIKI_ENV: wiki-env
+        run: kubectl annotate es $WIKI_ENV force-sync=$(date +%s) --overwrite -n ${{ env.EKS_NAMESPACE }} && kubectl wait es -n ${{ env.EKS_NAMESPACE }} --for=jsonpath="{.status.conditions[?(@.reason=='SecretSynced')].status}"=True --timeout=30s $WIKI_ENV
+
+      - name: Launch Temporary Pod
+        run: |
+          kubectl run temp-pod-${{ steps.vars.outputs.sha_short }} -n ${{ env.EKS_NAMESPACE }} --image=freelawproject/wiki:${{ steps.vars.outputs.sha_short }}-prod --restart Never --pod-running-timeout=120s --overrides='
+          {
+              "spec": {
+              "containers": [{
+                  "name": "temp-pod",
+                  "image": "freelawproject/wiki:${{ steps.vars.outputs.sha_short }}-prod",
+                  "command": ["/bin/sh", "-c", "trap : TERM INT; sleep 259200 & wait"],
+                  "envFrom": [{
+                  "secretRef": {
+                      "name": "wiki-env"
+                  }
+                  }]
+              }]
+              }
+          }'
+      - name: Wait for Temporary Pod to Start
+        run: kubectl wait pods -n ${{ env.EKS_NAMESPACE }} --for condition=Ready --timeout=90s temp-pod-${{ steps.vars.outputs.sha_short }}
+      - name: Collect Static Assets
+        run: |
+          kubectl exec -n ${{ env.EKS_NAMESPACE }} temp-pod-${{ steps.vars.outputs.sha_short }} -- ./manage.py collectstatic --noinput
+      - name: Handle Collectstatic Error
+        if: failure()
+        run: |
+          echo "collectstatic failed--aborting build"
+          exit 1
+
+      - name: Check Migrations
+        run: |
+          kubectl exec -n ${{ env.EKS_NAMESPACE }} temp-pod-${{ steps.vars.outputs.sha_short }} -- ./manage.py migrate --check
+      - name: Handle Check Migrations Error
+        if: failure()
+        run: |
+          echo "Found unapplied migrations. Open shell into pod temp-pod-${{ steps.vars.outputs.sha_short }}"
+          echo "Manually run migrations. That pod will delete itself after an hour."
+          exit 1
+      - name: Delete Temporary Pod
+        run: kubectl delete pod -n ${{ env.EKS_NAMESPACE }} temp-pod-${{ steps.vars.outputs.sha_short }}
+
+  deploy-web:
+    needs: [get-pr-labels, setup-deploy]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.get-pr-labels.outputs.labels, 'skip-web-deploy') }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Create Kubeconfig with AWS CLI
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Rollout wiki-web
+        run: kubectl set image -n ${{ env.EKS_NAMESPACE }} deployment/wiki-web web=freelawproject/wiki:${{ needs.setup-deploy.outputs.sha_short }}-prod
+      - name: Watch wiki-web rollout status
+        run: kubectl rollout status -n ${{ env.EKS_NAMESPACE }} deployment/wiki-web
+
+  deploy-daemon:
+    needs: [get-pr-labels, setup-deploy]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.get-pr-labels.outputs.labels, 'skip-daemon-deploy') }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Create Kubeconfig with AWS CLI
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Rollout wiki-daemon
+        run: kubectl set image -n ${{ env.EKS_NAMESPACE }} deployment/wiki-daemon wiki-daemon=freelawproject/wiki:${{ needs.setup-deploy.outputs.sha_short }}-prod
+      - name: Watch wiki-daemon rollout status
+        run: kubectl rollout status -n ${{ env.EKS_NAMESPACE }} deployment/wiki-daemon
+
+  complete-deploy:
+    needs:
+      [
+        deploy-web,
+        deploy-daemon,
+      ]
+    runs-on: ubuntu-latest
+    concurrency: production
+    if: always()
+    steps:
+      - name: Deployment Complete
+        run: echo "All deployments have finished."
