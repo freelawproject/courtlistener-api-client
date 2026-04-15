@@ -84,36 +84,9 @@ builds), you can bridge to the remote server with
 ### Programmatic access
 
 If you want to call the server from code — for testing, scripting, or building
-your own agent — use any MCP client library. Here's an example with the
-`fastmcp` Python client:
-
-```python
-import asyncio
-import os
-
-from fastmcp import Client
-from fastmcp.client.transports import StreamableHttpTransport
-
-
-async def main():
-    async with Client(
-        transport=StreamableHttpTransport(
-            "https://mcp.courtlistener.com/",
-            headers={
-                "Authorization": f"Token {os.environ['COURTLISTENER_API_TOKEN']}"
-            },
-        ),
-    ) as client:
-        result = await client.call_tool(
-            "get_endpoint_item",
-            {"endpoint_id": "courts", "item_id": "scotus"},
-        )
-        print(result)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+your own agent — use any MCP client library. See
+[Calling the server from code](#calling-the-server-from-code) in the
+Development section for an example.
 
 ---
 
@@ -123,23 +96,20 @@ You can also run the server on your own machine. Two transports are supported.
 
 ### stdio (recommended for local desktop clients)
 
-Install the package with the `mcp` extra:
-
-```bash
-pip install 'courtlistener-api-client[mcp]'
-```
-
-That installs a `courtlistener-mcp` console script (defined in
-`pyproject.toml` and backed by `courtlistener.mcp.server:main`) that runs the
-server over stdio — the transport most desktop MCP clients expect for local
-servers.
+The easiest way to run the stdio server is with
+[`uvx`](https://docs.astral.sh/uv/guides/tools/), which fetches the
+`courtlistener-api-client` package from PyPI and runs the
+`courtlistener-mcp` console script (backed by `courtlistener.mcp.server:main`)
+in an ephemeral environment — no manual install required. If you don't have
+`uv` yet, follow the
+[uv install instructions](https://docs.astral.sh/uv/getting-started/installation/).
 
 Authentication in stdio mode uses the `COURTLISTENER_API_TOKEN` environment
 variable (there is no request to attach headers to):
 
 ```bash
 export COURTLISTENER_API_TOKEN="your-token-here"
-courtlistener-mcp
+uvx --from 'courtlistener-api-client[mcp]' courtlistener-mcp
 ```
 
 A Claude Desktop–style config entry looks like this:
@@ -148,7 +118,12 @@ A Claude Desktop–style config entry looks like this:
 {
   "mcpServers": {
     "courtlistener": {
-      "command": "courtlistener-mcp",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "courtlistener-api-client[mcp]",
+        "courtlistener-mcp"
+      ],
       "env": {
         "COURTLISTENER_API_TOKEN": "your-token-here"
       }
@@ -156,6 +131,10 @@ A Claude Desktop–style config entry looks like this:
   }
 }
 ```
+
+If you'd rather install the package into an environment yourself,
+`pip install 'courtlistener-api-client[mcp]'` exposes the same
+`courtlistener-mcp` command on your `PATH`.
 
 stdio mode does not require Redis.
 
@@ -213,12 +192,55 @@ The MCP code lives under `courtlistener/mcp/`:
 See the `COURTLISTENER_API_BASE_URL` instructions in the HTTP section above.
 The same variable works in stdio mode if you prefer to iterate without Docker.
 
+### Calling the server from code
+
+Any MCP client library works against the running server — useful for smoke
+tests, one-off scripts, or building your own agent. Here's an example against
+the hosted server using the `fastmcp` Python client:
+
+```python
+import asyncio
+import os
+
+from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
+
+
+async def main():
+    async with Client(
+        transport=StreamableHttpTransport(
+            "https://mcp.courtlistener.com/",
+            headers={
+                "Authorization": f"Token {os.environ['COURTLISTENER_API_TOKEN']}"
+            },
+        ),
+    ) as client:
+        result = await client.call_tool(
+            "get_endpoint_item",
+            {"endpoint_id": "courts", "item_id": "scotus"},
+        )
+        print(result)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Swap the URL for `http://localhost:8080/` to hit a locally running HTTP
+instance instead.
+
 ### Tests and linting
 
 Tests, linting, and type-checking run via `tox`:
 
 ```bash
 tox
+```
+
+Run the pre-commit hooks (formatting, lint, etc.) across the whole repo with:
+
+```bash
+pre-commit run --all-files
 ```
 
 CI runs the same targets on pull requests.
