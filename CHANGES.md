@@ -5,7 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
-- Add middleware to extract API token from Authorization header for MCP server.
+- Extract API token from Authorization header for HTTP MCP server.
 - Add tool annotation hints to MCP tools.
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 
