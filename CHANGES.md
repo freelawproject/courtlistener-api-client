@@ -10,11 +10,13 @@ Features:
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 - Add factory for HTTP MCP server with Redis session state store.
 - Add Docker Compose configuration for development.
+- Report the image version (Git SHA) on the MCP `/health` endpoint.
 
 Changes:
 - Update pre-commit hooks to latest versions.
 - Refactor MCP server to use FastMCP.
 - Make COURTLISTENER_API_BASE_URL configurable via environment variable.
+- Add CI workflow and Makefile for building and deploying the MCP server.
 
 Fixes:
 -
