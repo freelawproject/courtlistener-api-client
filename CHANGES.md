@@ -9,6 +9,7 @@ Features:
 - Add tool annotation hints to MCP tools.
 - Add human-readable titles to all MCP tools via ToolAnnotations.
 - Add factory for HTTP MCP server with Redis session state store.
+- Add Docker Compose configuration for development.
 
 Changes:
 - Update pre-commit hooks to latest versions.
