@@ -40,6 +40,10 @@ def create_http_app():
     return mcp.http_app(path="/")
 
 
-if __name__ == "__main__":
+def main():
     mcp = create_mcp_server()
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()
