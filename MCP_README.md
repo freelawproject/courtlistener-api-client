@@ -12,6 +12,7 @@ The CourtListener MCP server is a FastMCP server that provides a MCP interface t
 | `TARGET_ENV` | Whether to run the server in `prod` or `dev` mode. |
 | `REDIS_URL` | The URL of the Redis server. |
 | `MCP_WORKERS` | The number of gunicorn workers to run the server with in `prod` mode. |
+| `COURTLISTENER_API_BASE_URL` | The base URL of the CourtListener API. Defaults to the real CourtListener API base URL, but can be overridden to use a local development API. |
 --------------------------------
 
 ### Development
@@ -23,6 +24,12 @@ docker compose up --build
 ```
 
 The server will be available at `http://localhost:8080`.
+
+If you want to point to a local CourtListener instance, you can set the `COURTLISTENER_API_BASE_URL` environment variable to the base URL of the local API. Because the MCP server is running in a Docker container, you can use the `host.docker.internal` hostname to point to your host machine's `localhost`. For example:
+
+```bash
+COURTLISTENER_API_BASE_URL=http://host.docker.internal:8000/api/rest/v4
+```
 
 Here is an example script to make a test tool call to the server:
 

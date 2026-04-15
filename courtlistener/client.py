@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from courtlistener.alerts import DocketAlerts, SearchAlerts
     from courtlistener.citation_lookup import CitationLookup
 
-DEFAULT_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
+DEFAULT_API_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
 
 
 class CourtListener:
@@ -22,7 +22,7 @@ class CourtListener:
     def __init__(
         self,
         api_token: str | None = None,
-        base_url: str = DEFAULT_BASE_URL,
+        base_url: str | None = None,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the CourtListener client.
@@ -38,6 +38,12 @@ class CourtListener:
             raise ValueError(
                 "API token is required. Provide it directly or set COURTLISTENER_API_TOKEN "
                 "environment variable."
+            )
+
+        if base_url is None:
+            base_url = (
+                os.environ.get("COURTLISTENER_API_BASE_URL")
+                or DEFAULT_API_BASE_URL
             )
 
         self.base_url = base_url.rstrip("/")
