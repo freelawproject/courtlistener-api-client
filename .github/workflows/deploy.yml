@@ -57,12 +57,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and Push
         run: |
-          VERSION=$(git rev-parse --short HEAD)
-          docker build \
-            --build-arg TARGET_ENV=prod \
-            --tag freelawproject/courtlistener-mcp:${VERSION}-prod \
-            .
-          docker push freelawproject/courtlistener-mcp:${VERSION}-prod
+          make push-image -e VERSION=$(git rev-parse --short HEAD)
 
   setup-deploy:
     needs: [get-pr-labels, build]

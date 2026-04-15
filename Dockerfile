@@ -47,6 +47,11 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ARG TARGET_ENV=dev
 ENV TARGET_ENV=${TARGET_ENV}
 
+# Bake the short commit SHA into the image so running containers can report
+# which build they came from. Passed in by CI / the Makefile.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
+
 RUN uv sync --extra mcp --frozen;
 
 RUN chmod +x /app/docker-entrypoint.sh
