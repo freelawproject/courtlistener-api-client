@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from fastmcp.server.context import Context
+from fastmcp.server.dependencies import get_http_request
 from fastmcp.tools import Tool
 from mcp.types import ToolAnnotations
 
 from courtlistener import CourtListener
-from courtlistener.mcp.auth import request_api_token
 
 
 class MCPTool:
@@ -23,7 +23,13 @@ class MCPTool:
         - stdio mode: falls back to COURTLISTENER_API_TOKEN env var
           (handled by CourtListener constructor)
         """
-        token = request_api_token.get()
+        request = get_http_request()
+        auth = request.headers.get("Authorization")
+
+        token = None
+        if auth is not None and auth.startswith("Token "):
+            token = auth[len("Token ") :] or None
+
         if token:
             return CourtListener(api_token=token)
         return CourtListener()
