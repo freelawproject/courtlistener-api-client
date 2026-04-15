@@ -8,6 +8,7 @@ Features:
 - Extract API token from Authorization header for HTTP MCP server.
 - Add tool annotation hints to MCP tools.
 - Add human-readable titles to all MCP tools via ToolAnnotations.
+- Add factory for HTTP MCP server with Redis session state store.
 
 Changes:
 - Update pre-commit hooks to latest versions.
