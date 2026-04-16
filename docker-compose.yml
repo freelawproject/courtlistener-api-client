@@ -15,6 +15,15 @@ services:
       TARGET_ENV: dev
       REDIS_URL: redis://redis:6379
       COURTLISTENER_API_BASE_URL: ${COURTLISTENER_API_BASE_URL:-}
+      # OAuth defaults mirror the prod HTTP MCP deployment so local
+      # `docker compose up` exercises the same auth path. Override any
+      # of these via shell env — e.g. `MCP_REQUIRE_OAUTH=false` to
+      # keep using `Authorization: Token <api_token>` locally, or
+      # `COURTLISTENER_OAUTH_ISSUER=http://host.docker.internal:8000`
+      # to validate JWTs against a local CourtListener dev instance.
+      MCP_REQUIRE_OAUTH: ${MCP_REQUIRE_OAUTH:-true}
+      COURTLISTENER_OAUTH_ISSUER: ${COURTLISTENER_OAUTH_ISSUER:-https://www.courtlistener.com}
+      MCP_BASE_URL: ${MCP_BASE_URL:-http://localhost:8080}
     healthcheck:
       test: [
         "CMD", "python", "-c",

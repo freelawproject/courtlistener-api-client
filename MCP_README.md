@@ -177,6 +177,9 @@ COURTLISTENER_API_BASE_URL=http://host.docker.internal:8000/api/rest/v4 \
 | `TARGET_ENV` | HTTP mode (Docker) | `dev` runs Uvicorn with `--reload`; `prod` runs Gunicorn. Set via the `docker-entrypoint.sh` script. |
 | `REDIS_URL` | HTTP mode | Required. URL of the Redis instance used for MCP session state. |
 | `MCP_WORKERS` | HTTP mode, prod | Number of Gunicorn workers. Defaults to `4`. |
+| `MCP_REQUIRE_OAUTH` | HTTP mode | When set to the literal string `true` (case-insensitive), the HTTP MCP app validates incoming JWT bearer tokens against CourtListener's JWKS. Any other value leaves OAuth off and falls back to legacy `Authorization: Token <api_token>` auth. Defaults to `true` in `docker-compose.yml`. |
+| `COURTLISTENER_OAUTH_ISSUER` | HTTP mode + OAuth | Issuer URL of the OAuth authorization server. Must match the `issuer` field in `/.well-known/oauth-authorization-server`. Defaults to `https://www.courtlistener.com`. |
+| `MCP_BASE_URL` | HTTP mode + OAuth | Public URL of the MCP server, used for `/.well-known/oauth-protected-resource`. Defaults to `https://mcp.courtlistener.com` (set to `http://localhost:8080` in `docker-compose.yml`). |
 
 ### Project layout
 
