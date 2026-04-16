@@ -1,6 +1,7 @@
 import os
 
 from fastmcp import FastMCP
+from fastmcp.server.auth.auth import AuthProvider, RemoteAuthProvider
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 from key_value.aio.stores.redis import RedisStore
 from starlette.responses import JSONResponse
@@ -21,8 +22,15 @@ OAUTH_ISSUER = os.getenv(
 MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
 
 
-def build_auth() -> JWTVerifier | None:
-    """Return a ``JWTVerifier`` when OAuth is configured, else ``None``.
+def build_auth() -> AuthProvider | None:
+    """Return an ``AuthProvider`` when OAuth is configured, else ``None``.
+
+    Wraps a ``JWTVerifier`` (which validates bearer tokens against the
+    CourtListener JWKS) in a ``RemoteAuthProvider``, which publishes the
+    RFC 9728 ``/.well-known/oauth-protected-resource`` metadata pointing
+    clients at the CourtListener authorization server. Without that
+    wrapper, ``JWTVerifier`` alone would gate the MCP routes but give
+    clients no way to discover where to get a token.
 
     Only the HTTP deployment requires OAuth; stdio / local dev can run
     without it. Set ``MCP_REQUIRE_OAUTH=true`` to opt in (the literal
@@ -30,13 +38,18 @@ def build_auth() -> JWTVerifier | None:
     """
     if os.getenv("MCP_REQUIRE_OAUTH", "").lower() != "true":
         return None
-    return JWTVerifier(
+    verifier = JWTVerifier(
         jwks_uri=f"{OAUTH_ISSUER}/o/.well-known/jwks.json",
         issuer=OAUTH_ISSUER,
         # audience left unset — RFC 8707 resource-indicator support on
         # the CL auth-server side is not yet complete. Tighten once
         # django-oauth-toolkit honors `aud == MCP_BASE_URL`.
         audience=None,
+        base_url=MCP_BASE_URL,
+    )
+    return RemoteAuthProvider(
+        token_verifier=verifier,
+        authorization_servers=[OAUTH_ISSUER],
         base_url=MCP_BASE_URL,
     )
 

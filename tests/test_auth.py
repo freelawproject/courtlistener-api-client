@@ -165,6 +165,11 @@ class TestServerAuthWiring:
             assert build_auth() is None
 
     def test_build_auth_returns_verifier_when_set(self):
+        """OAuth on → returns a RemoteAuthProvider that publishes the
+        RFC 9728 protected-resource metadata, wrapping a JWTVerifier
+        that does the actual token validation.
+        """
+        from fastmcp.server.auth.auth import RemoteAuthProvider
         from fastmcp.server.auth.providers.jwt import JWTVerifier
 
         with patch.dict(
@@ -182,7 +187,14 @@ class TestServerAuthWiring:
 
             importlib.reload(server_mod)
             auth = server_mod.build_auth()
-        assert isinstance(auth, JWTVerifier)
+        assert isinstance(auth, RemoteAuthProvider)
+        assert isinstance(auth.token_verifier, JWTVerifier)
+        # Discovery route is advertised so clients can find the auth
+        # server without the MCP having to serve
+        # .well-known/oauth-authorization-server itself.
+        routes = auth.get_routes(mcp_path="/")
+        paths = {getattr(r, "path", None) for r in routes}
+        assert "/.well-known/oauth-protected-resource" in paths
 
     def test_build_auth_accepts_true_case_insensitively(self):
         """``MCP_REQUIRE_OAUTH=TRUE`` / ``True`` also enables OAuth."""
