@@ -166,11 +166,12 @@ class TestServerAuthWiring:
 
     def test_build_auth_returns_verifier_when_set(self):
         """OAuth on → returns a RemoteAuthProvider that publishes the
-        RFC 9728 protected-resource metadata, wrapping a JWTVerifier
-        that does the actual token validation.
+        RFC 9728 protected-resource metadata, wrapping the pass-through
+        verifier. Token validation itself is delegated downstream to
+        CL's OAuth2Authentication when the tool code forwards the
+        bearer to the CourtListener API.
         """
         from fastmcp.server.auth.auth import RemoteAuthProvider
-        from fastmcp.server.auth.providers.jwt import JWTVerifier
 
         with patch.dict(
             "os.environ",
@@ -181,20 +182,51 @@ class TestServerAuthWiring:
             },
         ):
             # Reload so module-level constants pick up the patched env.
+            # Re-read the class from the reloaded module so isinstance()
+            # sees the new class object, not a stale reference.
             import importlib
 
             import courtlistener.mcp.server as server_mod
 
             importlib.reload(server_mod)
             auth = server_mod.build_auth()
+            verifier_cls = server_mod.PassThroughTokenVerifier
         assert isinstance(auth, RemoteAuthProvider)
-        assert isinstance(auth.token_verifier, JWTVerifier)
+        assert isinstance(auth.token_verifier, verifier_cls)
         # Discovery route is advertised so clients can find the auth
         # server without the MCP having to serve
         # .well-known/oauth-authorization-server itself.
         routes = auth.get_routes(mcp_path="/")
         paths = {getattr(r, "path", None) for r in routes}
         assert "/.well-known/oauth-protected-resource" in paths
+
+    def test_pass_through_verifier_accepts_any_non_empty_token(self):
+        """Non-empty bearer tokens are accepted without local checks;
+        CL is the authoritative validator downstream.
+        """
+        import asyncio
+
+        from courtlistener.mcp.server import PassThroughTokenVerifier
+
+        verifier = PassThroughTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
+        token = asyncio.run(verifier.verify_token("anything-goes"))
+        assert token is not None
+        assert token.token == "anything-goes"
+
+    def test_pass_through_verifier_rejects_empty_token(self):
+        """Empty bearer → not authenticated. Prevents trivially-empty
+        ``Authorization: Bearer`` headers from slipping through.
+        """
+        import asyncio
+
+        from courtlistener.mcp.server import PassThroughTokenVerifier
+
+        verifier = PassThroughTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
+        assert asyncio.run(verifier.verify_token("")) is None
 
     def test_build_auth_accepts_true_case_insensitively(self):
         """``MCP_REQUIRE_OAUTH=TRUE`` / ``True`` also enables OAuth."""
