@@ -11,6 +11,10 @@ Features:
 - Add factory for HTTP MCP server with Redis session state store.
 - Add Docker Compose configuration for development.
 - Report the image version (Git SHA) on the MCP `/health` endpoint.
+- Accept OAuth 2.0 bearer tokens in the MCP HTTP transport via
+  FastMCP's `JWTVerifier` (gated on `MCP_REQUIRE_OAUTH`), and forward
+  them to the CourtListener API as `Authorization: Bearer <jwt>`.
+  Adds an `access_token` parameter to `CourtListener` for Bearer auth.
 
 Changes:
 - Update pre-commit hooks to latest versions.
