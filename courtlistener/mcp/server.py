@@ -25,9 +25,10 @@ def build_auth() -> JWTVerifier | None:
     """Return a ``JWTVerifier`` when OAuth is configured, else ``None``.
 
     Only the HTTP deployment requires OAuth; stdio / local dev can run
-    without it. ``MCP_REQUIRE_OAUTH`` is the opt-in switch.
+    without it. Set ``MCP_REQUIRE_OAUTH=true`` to opt in (the literal
+    string ``"true"`` — any other value leaves OAuth off).
     """
-    if not os.getenv("MCP_REQUIRE_OAUTH"):
+    if os.getenv("MCP_REQUIRE_OAUTH", "").lower() != "true":
         return None
     return JWTVerifier(
         jwks_uri=f"{OAUTH_ISSUER}/o/.well-known/jwks.json",

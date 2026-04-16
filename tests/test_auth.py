@@ -170,7 +170,7 @@ class TestServerAuthWiring:
         with patch.dict(
             "os.environ",
             {
-                "MCP_REQUIRE_OAUTH": "1",
+                "MCP_REQUIRE_OAUTH": "true",
                 "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
                 "MCP_BASE_URL": "https://mcp.example.test",
             },
@@ -184,15 +184,72 @@ class TestServerAuthWiring:
             auth = server_mod.build_auth()
         assert isinstance(auth, JWTVerifier)
 
+    def test_build_auth_accepts_true_case_insensitively(self):
+        """``MCP_REQUIRE_OAUTH=TRUE`` / ``True`` also enables OAuth."""
+        from courtlistener.mcp.server import build_auth
+
+        for value in ("true", "TRUE", "True"):
+            with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": value}):
+                assert build_auth() is not None, value
+
+    def test_build_auth_ignores_other_truthy_values(self):
+        """Only the literal string ``true`` (any casing) enables OAuth.
+
+        Prevents accidental activation from stray values like ``1`` or
+        ``yes`` in deployment configs.
+        """
+        from courtlistener.mcp.server import build_auth
+
+        for value in ("1", "yes", "on", "True ", " true", "false", ""):
+            with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": value}):
+                assert build_auth() is None, value
+
     def test_create_mcp_server_does_not_enable_auth_by_default(self):
         """Bare ``create_mcp_server`` should not wire in OAuth, even
         when ``MCP_REQUIRE_OAUTH`` is set — only the HTTP factory does.
         """
         from courtlistener.mcp.server import create_mcp_server
 
-        with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": "1"}):
+        with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": "true"}):
             mcp = create_mcp_server()
         # FastMCP exposes its auth provider via ``auth`` (or ``_auth``
         # depending on version); both should be falsy here.
         auth = getattr(mcp, "auth", None) or getattr(mcp, "_auth", None)
         assert not auth
+
+
+class TestHealthEndpoint:
+    """``/health`` must stay unauthenticated so uptime checks keep
+    working even when OAuth is enabled on the MCP routes."""
+
+    def test_health_is_unauthenticated_under_oauth(self):
+        """GET /health returns 200 with no Authorization header, even
+        when the HTTP app has a ``JWTVerifier`` attached."""
+        from starlette.testclient import TestClient
+
+        # Skip the RedisStore wiring (create_http_app requires Redis);
+        # we only care that /health routes through FastMCP's starlette
+        # app unauthenticated. Build the server the same way
+        # create_http_app does — auth via build_auth().
+        with patch.dict(
+            "os.environ",
+            {
+                "MCP_REQUIRE_OAUTH": "true",
+                "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
+                "MCP_BASE_URL": "https://mcp.example.test",
+            },
+        ):
+            import importlib
+
+            import courtlistener.mcp.server as server_mod
+
+            importlib.reload(server_mod)
+            mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
+
+        app = mcp.http_app(path="/")
+        with TestClient(app) as http_client:
+            response = http_client.get("/health")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "healthy"
+        assert body["services"] == {"mcp": True}
