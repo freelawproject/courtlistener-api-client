@@ -36,13 +36,13 @@ class GetCountsTool(MCPTool):
 
     async def __call__(self, arguments: dict, ctx: Context) -> int:
         query_id = arguments["query_id"]
-        data = await get_session_query(query_id, ctx)
-        if data is None:
-            raise ValueError(
-                f"Query ID {query_id!r} not found. The session may have expired, "
-                "please redo the query first."
-            )
         with self.get_client() as client:
+            data = await get_session_query(query_id, client)
+            if data is None:
+                raise ValueError(
+                    f"Query ID {query_id!r} not found. The session may have "
+                    "expired, please redo the query first."
+                )
             response = ResourceIterator.load(client, data["response"])
             count = response.count
             return count

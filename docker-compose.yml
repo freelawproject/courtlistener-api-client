@@ -15,6 +15,7 @@ services:
       TARGET_ENV: dev
       REDIS_URL: redis://redis:6379
       COURTLISTENER_API_BASE_URL: ${COURTLISTENER_API_BASE_URL:-}
+      MCP_SECRET_KEY: dev-insecure-do-not-use-in-production
     healthcheck:
       test: [
         "CMD", "python", "-c",

@@ -176,6 +176,8 @@ COURTLISTENER_API_BASE_URL=http://host.docker.internal:8000/api/rest/v4 \
 | `COURTLISTENER_API_BASE_URL` | both | Override the CourtListener API base URL. Defaults to the public API; set it to point at a local CourtListener dev instance. |
 | `TARGET_ENV` | HTTP mode (Docker) | `dev` runs Uvicorn with `--reload`; `prod` runs Gunicorn. Set via the `docker-entrypoint.sh` script. |
 | `REDIS_URL` | HTTP mode | Required. URL of the Redis instance used for MCP session state. |
+| `MCP_WORKERS` | HTTP mode | Number of Gunicorn workers. Defaults to `4`. |
+| `MCP_SECRET_KEY` | HTTP mode | HMAC key used to derive per-user Redis key prefixes for session-scoped tool state (query pagination, citation analysis jobs). Set to a strong random value in production. |
 
 ### Project layout
 

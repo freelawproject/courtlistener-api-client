@@ -70,7 +70,7 @@ class CallEndpointTool(MCPTool):
                     response = resource.list(**query)
 
                     results = collect_results(response, num_results)
-                    query_id = await prepare_query_id(response, ctx)
+                    query_id = await prepare_query_id(response, client)
                     count = prepare_count(
                         response.current_page.count, query_id
                     )

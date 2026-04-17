@@ -50,28 +50,28 @@ class ResumeCitationAnalysisTool(MCPTool):
 
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         job_id = arguments["job_id"]
-        job = await get_session_citation_analysis(job_id, ctx)
-
-        if job is None:
-            raise ValueError(
-                f"Job ID {job_id!r} not found. The session may have expired."
-            )
-
-        pending = job["pending"]
-        if not pending:
-            return f"Job {job_id!r} is already complete.  All citations processed."
-
-        # Verify next batch
-        batch = pending[:MAX_CITATIONS_PER_REQUEST]
-        compact_text = build_compact_string(batch)
-
         with self.get_client() as client:
+            job = await get_session_citation_analysis(job_id, client)
+            if job is None:
+                raise ValueError(
+                    f"Job ID {job_id!r} not found. The session may have expired."
+                )
+
+            pending = job["pending"]
+            if not pending:
+                return f"Job {job_id!r} is already complete.  All citations processed."
+
+            # Verify next batch
+            batch = pending[:MAX_CITATIONS_PER_REQUEST]
+            compact_text = build_compact_string(batch)
             results = client.citation_lookup.lookup_text(compact_text)
 
-        previously_verified = set(job["verified"].keys())
-        process_api_results(results, batch, job["verified"], job["pending"])
-        newly_verified = set(job["verified"].keys()) - previously_verified
+            previously_verified = set(job["verified"].keys())
+            process_api_results(
+                results, batch, job["verified"], job["pending"]
+            )
+            newly_verified = set(job["verified"].keys()) - previously_verified
 
-        await store_session_citation_analysis(job_id, job, ctx)
+            await store_session_citation_analysis(job_id, job, client)
 
-        return format_resume(job_id, job, newly_verified)
+            return format_resume(job_id, job, newly_verified)

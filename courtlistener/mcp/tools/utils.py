@@ -1,14 +1,36 @@
+import hashlib
+import hmac
 import json
+import logging
+import os
 import uuid
 from itertools import islice
+from typing import Any
 
+import redis.asyncio as redis
 import tiktoken
-from fastmcp.server.context import Context
 
+from courtlistener import CourtListener
 from courtlistener.resource import ResourceIterator
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_NUM_RESULTS = 20
 MAX_NUM_RESULTS = 100
+
+# Session-scoped keys live in Redis for this long before being evicted.
+SESSION_TTL_SECONDS = 3600
+
+MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
+if not MCP_SECRET_KEY:
+    MCP_SECRET_KEY = "temporarily-insecure"
+    logger.warning(
+        "MCP_SECRET_KEY is not set; falling back to an insecure default. "
+        "Set a strong random value before going to production."
+    )
+MCP_SECRET_BYTES = MCP_SECRET_KEY.encode("utf-8")
+
+redis_client: redis.Redis | None = None
 
 
 def collect_results(
@@ -25,15 +47,15 @@ def collect_results(
 
 async def prepare_query_id(
     response: ResourceIterator,
-    ctx: Context,
+    client: CourtListener,
     fields: list[str] | None = None,
 ) -> str:
-    """Store query response in session and return a short UUID query ID."""
+    """Store query response in Redis and return a short UUID query ID."""
     query_id = make_id()
     data: dict = {"response": response.dump()}
     if fields is not None:
         data["fields"] = fields
-    await store_session_query(query_id, data, ctx)
+    await store_session_query(query_id, data, client)
     return query_id
 
 
@@ -126,26 +148,82 @@ def prepare_has_more_str(
     return None
 
 
-# Session store helpers
+# User-scoped Redis session helpers.
+#
+# Keyed by an HMAC of the caller's API token rather than the MCP session id,
+# so state survives across stateless_http=True requests and across workers.
+def get_redis() -> redis.Redis:
+    """Lazily build a module-level async Redis client from REDIS_URL."""
+    global redis_client
+    if redis_client is None:
+        url = os.environ.get("REDIS_URL")
+        if not url:
+            raise RuntimeError(
+                "REDIS_URL is not set; cannot access session store."
+            )
+        redis_client = redis.from_url(url, decode_responses=True)
+    return redis_client
+
+
+def user_hash(client: CourtListener) -> str:
+    """Derive an opaque per-user key prefix from the client's API token.
+
+    HMAC-SHA256 with MCP_SECRET_KEY so raw tokens can't be recovered from
+    Redis keys, even by someone with read access to the store.
+    """
+    token = client.api_token
+    if not token:
+        raise ValueError("Client has no API token; cannot derive user hash.")
+    return hmac.new(
+        MCP_SECRET_BYTES, token.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def redis_key(client: CourtListener, suffix: str) -> str:
+    return f"mcp:{user_hash(client)}:{suffix}"
+
+
 def make_id() -> str:
+    """Generate a short, random UUID for session-scoped tool state."""
     return str(uuid.uuid4())[:8]
 
 
-async def get_session_query(query_id: str, ctx: Context) -> dict | None:
-    return await ctx.get_state(f"query:{query_id}")
+async def set_user_scoped(
+    client: CourtListener, suffix: str, value: Any
+) -> None:
+    await get_redis().set(
+        redis_key(client, suffix),
+        json.dumps(value),
+        ex=SESSION_TTL_SECONDS,
+    )
 
 
-async def store_session_query(query_id: str, data: dict, ctx: Context) -> None:
-    await ctx.set_state(f"query:{query_id}", data)
+async def get_user_scoped(client: CourtListener, suffix: str) -> Any:
+    raw = await get_redis().get(redis_key(client, suffix))
+    if raw is None:
+        return None
+    return json.loads(raw)
+
+
+async def get_session_query(
+    query_id: str, client: CourtListener
+) -> dict | None:
+    return await get_user_scoped(client, f"query:{query_id}")
+
+
+async def store_session_query(
+    query_id: str, data: dict, client: CourtListener
+) -> None:
+    await set_user_scoped(client, f"query:{query_id}", data)
 
 
 async def get_session_citation_analysis(
-    job_id: str, ctx: Context
+    job_id: str, client: CourtListener
 ) -> dict | None:
-    return await ctx.get_state(f"citation:{job_id}")
+    return await get_user_scoped(client, f"citation:{job_id}")
 
 
 async def store_session_citation_analysis(
-    job_id: str, data: dict, ctx: Context
+    job_id: str, data: dict, client: CourtListener
 ) -> None:
-    await ctx.set_state(f"citation:{job_id}", data)
+    await set_user_scoped(client, f"citation:{job_id}", data)
