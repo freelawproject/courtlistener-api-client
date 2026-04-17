@@ -1,6 +1,7 @@
 import os
 
 from fastmcp import FastMCP
+from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
 from starlette.responses import JSONResponse
 
@@ -15,7 +16,14 @@ GIT_SHA = os.getenv("GIT_SHA", "unknown")
 def create_mcp_server(**kwargs):
     mcp = FastMCP("courtlistener", **kwargs)
 
+    redis_store = kwargs.get("session_state_store")
+
     mcp.add_middleware(ToolHandlerMiddleware())
+
+    if redis_store is not None:
+        mcp.add_middleware(
+            ResponseCachingMiddleware(cache_storage=redis_store)
+        )
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request):
