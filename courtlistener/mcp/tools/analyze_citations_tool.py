@@ -75,104 +75,101 @@ class AnalyzeCitationsTool(MCPTool):
                 "Exactly one of text or opinion ID must be provided."
             )
 
-        if opinion_id is not None:
-            with self.get_client() as client:
+        with self.get_client() as client:
+            if opinion_id is not None:
                 opinion = client.opinions.get(opinion_id)
                 text = opinion.get("plain_text")
                 if not text:
                     raise ValueError("Text not available for opinion ID.")
 
-        # Step 1: Local extraction and resolution
-        assert text is not None  # for mypy
-        cites = get_citations(text)
-        if not cites:
-            return "No citations found."
+            # Step 1: Local extraction and resolution
+            assert text is not None  # for mypy
+            cites = get_citations(text)
+            if not cites:
+                return "No citations found."
 
-        resolutions = resolve_citations(cites)
+            resolutions = resolve_citations(cites)
 
-        # Build per-resource reference info for output
-        resource_refs: dict[str, dict] = {}
-        for resource, cite_list in resolutions.items():
-            if hasattr(resource, "citation"):
-                primary = resource.citation
+            # Build per-resource reference info for output
+            resource_refs: dict[str, dict] = {}
+            for resource, cite_list in resolutions.items():
+                if hasattr(resource, "citation"):
+                    primary = resource.citation
+                    if isinstance(primary, FullCaseCitation):
+                        key = canonical_key(primary)
+                        counts: dict[str, int] = {}
+                        for c in cite_list:
+                            label = citation_type_label(c)
+                            counts[label] = counts.get(label, 0) + 1
+                        total = sum(counts.values())
+                        parts = [f"{v} {k}" for k, v in counts.items()]
+                        breakdown = ", ".join(parts)
+                        resource_refs[key] = {
+                            "ref_count": total,
+                            "ref_breakdown": breakdown,
+                        }
+
+            # Step 2: Get unique case citation strings for API verification
+            unique_citations: list[str] = []
+            seen: set[str] = set()
+            for resource in resolutions:
+                primary = getattr(resource, "citation", None)
                 if isinstance(primary, FullCaseCitation):
                     key = canonical_key(primary)
-                    counts: dict[str, int] = {}
-                    for c in cite_list:
-                        label = citation_type_label(c)
-                        counts[label] = counts.get(label, 0) + 1
-                    total = sum(counts.values())
-                    parts = [f"{v} {k}" for k, v in counts.items()]
-                    breakdown = ", ".join(parts)
-                    resource_refs[key] = {
-                        "ref_count": total,
-                        "ref_breakdown": breakdown,
+                    if key not in seen:
+                        seen.add(key)
+                        unique_citations.append(key)
+
+            # Step 3: Verify via API
+            verified: dict[str, dict] = {}
+
+            # Separate out citations with None page numbers (slip opinions).
+            # These produce keys like "586 U. S. None" which the API cannot
+            # resolve.  Mark them as unresolvable upfront rather than sending
+            # them to the API where they'd silently get no result.
+            sendable: list[str] = []
+            for key in unique_citations:
+                if key.endswith(" None"):
+                    verified[key] = {
+                        "status": None,
+                        "citation": key,
+                        "clusters": [],
+                        "error_message": (
+                            "Slip opinion citation without page number"
+                        ),
                     }
+                else:
+                    sendable.append(key)
 
-        # Step 2: Get unique case citation strings for API verification
-        unique_citations: list[str] = []
-        seen: set[str] = set()
-        for resource in resolutions:
-            primary = getattr(resource, "citation", None)
-            if isinstance(primary, FullCaseCitation):
-                key = canonical_key(primary)
-                if key not in seen:
-                    seen.add(key)
-                    unique_citations.append(key)
+            pending = list(sendable)
 
-        # Step 3: Verify via API
-        verified: dict[str, dict] = {}
-
-        # Separate out citations with None page numbers (slip opinions).
-        # These produce keys like "586 U. S. None" which the API cannot
-        # resolve.  Mark them as unresolvable upfront rather than sending
-        # them to the API where they'd silently get no result.
-        sendable: list[str] = []
-        for key in unique_citations:
-            if key.endswith(" None"):
-                verified[key] = {
-                    "status": None,
-                    "citation": key,
-                    "clusters": [],
-                    "error_message": (
-                        "Slip opinion citation without page number"
-                    ),
-                }
-            else:
-                sendable.append(key)
-
-        pending = list(sendable)
-
-        if sendable:
-            batch = pending[:MAX_CITATIONS_PER_REQUEST]
-            compact_text = build_compact_string(batch)
-
-            with self.get_client() as client:
+            if sendable:
+                batch = pending[:MAX_CITATIONS_PER_REQUEST]
+                compact_text = build_compact_string(batch)
                 results = client.citation_lookup.lookup_text(compact_text)
+                process_api_results(results, batch, verified, pending)
 
-            process_api_results(results, batch, verified, pending)
+            # Step 4: Store in user-scoped session store
+            analysis_id = make_id()
+            await store_session_citation_analysis(
+                analysis_id,
+                {
+                    "resource_refs": resource_refs,
+                    "unique_citations": unique_citations,
+                    "verified": verified,
+                    "pending": pending,
+                },
+                client,
+            )
 
-        # Step 4: Store in session
-        analysis_id = make_id()
-        await store_session_citation_analysis(
-            analysis_id,
-            {
-                "resource_refs": resource_refs,
-                "unique_citations": unique_citations,
-                "verified": verified,
-                "pending": pending,
-            },
-            ctx,
-        )
-
-        # Step 5: Format output
-        output = format_analysis(
-            analysis_id,
-            cites,
-            resolutions,
-            resource_refs,
-            unique_citations,
-            verified,
-            pending,
-        )
-        return output
+            # Step 5: Format output
+            output = format_analysis(
+                analysis_id,
+                cites,
+                resolutions,
+                resource_refs,
+                unique_citations,
+                verified,
+                pending,
+            )
+            return output

@@ -20,6 +20,7 @@ Changes:
 - Make COURTLISTENER_API_BASE_URL configurable via environment variable.
 - Add CI workflow and Makefile for building and deploying the MCP server.
 - Force use of single worker per pod in production.
+- Switch MCP server to stateless HTTP. Session-scoped tool state (query pagination, citation analysis jobs) is now stored in Redis under per-user keys derived from an HMAC of the API token, so any worker can serve any request. Adds `MCP_SECRET_KEY` for the HMAC key.
 
 Fixes:
 -

@@ -48,8 +48,10 @@ def create_http_app():
     if REDIS_URL is None:
         raise ValueError("REDIS_URL is required for HTTP mode")
     redis_store = RedisStore(url=REDIS_URL)
-    mcp = create_mcp_server(session_state_store=redis_store)
-    return mcp.http_app(path="/")
+    mcp = create_mcp_server(
+        session_state_store=redis_store,
+    )
+    return mcp.http_app(path="/", stateless_http=True)
 
 
 def main():

@@ -58,14 +58,14 @@ class GetMoreResultsTool(MCPTool):
         query_id = arguments["query_id"]
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
 
-        query = await get_session_query(query_id, ctx)
-        if query is None:
-            raise ValueError(
-                f"Query ID {query_id!r} not found. The session may have expired, "
-                "please redo the query first."
-            )
-
         with self.get_client() as client:
+            query = await get_session_query(query_id, client)
+            if query is None:
+                raise ValueError(
+                    f"Query ID {query_id!r} not found. The session may have "
+                    "expired, please redo the query first."
+                )
+
             response = ResourceIterator.load(client, query["response"])
 
             if not has_more_results(response):
@@ -77,7 +77,7 @@ class GetMoreResultsTool(MCPTool):
             fields = query.get("fields")
             if fields is not None:
                 updated_data["fields"] = fields
-            await store_session_query(query_id, updated_data, ctx)
+            await store_session_query(query_id, updated_data, client)
 
             filtered_results, _ = filter_results_by_fields(results, fields)
 
