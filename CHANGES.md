@@ -11,6 +11,7 @@ Features:
 - Add factory for HTTP MCP server with Redis session state store.
 - Add Docker Compose configuration for development.
 - Report the image version (Git SHA) on the MCP `/health` endpoint.
+- Add gunicorn as a dependency for running the MCP server in production.
 
 Changes:
 - Update pre-commit hooks to latest versions.
