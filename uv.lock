@@ -356,7 +356,6 @@ name = "courtlistener-api-client"
 version = "0.0.6"
 source = { editable = "." }
 dependencies = [
-    { name = "gunicorn" },
     { name = "httpx" },
     { name = "pydantic" },
 ]
@@ -376,6 +375,7 @@ dev = [
 mcp = [
     { name = "eyecite" },
     { name = "fastmcp" },
+    { name = "gunicorn" },
     { name = "redis" },
     { name = "tiktoken" },
 ]
@@ -385,7 +385,7 @@ requires-dist = [
     { name = "click", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "eyecite", marker = "extra == 'mcp'", specifier = ">=2.6.0" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=3.0.0" },
-    { name = "gunicorn", specifier = ">=25.3.0" },
+    { name = "gunicorn", marker = "extra == 'mcp'", specifier = ">=25.3.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jinja2", marker = "extra == 'dev'", specifier = ">=3.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
