@@ -4,7 +4,7 @@ set -e
 if [ "$TARGET_ENV" = "prod" ]; then
     # Production command
     exec gunicorn \
-        --workers=${MCP_WORKERS:-4} \
+        --workers=1 \
         --worker-class=uvicorn.workers.UvicornWorker \
         --bind=0.0.0.0:8080 \
         --timeout=300 \

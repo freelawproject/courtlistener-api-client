@@ -18,6 +18,7 @@ Changes:
 - Refactor MCP server to use FastMCP.
 - Make COURTLISTENER_API_BASE_URL configurable via environment variable.
 - Add CI workflow and Makefile for building and deploying the MCP server.
+- Force use of single worker per pod in production.
 
 Fixes:
 -
