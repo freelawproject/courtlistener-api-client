@@ -138,9 +138,7 @@ def input_case_name(cite: FullCaseCitation) -> str | None:
     return plaintiff or defendant or None
 
 
-def case_name_mismatch(
-    result: dict, input_case_name: str | None
-) -> bool:
+def case_name_mismatch(result: dict, input_case_name: str | None) -> bool:
     """True if a FOUND result's cluster name diverges from the input name.
 
     Only reports mismatches for status=200 with both an input case name
@@ -413,9 +411,7 @@ def _format_found_cluster(
     lines.append(f"     Status: FOUND (cited by {cite_count} opinion(s))")
     if cluster_id is not None:
         lines.append(f"     Cluster ID: {cluster_id}")
-    lines.append(
-        f"     References in document: {ref_count} ({ref_breakdown})"
-    )
+    lines.append(f"     References in document: {ref_count} ({ref_breakdown})")
     if url:
         lines.append(f"     URL: https://www.courtlistener.com{url}")
     if parallel:
@@ -573,7 +569,9 @@ def format_analysis(
 
     # Summary line
     extraction_parts = [f"{len(cites)} citation occurrence(s)"]
-    extraction_parts.append(f"{len(unique_citations)} unique citation string(s)")
+    extraction_parts.append(
+        f"{len(unique_citations)} unique citation string(s)"
+    )
     if case_count:
         extraction_parts.append(f"{case_count} unique case cluster(s)")
     if statute_count:
