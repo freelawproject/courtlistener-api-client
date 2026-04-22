@@ -1,17 +1,11 @@
 import json
-from datetime import date
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 from mcp.types import TextContent
 
 from courtlistener.mcp.tools import MCP_TOOLS
-
-
-def json_default(obj):
-    if isinstance(obj, date):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+from courtlistener.mcp.tools.utils import json_default
 
 
 class ToolHandlerMiddleware(Middleware):
