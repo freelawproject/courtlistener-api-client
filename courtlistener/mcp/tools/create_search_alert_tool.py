@@ -46,9 +46,12 @@ class CreateSearchAlertTool(MCPTool):
                 },
                 "alert_type": {
                     "type": "string",
-                    "enum": ["d", "r"],
+                    "enum": ["o", "r", "d", "oa"],
                     "description": (
-                        'Optional alert type: "d" (docket) or "r" (recap).'
+                        "Optional alert type matching the search `type` in "
+                        'the query: "o" (opinion), "r" (recap), '
+                        '"d" (docket), or "oa" (oral argument). '
+                        "If omitted, the server infers it from the query."
                     ),
                 },
             },
