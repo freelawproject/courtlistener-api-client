@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import uuid
+from datetime import date, datetime
 from itertools import islice
 from typing import Any
 
@@ -31,6 +32,12 @@ if not MCP_SECRET_KEY:
 MCP_SECRET_BYTES = MCP_SECRET_KEY.encode("utf-8")
 
 redis_client: redis.Redis | None = None
+
+
+def json_default(obj):
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
 def collect_results(
@@ -200,7 +207,7 @@ async def set_user_scoped(
 ) -> None:
     await get_redis().set(
         redis_key(client, suffix),
-        json.dumps(value),
+        json.dumps(value, default=json_default),
         ex=SESSION_TTL_SECONDS,
     )
 
