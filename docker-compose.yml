@@ -16,6 +16,9 @@ services:
       REDIS_URL: redis://redis:6379
       COURTLISTENER_API_BASE_URL: ${COURTLISTENER_API_BASE_URL:-}
       MCP_SECRET_KEY: dev-insecure-do-not-use-in-production
+      MCP_REQUIRE_OAUTH: ${MCP_REQUIRE_OAUTH:-true}
+      MCP_BASE_URL: ${MCP_BASE_URL:-http://localhost:8080}
+      COURTLISTENER_OAUTH_ISSUER: ${COURTLISTENER_OAUTH_ISSUER:-https://www.courtlistener.com}
     healthcheck:
       test: [
         "CMD", "python", "-c",
