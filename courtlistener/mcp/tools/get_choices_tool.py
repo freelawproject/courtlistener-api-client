@@ -34,7 +34,7 @@ class GetChoicesTool(MCPTool):
             "required": ["endpoint_id", "field_name"],
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> dict:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict[str, list[dict]]:
         endpoint_id: str = arguments["endpoint_id"]
         field_name: str = arguments["field_name"]
 
@@ -55,6 +55,6 @@ class GetChoicesTool(MCPTool):
                     f"Field '{field_name}' on endpoint '{endpoint_id}' has no choices"
                 )
 
-            return choices
+            return {"choices": choices}
 
         raise ValueError(f"Endpoint '{endpoint_id}' not found")
