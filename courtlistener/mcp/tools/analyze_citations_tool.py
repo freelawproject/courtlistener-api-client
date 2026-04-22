@@ -11,6 +11,7 @@ from courtlistener.mcp.tools.citation_utils import (
     canonical_key,
     citation_type_label,
     format_analysis,
+    input_case_name,
     process_api_results,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -35,6 +36,19 @@ class AnalyzeCitationsTool(MCPTool):
     For documents with more than 250 unique case citations, the first
     batch is verified immediately and a job_id is returned. Use
     resume_citation_analysis to continue verifying remaining citations.
+
+    Terminology in the output:
+
+    * **citation occurrence** — each citation as it appears in the text.
+    * **unique citation string** — distinct ``volume reporter page``
+      triples (e.g., one case cited three times is one string).
+    * **unique case cluster** — distinct CourtListener case clusters
+      after parallel-citation dedup (several strings may map to one).
+
+    Case-name cross-check: when a citation verifies by reporter but
+    its input case name differs significantly from the cluster's
+    canonical name, a WARNING is emitted flagging a possible
+    hallucinated citation.
     """
 
     name: str = "analyze_citations"
@@ -109,8 +123,11 @@ class AnalyzeCitationsTool(MCPTool):
                             "ref_breakdown": breakdown,
                         }
 
-            # Step 2: Get unique case citation strings for API verification
+            # Step 2: Get unique case citation strings for API verification.
+            # Also capture the input case name for each unique citation so we
+            # can later warn when the verified cluster's name doesn't match.
             unique_citations: list[str] = []
+            input_case_names: dict[str, str] = {}
             seen: set[str] = set()
             for resource in resolutions:
                 primary = getattr(resource, "citation", None)
@@ -119,6 +136,9 @@ class AnalyzeCitationsTool(MCPTool):
                     if key not in seen:
                         seen.add(key)
                         unique_citations.append(key)
+                        name = input_case_name(primary)
+                        if name:
+                            input_case_names[key] = name
 
             # Step 3: Verify via API
             verified: dict[str, dict] = {}
@@ -156,6 +176,7 @@ class AnalyzeCitationsTool(MCPTool):
                 {
                     "resource_refs": resource_refs,
                     "unique_citations": unique_citations,
+                    "input_case_names": input_case_names,
                     "verified": verified,
                     "pending": pending,
                 },
@@ -171,5 +192,6 @@ class AnalyzeCitationsTool(MCPTool):
                 unique_citations,
                 verified,
                 pending,
+                input_case_names,
             )
             return output
