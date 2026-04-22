@@ -34,7 +34,9 @@ class GetChoicesTool(MCPTool):
             "required": ["endpoint_id", "field_name"],
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> dict[str, list[dict]]:
+    async def __call__(
+        self, arguments: dict, ctx: Context
+    ) -> dict[str, list[dict]]:
         endpoint_id: str = arguments["endpoint_id"]
         field_name: str = arguments["field_name"]
 

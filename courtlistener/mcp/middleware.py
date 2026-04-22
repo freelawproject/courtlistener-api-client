@@ -1,8 +1,17 @@
+import json
+from datetime import date
+
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 from mcp.types import TextContent
 
 from courtlistener.mcp.tools import MCP_TOOLS
+
+
+def json_default(obj):
+    if isinstance(obj, date):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
 class ToolHandlerMiddleware(Middleware):
@@ -21,11 +30,11 @@ class ToolHandlerMiddleware(Middleware):
         if ctx is None:
             raise ValueError("No context found")
         result = await mcp_tool(arguments, ctx)
+        if isinstance(result, dict):
+            result = json.dumps(result, default=json_default, indent=2)
         if isinstance(result, str):
             return ToolResult(
                 content=[TextContent(type="text", text=result)],
             )
         else:
-            return ToolResult(
-                structured_content=result,
-            )
+            raise ValueError(f"Invalid result type: {type(result)}")
