@@ -23,7 +23,7 @@ SESSION_TTL_SECONDS = 3600
 
 MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
 if not MCP_SECRET_KEY:
-    MCP_SECRET_KEY = "temporarily-insecure"
+    MCP_SECRET_KEY = "insecure-do-not-use-in-production"
     logger.warning(
         "MCP_SECRET_KEY is not set; falling back to an insecure default. "
         "Set a strong random value before going to production."
