@@ -22,21 +22,31 @@ class CourtListener:
     def __init__(
         self,
         api_token: str | None = None,
+        access_token: str | None = None,
         base_url: str | None = None,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the CourtListener client.
 
         Args:
-            api_token: CourtListener API token. If not provided, will look for
-                COURTLISTENER_API_TOKEN environment variable.
+            api_token: CourtListener API token, sent as
+                ``Authorization: Token <api_token>``. If not provided and
+                ``access_token`` is also not provided, will look for the
+                ``COURTLISTENER_API_TOKEN`` environment variable.
+            access_token: OAuth2 access token, sent as
+                ``Authorization: Bearer <access_token>``. When set, it
+                takes precedence over ``api_token`` and the env var.
             base_url: Base URL for the CourtListener API.
             timeout: Request timeout in seconds.
         """
-        self.api_token = api_token or os.environ.get("COURTLISTENER_API_TOKEN")
-        if not self.api_token:
+        self.api_token = api_token or (
+            None if access_token else os.environ.get("COURTLISTENER_API_TOKEN")
+        )
+        self.access_token = access_token
+        if not self.api_token and not self.access_token:
             raise ValueError(
-                "API token is required. Provide it directly or set COURTLISTENER_API_TOKEN "
+                "Authentication is required. Provide api_token, "
+                "access_token, or set COURTLISTENER_API_TOKEN "
                 "environment variable."
             )
 
@@ -97,10 +107,14 @@ class CourtListener:
     def client(self) -> httpx.Client:
         """Get or create the HTTP client."""
         if self._http_client is None:
+            if self.access_token:
+                auth_header = f"Bearer {self.access_token}"
+            else:
+                auth_header = f"Token {self.api_token}"
             self._http_client = httpx.Client(
                 base_url=self.base_url,
                 headers={
-                    "Authorization": f"Token {self.api_token}",
+                    "Authorization": auth_header,
                 },
                 timeout=self.timeout,
             )
