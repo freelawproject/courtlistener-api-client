@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import uuid
-from datetime import date
+from datetime import date, datetime
 from itertools import islice
 from typing import Any
 
@@ -35,7 +35,7 @@ redis_client: redis.Redis | None = None
 
 
 def json_default(obj):
-    if isinstance(obj, date):
+    if isinstance(obj, (date, datetime)):
         return obj.isoformat()
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
