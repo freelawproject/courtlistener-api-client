@@ -35,6 +35,14 @@ class AnalyzeCitationsTool(MCPTool):
     For documents with more than 250 unique case citations, the first
     batch is verified immediately and a job_id is returned. Use
     resume_citation_analysis to continue verifying remaining citations.
+
+    Terminology in the output:
+
+    * **citation occurrence** — each citation as it appears in the text.
+    * **unique citation string** — distinct ``volume reporter page``
+      triples (e.g., one case cited three times is one string).
+    * **unique case cluster** — distinct CourtListener case clusters
+      after parallel-citation dedup (several strings may map to one).
     """
 
     name: str = "analyze_citations"

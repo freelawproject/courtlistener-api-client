@@ -308,7 +308,18 @@ def format_analysis(
     verified: dict[str, dict],
     pending: list[str],
 ) -> str:
-    """Format the full analysis output."""
+    """Format the full analysis output.
+
+    Terminology used below:
+
+    * **citation occurrence** — one citation as it appears in the text.
+    * **unique citation string** — distinct ``volume reporter page``
+      triples; many occurrences can share one string (e.g., a case cited
+      three times).
+    * **unique case cluster** — distinct CourtListener case clusters
+      after parallel-citation dedup; several strings can map to one
+      cluster.
+    """
     # Count by type
     case_count = sum(
         1 for r in resolutions if isinstance(r.citation, FullCaseCitation)
@@ -326,9 +337,10 @@ def format_analysis(
     parts = [f"Citation Analysis (Job ID: {analysis_id})\n"]
 
     # Summary line
-    extraction_parts = [f"{len(cites)} citation(s) found"]
+    extraction_parts = [f"{len(cites)} citation occurrence(s)"]
+    extraction_parts.append(f"{len(unique_citations)} unique citation string(s)")
     if case_count:
-        extraction_parts.append(f"{case_count} unique case(s)")
+        extraction_parts.append(f"{case_count} unique case cluster(s)")
     if statute_count:
         extraction_parts.append(f"{statute_count} statute(s)")
     if unresolved:
