@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from difflib import SequenceMatcher
 from typing import Any
 
 from eyecite.models import (
@@ -17,6 +19,7 @@ from eyecite.models import (
 from eyecite.models import (
     Resource as CitationResource,
 )
+from eyecite.utils import DISALLOWED_NAMES
 
 # Delimiter used between citations in the compact string sent to the
 # citation-lookup API.  Semicolon-space is a natural Bluebook list
@@ -25,6 +28,134 @@ CITATION_DELIMITER = "; "
 
 # Maximum citations per API request before 429 throttling.
 MAX_CITATIONS_PER_REQUEST = 250
+
+# Similarity below this is flagged as a possible hallucinated citation
+# (volume+reporter+page match, but the case name does not).
+CASE_NAME_MATCH_THRESHOLD = 0.8
+
+_VS_PATTERN = re.compile(r"\b(vs?\.?|versus)\b", re.IGNORECASE)
+_NON_WORD_PATTERN = re.compile(r"[^\w\s]")
+_WHITESPACE_PATTERN = re.compile(r"\s+")
+
+# Generic party-name phrases drawn from eyecite's DISALLOWED_NAMES list.
+# Only the lowercase-in-source entries are party terms worth stripping
+# ("state", "united states", etc.); the capitalized AG-surname entries in
+# that list exist for eyecite's own extraction filter, not for
+# name-weight adjustment. Sorted longest-first so multi-word phrases
+# (e.g. "united states") match before their single-word overlaps.
+_STOP_PHRASES: tuple[tuple[str, ...], ...] = tuple(
+    sorted(
+        (tuple(p.split()) for p in DISALLOWED_NAMES if p == p.lower()),
+        key=len,
+        reverse=True,
+    )
+)
+
+
+def normalize_case_name(name: str | None) -> str:
+    """Normalize a case name for comparison.
+
+    Lowercases, collapses ``v.``/``vs.``/``versus`` to ``v``, strips
+    punctuation, and collapses whitespace. Returns empty string for
+    None/empty input.
+    """
+    if not name:
+        return ""
+    s = name.lower()
+    s = _VS_PATTERN.sub("v", s)
+    s = _NON_WORD_PATTERN.sub(" ", s)
+    s = _WHITESPACE_PATTERN.sub(" ", s).strip()
+    return s
+
+
+def _strip_generic_party_terms(normalized: str) -> str:
+    """Drop tokens matching generic party phrases (e.g. "united states").
+
+    Operates on an already-normalized string (lowercase, punctuation
+    stripped). Multi-word phrases are matched greedily against contiguous
+    token runs.
+    """
+    tokens = normalized.split()
+    out: list[str] = []
+    i = 0
+    while i < len(tokens):
+        for phrase in _STOP_PHRASES:
+            n = len(phrase)
+            if tuple(tokens[i : i + n]) == phrase:
+                i += n
+                break
+        else:
+            out.append(tokens[i])
+            i += 1
+    return " ".join(out)
+
+
+def case_name_similarity(a: str | None, b: str | None) -> float:
+    """Return a 0.0-1.0 similarity score between two case names.
+
+    Generic party phrases from eyecite's DISALLOWED_NAMES (e.g.
+    ``"united states"``, ``"state"``, ``"people"``) are stripped before
+    token comparison so the signal comes from the discriminating parts
+    of the name, not shared prosecutorial prefixes. Combines token-set
+    Jaccard with a subset boost (short form contained in long form
+    scores 1.0) and falls back to character-level ``difflib`` ratio for
+    non-tokenizable edge cases. Returns 0.0 if either side normalizes
+    to empty.
+    """
+    na, nb = normalize_case_name(a), normalize_case_name(b)
+    if not na or not nb:
+        return 0.0
+    if na == nb:
+        return 1.0
+    # Prefer comparing the discriminating tokens. Fall back to the
+    # unstripped forms when stripping empties one side (e.g. a name made
+    # entirely of generic terms).
+    sa, sb = _strip_generic_party_terms(na), _strip_generic_party_terms(nb)
+    if not sa or not sb:
+        sa, sb = na, nb
+    ta, tb = set(sa.split()), set(sb.split())
+    if ta and tb:
+        smaller, larger = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+        if smaller.issubset(larger):
+            return 1.0
+        jaccard = len(ta & tb) / len(ta | tb)
+    else:
+        jaccard = 0.0
+    return max(jaccard, SequenceMatcher(None, sa, sb).ratio())
+
+
+def input_case_name(cite: FullCaseCitation) -> str | None:
+    """Extract the input case name from an eyecite FullCaseCitation.
+
+    Returns ``"Plaintiff v. Defendant"`` when both are present, otherwise
+    whichever single party name is available, or None.
+    """
+    meta = cite.metadata
+    plaintiff = getattr(meta, "plaintiff", None)
+    defendant = getattr(meta, "defendant", None)
+    if plaintiff and defendant:
+        return f"{plaintiff} v. {defendant}"
+    return plaintiff or defendant or None
+
+
+def case_name_mismatch(
+    result: dict, input_case_name: str | None
+) -> bool:
+    """True if a FOUND result's cluster name diverges from the input name.
+
+    Only reports mismatches for status=200 with both an input case name
+    and a verified cluster name available.
+    """
+    if not input_case_name or result.get("status") != 200:
+        return False
+    clusters = result.get("clusters", [])
+    if not clusters:
+        return False
+    verified_name = clusters[0].get("case_name")
+    if not verified_name:
+        return False
+    similarity = case_name_similarity(input_case_name, verified_name)
+    return similarity < CASE_NAME_MATCH_THRESHOLD
 
 
 def citation_type_label(cite: CitationBase) -> str:
@@ -224,14 +355,66 @@ def process_api_results(
             pending.remove(key)
 
 
+def _format_found_cluster(
+    citation_key: str,
+    cluster: dict,
+    ref_count: int,
+    ref_breakdown: str,
+    index: int,
+    input_case_name: str | None,
+) -> str:
+    """Render a FOUND cluster, warning when the input case name diverges."""
+    name = cluster.get("case_name", "Unknown")
+    date = cluster.get("date_filed", "")
+    cite_count = cluster.get("citation_count", 0)
+    url = cluster.get("absolute_url", "")
+    parallel = cluster.get("citations", [])
+    cluster_id = cluster.get("cluster_id")
+
+    similarity: float | None = None
+    mismatch = False
+    if input_case_name:
+        similarity = case_name_similarity(input_case_name, name)
+        mismatch = similarity < CASE_NAME_MATCH_THRESHOLD
+
+    header = f"  {index}. {citation_key} — {name}"
+    if date:
+        header += f" ({date})"
+    lines = [header]
+    if mismatch:
+        lines.append(
+            "     WARNING: Input case name "
+            f'"{input_case_name}" differs from verified "{name}" '
+            f"(similarity {similarity:.2f}). Possible hallucinated citation."
+        )
+    lines.append(f"     Status: FOUND (cited by {cite_count} opinion(s))")
+    if cluster_id is not None:
+        lines.append(f"     Cluster ID: {cluster_id}")
+    lines.append(
+        f"     References in document: {ref_count} ({ref_breakdown})"
+    )
+    if url:
+        lines.append(f"     URL: https://www.courtlistener.com{url}")
+    if parallel:
+        lines.append(f"     Parallel citations: {', '.join(parallel)}")
+    return "\n".join(lines)
+
+
 def format_verification_result(
     citation_key: str,
     result: dict,
     ref_count: int,
     ref_breakdown: str,
     index: int,
+    input_case_name: str | None = None,
 ) -> str:
-    """Format a single verified citation for display."""
+    """Format a single verified citation for display.
+
+    When ``input_case_name`` is provided and a FOUND result's cluster
+    case name differs significantly (similarity below
+    ``CASE_NAME_MATCH_THRESHOLD``), a warning is prepended to flag
+    possible hallucinated citations.
+    """
     status = result.get("status")
     if status == 200:
         clusters = result.get("clusters", [])
@@ -242,24 +425,14 @@ def format_verification_result(
                 f"     References in document: {ref_count} ({ref_breakdown})"
             )
         cluster = clusters[0]
-        name = cluster.get("case_name", "Unknown")
-        date = cluster.get("date_filed", "")
-        cite_count = cluster.get("citation_count", 0)
-        url = cluster.get("absolute_url", "")
-        parallel = cluster.get("citations", [])
-
-        lines = [f"  {index}. {citation_key} — {name}"]
-        if date:
-            lines[0] += f" ({date})"
-        lines.append(f"     Status: FOUND (cited by {cite_count} opinion(s))")
-        lines.append(
-            f"     References in document: {ref_count} ({ref_breakdown})"
+        return _format_found_cluster(
+            citation_key,
+            cluster,
+            ref_count,
+            ref_breakdown,
+            index,
+            input_case_name,
         )
-        if url:
-            lines.append(f"     URL: https://www.courtlistener.com{url}")
-        if parallel:
-            lines.append(f"     Parallel citations: {', '.join(parallel)}")
-        return "\n".join(lines)
 
     elif status == 404:
         return (
@@ -307,6 +480,7 @@ def format_analysis(
     unique_citations: list[str],
     verified: dict[str, dict],
     pending: list[str],
+    input_case_names: dict[str, str] | None = None,
 ) -> str:
     """Format the full analysis output.
 
@@ -320,6 +494,7 @@ def format_analysis(
       after parallel-citation dedup; several strings can map to one
       cluster.
     """
+    input_case_names = input_case_names or {}
     # Count by type
     case_count = sum(
         1 for r in resolutions if isinstance(r.citation, FullCaseCitation)
@@ -360,6 +535,17 @@ def format_analysis(
         )
     parts.append(verification_line)
 
+    mismatch_count = sum(
+        1
+        for key in verified
+        if case_name_mismatch(verified[key], input_case_names.get(key))
+    )
+    if mismatch_count:
+        parts.append(
+            f"WARNING: {mismatch_count} citation(s) matched by reporter "
+            "but case name differs significantly — possible hallucinations."
+        )
+
     # Verified cases
     if verified or pending:
         parts.append("\nCases:")
@@ -377,6 +563,7 @@ def format_analysis(
                         ref_count,
                         ref_breakdown,
                         idx,
+                        input_case_names.get(key),
                     )
                 )
             else:
@@ -418,6 +605,7 @@ def format_resume(
     pending = job["pending"]
     unique = job["unique_citations"]
     resource_refs = job["resource_refs"]
+    input_case_names = job.get("input_case_names", {})
     total = len(unique)
 
     parts = [f"Citation Analysis (Job ID: {job_id}) — Resumed\n"]
@@ -446,6 +634,7 @@ def format_resume(
                         ref_count,
                         ref_breakdown,
                         idx,
+                        input_case_names.get(key),
                     )
                 )
                 idx += 1
