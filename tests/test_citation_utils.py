@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from courtlistener.mcp.tools.citation_utils import (
     CASE_NAME_MATCH_THRESHOLD,
+    _auto_resolve_identical_clusters,
     case_name_mismatch,
     case_name_similarity,
     format_analysis,
@@ -146,6 +149,70 @@ class TestFormatVerificationResultFoundBranch:
             "347 U.S. 483", result, 1, "1 full", 1, input_case_name=None,
         )
         assert "WARNING" not in out
+
+
+class TestAutoResolveIdenticalClusters:
+    def test_resolves_to_highest_citation_count(self):
+        clusters = [
+            {"cluster_id": 1, "case_name": "Gideon v. Wainwright", "citation_count": 50, "date_filed": "1963-03-18"},
+            {"cluster_id": 2, "case_name": "Gideon v. Wainwright", "citation_count": 120, "date_filed": "1963-03-19"},
+        ]
+        assert _auto_resolve_identical_clusters(clusters)["cluster_id"] == 2
+
+    def test_tiebreaks_on_earliest_date(self):
+        clusters = [
+            {"cluster_id": 1, "case_name": "Gideon v. Wainwright", "citation_count": 100, "date_filed": "1963-03-19"},
+            {"cluster_id": 2, "case_name": "Gideon v. Wainwright", "citation_count": 100, "date_filed": "1963-03-18"},
+        ]
+        assert _auto_resolve_identical_clusters(clusters)["cluster_id"] == 2
+
+    def test_different_names_not_resolved(self):
+        clusters = [
+            {"cluster_id": 1, "case_name": "Smith v. Jones", "citation_count": 5, "date_filed": "1990-01-01"},
+            {"cluster_id": 2, "case_name": "Doe v. Roe", "citation_count": 3, "date_filed": "1991-01-01"},
+        ]
+        assert _auto_resolve_identical_clusters(clusters) is None
+
+    def test_single_cluster_not_resolved(self):
+        clusters = [{"cluster_id": 1, "case_name": "Gideon v. Wainwright", "citation_count": 100}]
+        assert _auto_resolve_identical_clusters(clusters) is None
+
+
+class TestFormatVerificationResultAmbiguous:
+    def test_ambiguous_identical_names_auto_resolves(self):
+        clusters = [
+            {"cluster_id": 100, "case_name": "Gideon v. Wainwright", "citation_count": 50, "date_filed": "1963-03-18"},
+            {"cluster_id": 101, "case_name": "Gideon v. Wainwright", "citation_count": 120, "date_filed": "1963-03-19"},
+        ]
+        result = {"status": 300, "clusters": clusters}
+        out = format_verification_result("372 U.S. 335", result, 1, "1 full", 1)
+        assert "Status: FOUND" in out
+        assert "Cluster ID: 101" in out
+        assert "Auto-resolved" in out
+        assert "100" in out  # other cluster ID listed
+
+    def test_ambiguous_different_names_lists_candidates_with_ids(self):
+        clusters = [
+            {"cluster_id": 200, "case_name": "Smith v. Jones", "citation_count": 5, "date_filed": "1990-01-01"},
+            {"cluster_id": 201, "case_name": "Doe v. Roe", "citation_count": 3, "date_filed": "1991-01-01"},
+        ]
+        result = {"status": 300, "clusters": clusters}
+        out = format_verification_result("100 F.2d 1", result, 1, "1 full", 1)
+        assert "Status: AMBIGUOUS" in out
+        assert "cluster_id=200" in out
+        assert "cluster_id=201" in out
+        assert "Smith v. Jones" in out
+        assert "Doe v. Roe" in out
+
+    @pytest.mark.parametrize("status,token", [
+        (404, "NOT FOUND"),
+        (400, "INVALID"),
+    ])
+    def test_non_found_statuses_render(self, status, token):
+        out = format_verification_result(
+            "100 U.S. 1", {"status": status, "clusters": []}, 1, "1 full", 1,
+        )
+        assert token in out
 
 
 class TestFormatAnalysisTerminology:

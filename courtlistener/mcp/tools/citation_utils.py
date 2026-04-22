@@ -355,6 +355,29 @@ def process_api_results(
             pending.remove(key)
 
 
+def _auto_resolve_identical_clusters(
+    clusters: list[dict],
+) -> dict | None:
+    """If all candidate clusters have the same normalized name, pick one.
+
+    Selection: highest ``citation_count`` (tie-break: earliest
+    ``date_filed``). Returns the chosen cluster, or None if names differ.
+    """
+    if len(clusters) < 2:
+        return None
+    names = {normalize_case_name(c.get("case_name")) for c in clusters}
+    names.discard("")
+    if len(names) != 1:
+        return None
+
+    def sort_key(c: dict) -> tuple[int, str]:
+        # Negative citation_count so higher counts sort first; ascending
+        # date_filed so the earliest wins on ties.
+        return (-(c.get("citation_count") or 0), c.get("date_filed") or "")
+
+    return sorted(clusters, key=sort_key)[0]
+
+
 def _format_found_cluster(
     citation_key: str,
     cluster: dict,
@@ -413,7 +436,9 @@ def format_verification_result(
     When ``input_case_name`` is provided and a FOUND result's cluster
     case name differs significantly (similarity below
     ``CASE_NAME_MATCH_THRESHOLD``), a warning is prepended to flag
-    possible hallucinated citations.
+    possible hallucinated citations. An AMBIGUOUS result whose candidate
+    clusters all share the same normalized name is auto-resolved to the
+    most-cited cluster, tie-breaking on earliest ``date_filed``.
     """
     status = result.get("status")
     if status == 200:
@@ -442,13 +467,48 @@ def format_verification_result(
         )
     elif status == 300:
         clusters = result.get("clusters", [])
-        names = [c.get("case_name", "?") for c in clusters[:3]]
+        resolved = _auto_resolve_identical_clusters(clusters)
+        if resolved is not None:
+            other_ids = [
+                c.get("cluster_id")
+                for c in clusters
+                if c is not resolved and c.get("cluster_id") is not None
+            ]
+            note = (
+                f"     Auto-resolved from {len(clusters)} clusters with "
+                f"identical name; other cluster IDs: "
+                f"{', '.join(str(i) for i in other_ids)}"
+            )
+            body = _format_found_cluster(
+                citation_key,
+                resolved,
+                ref_count,
+                ref_breakdown,
+                index,
+                input_case_name,
+            )
+            return body + "\n" + note
+
+        candidate_lines = []
+        for c in clusters:
+            name = c.get("case_name", "?")
+            cid = c.get("cluster_id")
+            date = c.get("date_filed") or ""
+            count = c.get("citation_count")
+            extras = []
+            if cid is not None:
+                extras.append(f"cluster_id={cid}")
+            if date:
+                extras.append(date)
+            if count is not None:
+                extras.append(f"cited by {count}")
+            suffix = f" ({'; '.join(extras)})" if extras else ""
+            candidate_lines.append(f"       - {name}{suffix}")
         return (
             f"  {index}. {citation_key}\n"
-            f"     Status: AMBIGUOUS — matches {len(clusters)} cases: "
-            + ", ".join(names)
-            + "\n"
-            f"     References in document: {ref_count} ({ref_breakdown})"
+            f"     Status: AMBIGUOUS — matches {len(clusters)} cases:\n"
+            + "\n".join(candidate_lines)
+            + f"\n     References in document: {ref_count} ({ref_breakdown})"
         )
     elif status == 400:
         return (
