@@ -34,7 +34,7 @@ class GetCountsTool(MCPTool):
             "required": ["query_id"],
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> int:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict[str, int]:
         query_id = arguments["query_id"]
         with self.get_client() as client:
             data = await get_session_query(query_id, client)
@@ -45,4 +45,4 @@ class GetCountsTool(MCPTool):
                 )
             response = ResourceIterator.load(client, data["response"])
             count = response.count
-            return count
+            return {"count": count}
