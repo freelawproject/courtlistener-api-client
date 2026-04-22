@@ -9,7 +9,6 @@ from fastmcp.server.auth.auth import (
 )
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
-from pydantic import AnyHttpUrl
 from starlette.responses import JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
@@ -53,7 +52,7 @@ def build_auth() -> AuthProvider | None:
         return None
     return RemoteAuthProvider(
         token_verifier=PassThroughTokenVerifier(base_url=MCP_BASE_URL),
-        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
+        authorization_servers=[OAUTH_ISSUER],  # type: ignore[list-item]
         base_url=MCP_BASE_URL,
     )
 
