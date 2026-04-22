@@ -31,7 +31,7 @@ Changes:
 - Switch MCP server to stateless HTTP. Session-scoped tool state (query pagination, citation analysis jobs) is now stored in Redis under per-user keys derived from an HMAC of the API token, so any worker can serve any request. Adds `MCP_SECRET_KEY` for the HMAC key.
 
 Fixes:
--
+- Fix JSON serialization of dates and datetimes in MCP tools.
 
 ### 0.0.6 - 2026-03-19
 
