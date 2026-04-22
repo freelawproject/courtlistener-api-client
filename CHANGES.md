@@ -13,6 +13,14 @@ Features:
 - Report the image version (Git SHA) on the MCP `/health` endpoint.
 - Add gunicorn as an `mcp` optional dependency for running the MCP server in production.
 - Add Redis session state store to MCP server.
+- Accept OAuth 2.0 bearer tokens in the MCP HTTP transport (gated on
+  `MCP_REQUIRE_OAUTH`) and forward them to the CourtListener API as
+  `Authorization: Bearer <token>`. Adds an `access_token` parameter
+  to `CourtListener` for Bearer auth. Publishes RFC 9728
+  protected-resource metadata pointing clients at the CourtListener
+  authorization server, but defers token validation itself to CL —
+  the MCP is a thin proxy and CL's OAuth2Authentication is the
+  authoritative check.
 
 Changes:
 - Update pre-commit hooks to latest versions.

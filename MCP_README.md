@@ -178,6 +178,9 @@ COURTLISTENER_API_BASE_URL=http://host.docker.internal:8000/api/rest/v4 \
 | `REDIS_URL` | HTTP mode | Required. URL of the Redis instance used for MCP session state. |
 | `MCP_WORKERS` | HTTP mode | Number of Gunicorn workers. Defaults to `4`. |
 | `MCP_SECRET_KEY` | HTTP mode | HMAC key used to derive per-user Redis key prefixes for session-scoped tool state (query pagination, citation analysis jobs). Set to a strong random value in production. |
+| `MCP_REQUIRE_OAUTH` | HTTP mode | When set to the literal string `true` (case-insensitive), the HTTP MCP app accepts OAuth bearer tokens and publishes RFC 9728 protected-resource metadata. Token validation itself is delegated to the CourtListener API. Any other value leaves OAuth off and falls back to legacy `Authorization: Token <api_token>` auth. Defaults to `true`. |
+| `MCP_BASE_URL` | HTTP mode + OAuth | Public URL of the MCP server, used for `/.well-known/oauth-protected-resource`. Defaults to `https://mcp.courtlistener.com` (set to `http://localhost:8080` in `docker-compose.yml`). |
+| `COURTLISTENER_OAUTH_ISSUER` | HTTP mode + OAuth | URL of the OAuth authorization server clients should register with. Advertised in `/.well-known/oauth-protected-resource`. Defaults to `https://www.courtlistener.com`. |
 
 ### Project layout
 
