@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastmcp.server.context import Context
-from fastmcp.server.dependencies import get_http_request
+from fastmcp.server.dependencies import get_access_token, get_http_request
 from fastmcp.tools import Tool
 from mcp.types import ToolAnnotations
 
@@ -15,23 +15,37 @@ class MCPTool:
     annotations: ToolAnnotations | None = None
 
     def get_client(self) -> CourtListener:
-        """Get a CourtListener client with the appropriate API token.
+        """Build a CourtListener client for the current request.
 
-        Token resolution:
-        - HTTP mode: reads from ContextVar (set by AuthMiddleware
-          from the Authorization header)
-        - stdio mode: falls back to COURTLISTENER_API_TOKEN env var
-          (handled by CourtListener constructor)
+        Resolution order:
+        1. HTTP + OAuth mode: use the OAuth access token FastMCP
+           accepted via the pass-through verifier. Forwarded to the CL
+           API as ``Authorization: Bearer <jwt>``, which CL accepts
+           because ``OAuth2Authentication`` is registered in its
+           ``DEFAULT_AUTHENTICATION_CLASSES``.
+        2. HTTP + legacy mode: ``Authorization: Token <api_token>``
+           header (existing stdio-over-HTTP / testing path).
+        3. stdio mode: ``COURTLISTENER_API_TOKEN`` env var, resolved
+           by the ``CourtListener`` constructor.
         """
-        request = get_http_request()
-        auth = request.headers.get("Authorization")
+        # 1. OAuth bearer token (HTTP + auth provider active)
+        access_token = get_access_token()
+        if access_token is not None:
+            return CourtListener(access_token=access_token.token)
 
-        token = None
-        if auth is not None and auth.startswith("Token "):
-            token = auth[len("Token ") :] or None
+        # 2. Legacy "Token ..." header pass-through (no OAuth).
+        #    get_http_request() raises when called outside an HTTP
+        #    request (e.g. stdio mode), so guard against that.
+        try:
+            request = get_http_request()
+        except RuntimeError:
+            request = None
+        if request is not None:
+            auth = request.headers.get("Authorization")
+            if auth and auth.startswith("Token "):
+                return CourtListener(api_token=auth[len("Token ") :] or None)
 
-        if token:
-            return CourtListener(api_token=token)
+        # 3. stdio mode — env var
         return CourtListener()
 
     def get_tool(self) -> Tool:
