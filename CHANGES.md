@@ -32,6 +32,7 @@ Changes:
 
 Fixes:
 - Fix JSON serialization of dates and datetimes in MCP tools.
+- Add valid search types to create search alert tool and client helper.
 
 ### 0.0.6 - 2026-03-19
 

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 RateType = Literal["rt", "dly", "wly", "mly", "off"]
-SearchAlertType = Literal["d", "r"]
+SearchAlertType = Literal["o", "r", "d", "oa"]
 DocketAlertType = Literal[0, 1]
 
 
