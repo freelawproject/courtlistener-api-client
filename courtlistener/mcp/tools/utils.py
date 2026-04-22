@@ -166,14 +166,21 @@ def get_redis() -> redis.Redis:
 
 
 def user_hash(client: CourtListener) -> str:
-    """Derive an opaque per-user key prefix from the client's API token.
+    """Derive an opaque per-user key prefix from the client's credential.
 
     HMAC-SHA256 with MCP_SECRET_KEY so raw tokens can't be recovered from
-    Redis keys, even by someone with read access to the store.
+    Redis keys, even by someone with read access to the store. Uses the
+    OAuth ``access_token`` when present, otherwise the legacy ``api_token``.
+
+    Known limitation: OAuth access tokens rotate, so session state
+    (pagination, citation analysis jobs) will appear to belong to a
+    different user after a refresh and be orphaned until the TTL
+    expires. Tracked separately; a stable user identifier would be a
+    cleaner key.
     """
-    token = client.api_token
+    token = client.access_token or client.api_token
     if not token:
-        raise ValueError("Client has no API token; cannot derive user hash.")
+        raise ValueError("Client has no credential; cannot derive user hash.")
     return hmac.new(
         MCP_SECRET_BYTES, token.encode("utf-8"), hashlib.sha256
     ).hexdigest()
