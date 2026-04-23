@@ -8,8 +8,10 @@ from datetime import date, datetime
 from itertools import islice
 from typing import Any
 
+import httpx
 import redis.asyncio as redis
 import tiktoken
+from fastmcp.server.dependencies import get_access_token
 
 from courtlistener import CourtListener
 from courtlistener.resource import ResourceIterator
@@ -21,6 +23,24 @@ MAX_NUM_RESULTS = 100
 
 # Session-scoped keys live in Redis for this long before being evicted.
 SESSION_TTL_SECONDS = 3600
+
+# How long a token→user_hash mapping is cached.
+TOKEN_CACHE_TTL_SECONDS = int(os.getenv("MCP_TOKEN_CACHE_TTL", "600"))
+
+REDIS_URL = os.getenv("REDIS_URL")
+
+GIT_SHA = os.getenv("GIT_SHA", "unknown")
+
+MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
+
+OAUTH_ISSUER = os.getenv(
+    "COURTLISTENER_OAUTH_ISSUER", "https://www.courtlistener.com"
+)
+
+OAUTH_USERINFO_URL = os.getenv(
+    "COURTLISTENER_OAUTH_USERINFO_URL",
+    f"{OAUTH_ISSUER.rstrip('/')}/o/userinfo/",
+)
 
 MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
 if not MCP_SECRET_KEY:
@@ -172,25 +192,100 @@ def get_redis() -> redis.Redis:
     return redis_client
 
 
-def user_hash(client: CourtListener) -> str:
-    """Derive an opaque per-user key prefix from the client's credential.
+def hmac_hex(value: str) -> str:
+    return hmac.new(
+        MCP_SECRET_BYTES, value.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
 
-    HMAC-SHA256 with MCP_SECRET_KEY so raw tokens can't be recovered from
-    Redis keys, even by someone with read access to the store. Uses the
-    OAuth ``access_token`` when present, otherwise the legacy ``api_token``.
 
-    Known limitation: OAuth access tokens rotate, so session state
-    (pagination, citation analysis jobs) will appear to belong to a
-    different user after a refresh and be orphaned until the TTL
-    expires. Tracked separately; a stable user identifier would be a
-    cleaner key.
+def token_cache_key(token: str) -> str:
+    """Redis key for the token→user_hash mapping set by the verifier."""
+    return f"mcp:token_to_user:{hmac_hex(token)}"
+
+
+async def resolve_user_hash_via_userinfo(token: str) -> str | None:
+    """Return the stable user_hash for *token*, hitting userinfo on cache miss.
+
+    Called from the auth verifier (see ``UserInfoTokenVerifier``). Returns
+    ``None`` if CL rejects the token, which the verifier translates into a
+    proper HTTP 401 at the auth layer.
+
+    The cache key is ``HMAC(token)``; the cache value is ``HMAC(sub)``. The
+    token never lands in Redis in plaintext, and the namespace is derived
+    from the stable OIDC ``sub`` claim so that rotated tokens still map to
+    the same user.
     """
-    token = client.access_token or client.api_token
+    r = get_redis()
+    cache_key = token_cache_key(token)
+    cached = await r.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as http:
+            resp = await http.get(
+                OAUTH_USERINFO_URL,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+    except httpx.HTTPError as exc:
+        logger.warning("userinfo call failed: %s", exc)
+        return None
+
+    if resp.status_code != 200:
+        # 401 from userinfo == revoked/expired/invalid. Don't cache.
+        return None
+
+    sub = resp.json().get("sub")
+    if not sub:
+        logger.warning("userinfo response missing `sub` claim")
+        return None
+
+    uh = hmac_hex(str(sub))
+    await r.set(cache_key, uh, ex=TOKEN_CACHE_TTL_SECONDS)
+    return uh
+
+
+async def invalidate_token_cache(token: str) -> None:
+    """Drop a token→user_hash mapping.
+
+    Called when CL rejects a token mid-cache (e.g. 401 on a downstream
+    API call). The *next* MCP request for this token will miss the cache,
+    re-hit userinfo, fail, and cause a proper HTTP 401 from the auth layer
+    so the MCP client re-runs OAuth.
+    """
+    try:
+        await get_redis().delete(token_cache_key(token))
+    except Exception as exc:
+        logger.warning("failed to invalidate token cache: %s", exc)
+
+
+def user_hash(client: CourtListener) -> str:
+    """Return the stable per-user key prefix for the current request.
+
+    OAuth path: reads ``user_hash`` from the FastMCP access-token claims,
+    which ``UserInfoTokenVerifier`` populated from the OIDC ``sub`` at
+    verification time. The hash survives access-token rotation because it
+    is derived from ``sub``, not the raw token.
+
+    Legacy path: hashes the API token directly, matching the old behavior
+    for non-OAuth requests.
+    """
+    try:
+        access_token = get_access_token()
+    except RuntimeError:
+        access_token = None
+
+    if access_token is not None:
+        uh = access_token.claims.get("user_hash")
+        if uh:
+            return uh
+        # Should not happen: UserInfoTokenVerifier always sets this. If
+        # another verifier is in use, fall through to token-based hashing.
+
+    token = client.api_token or client.access_token
     if not token:
         raise ValueError("Client has no credential; cannot derive user hash.")
-    return hmac.new(
-        MCP_SECRET_BYTES, token.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
+    return hmac_hex(token)
 
 
 def redis_key(client: CourtListener, suffix: str) -> str:
