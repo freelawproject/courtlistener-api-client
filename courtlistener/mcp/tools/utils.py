@@ -22,6 +22,16 @@ MAX_NUM_RESULTS = 100
 # Session-scoped keys live in Redis for this long before being evicted.
 SESSION_TTL_SECONDS = 3600
 
+REDIS_URL = os.getenv("REDIS_URL")
+
+GIT_SHA = os.getenv("GIT_SHA", "unknown")
+
+MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
+
+OAUTH_ISSUER = os.getenv(
+    "COURTLISTENER_OAUTH_ISSUER", "https://www.courtlistener.com"
+)
+
 MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
 if not MCP_SECRET_KEY:
     MCP_SECRET_KEY = "insecure-do-not-use-in-production"

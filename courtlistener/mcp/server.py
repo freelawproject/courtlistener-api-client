@@ -12,15 +12,12 @@ from key_value.aio.stores.redis import RedisStore
 from starlette.responses import JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
-
-REDIS_URL = os.getenv("REDIS_URL")
-
-GIT_SHA = os.getenv("GIT_SHA", "unknown")
-
-OAUTH_ISSUER = os.getenv(
-    "COURTLISTENER_OAUTH_ISSUER", "https://www.courtlistener.com"
+from courtlistener.mcp.tools.utils import (
+    GIT_SHA,
+    MCP_BASE_URL,
+    OAUTH_ISSUER,
+    REDIS_URL,
 )
-MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
 
 
 class PassThroughTokenVerifier(TokenVerifier):
