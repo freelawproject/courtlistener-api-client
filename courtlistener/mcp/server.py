@@ -9,6 +9,7 @@ from fastmcp.server.auth.auth import (
 )
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
+from pydantic import AnyHttpUrl
 from starlette.responses import JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
@@ -17,29 +18,56 @@ from courtlistener.mcp.tools.utils import (
     MCP_BASE_URL,
     OAUTH_ISSUER,
     REDIS_URL,
+    resolve_user_hash_via_userinfo,
 )
 
 
-class PassThroughTokenVerifier(TokenVerifier):
-    """Accept any non-empty bearer token without local validation.
+class UserInfoTokenVerifier(TokenVerifier):
+    """Verify OAuth tokens by calling CL's OIDC userinfo endpoint.
 
-    Known limitation: a bearer token that CL later rejects (expired or
-    revoked mid-session) surfaces as a tool-level error rather than an
-    HTTP 401 from the MCP, so clients won't automatically re-run the
-    OAuth flow. Proactive refresh-token handling in MCP clients covers
-    the common case; revisit with explicit 401 translation if the edge
-    case starts biting in practice.
+    Caches token→user_hash mappings in Redis so a burst of tool calls
+    from one session collapses to a single userinfo round-trip. The
+    cached ``user_hash`` is a stable HMAC of the OIDC ``sub`` claim, so
+    session state in Redis survives access-token rotation (previously,
+    a refresh silently orphaned the user's namespace).
+
+    Revocation semantics:
+    - A freshly-rejected token surfaces here as a 401 from userinfo →
+      ``verify_token`` returns ``None`` → the auth middleware sends a
+      proper 401 with ``WWW-Authenticate`` so the MCP client re-auths.
+    - A token revoked mid-cache keeps working until the TTL expires or
+      until ``ToolHandlerMiddleware`` sees a 401 from a downstream CL
+      API call, invalidates the cache entry, and forces re-verification
+      on the next request.
+
+    Required scopes (advertised in the protected-resource metadata so
+    MCP clients include them in the authorize request):
+    - ``openid``: needed by DOT's ``/o/userinfo/`` endpoint.
+    - ``api``: CL's custom scope for REST API access.
     """
+
+    def __init__(self, *, base_url: str) -> None:
+        super().__init__(
+            base_url=base_url,
+            required_scopes=["openid", "api"],
+        )
 
     async def verify_token(self, token: str) -> AccessToken | None:
         if not token:
             return None
-        # ``client_id`` is required by AccessToken but unused on our
-        # path; CL resolves the real client/user from the token itself.
+        user_hash = await resolve_user_hash_via_userinfo(token)
+        if user_hash is None:
+            return None
+        # Userinfo doesn't return the token's scopes, but a 200 from it
+        # proves the token carries ``openid`` (DOT enforces that). The
+        # ``api`` scope is enforced downstream by CL's REST API itself.
+        # Echoing the required set back here satisfies the middleware's
+        # scope check without a second round-trip to introspection.
         return AccessToken(
             token=token,
-            client_id="courtlistener-mcp-passthrough",
-            scopes=[],
+            client_id="courtlistener-mcp",
+            scopes=list(self.required_scopes),
+            claims={"user_hash": user_hash},
         )
 
 
@@ -48,8 +76,8 @@ def build_auth() -> AuthProvider | None:
     if os.getenv("MCP_REQUIRE_OAUTH", "true").lower() != "true":
         return None
     return RemoteAuthProvider(
-        token_verifier=PassThroughTokenVerifier(base_url=MCP_BASE_URL),
-        authorization_servers=[OAUTH_ISSUER],  # type: ignore[list-item]
+        token_verifier=UserInfoTokenVerifier(base_url=MCP_BASE_URL),
+        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
         base_url=MCP_BASE_URL,
     )
 

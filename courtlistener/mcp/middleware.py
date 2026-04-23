@@ -1,11 +1,17 @@
 import json
 
+from fastmcp.exceptions import ToolError
+from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 from mcp.types import TextContent
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools import MCP_TOOLS
-from courtlistener.mcp.tools.utils import json_default
+from courtlistener.mcp.tools.utils import (
+    invalidate_token_cache,
+    json_default,
+)
 
 
 class ToolHandlerMiddleware(Middleware):
@@ -23,7 +29,34 @@ class ToolHandlerMiddleware(Middleware):
         ctx = context.fastmcp_context
         if ctx is None:
             raise ValueError("No context found")
-        result = await mcp_tool(arguments, ctx)
+
+        try:
+            result = await mcp_tool(arguments, ctx)
+        except CourtListenerAPIError as exc:
+            if exc.status_code == 401:
+                # CL rejected a token our verifier previously accepted
+                # (revoked or rotated mid-cache). Drop the cache entry so
+                # the next MCP request re-runs userinfo, fails verification,
+                # and gets a proper HTTP 401 from the auth middleware —
+                # which is what triggers the client's OAuth refresh flow.
+                #
+                # We can't emit the 401 for *this* request from inside the
+                # tool handler (the HTTP response has already committed to
+                # 200 for the JSON-RPC envelope). The tool-level error
+                # below is the best we can do here; the follow-up request
+                # gets the clean signal.
+                try:
+                    access_token = get_access_token()
+                except RuntimeError:
+                    access_token = None
+                if access_token is not None:
+                    await invalidate_token_cache(access_token.token)
+                raise ToolError(
+                    "CourtListener rejected the request as unauthorized. "
+                    "Your session may have expired; retry to re-authenticate."
+                ) from exc
+            raise
+
         if isinstance(result, dict):
             result = json.dumps(result, default=json_default, indent=2)
         if isinstance(result, str):
