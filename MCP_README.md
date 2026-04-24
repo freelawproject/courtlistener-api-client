@@ -1,276 +1,240 @@
 # CourtListener MCP Server
 
-A [FastMCP](https://github.com/jlowin/fastmcp) server that exposes the
-[CourtListener API](https://www.courtlistener.com/help/api/rest/v4) to
-[Model Context Protocol](https://modelcontextprotocol.io) clients. Use it to
-let an MCP-capable LLM (Claude Desktop, Cursor, Goose, etc.) search opinions,
-retrieve dockets, analyze citations, manage alerts, and more.
+The **CourtListener MCP server** gives any [Model Context Protocol](https://modelcontextprotocol.io) client — Claude Desktop, Claude.ai, Claude Code, Cursor, and others — access to the CourtListener legal research database. Search U.S. case law, dockets, judges, and oral arguments; extract and verify legal citations; and manage alerts, all from inside your AI client.
 
-This document covers three things, in order:
+The server is hosted by [Free Law Project](https://free.law/), the nonprofit behind CourtListener, at:
 
-1. ~~[Connecting to the hosted server](#connecting-to-the-hosted-server) at
-   `mcp.courtlistener.com` (the option most users want)~~ — **Coming Soon**
-2. [Running the server locally](#running-the-server-locally) over stdio or HTTP
-3. [Development and deployment](#development) of the server itself
+```
+https://mcp.courtlistener.com/
+```
+
+It is the same data that powers [courtlistener.com](https://www.courtlistener.com/): millions of opinions from federal and state courts, the [RECAP archive](https://www.courtlistener.com/recap/) of PACER filings, the [oral arguments collection](https://www.courtlistener.com/audio/), and a comprehensive judges database.
 
 ---
 
-## Connecting to the hosted server
+## Table of contents
 
-~~Free Law Project hosts a public instance of this server at
-`https://mcp.courtlistener.com/`.~~ **(Coming Soon.)**
+- [What you can do with it](#what-you-can-do-with-it)
+- [Requirements](#requirements)
+- [Connect a client](#connect-a-client)
+  - [Claude.ai and Claude Desktop](#claudeai-and-claude-desktop)
+  - [Claude Code](#claude-code)
+  - [Other MCP clients](#other-mcp-clients)
+- [Authentication](#authentication)
+- [Available tools](#available-tools)
+- [Usage notes and limits](#usage-notes-and-limits)
+- [Troubleshooting](#troubleshooting)
+- [Privacy and data handling](#privacy-and-data-handling)
+- [Self-hosting / local development](#self-hosting--local-development)
+- [Support](#support)
 
-It speaks the MCP [Streamable HTTP](https://modelcontextprotocol.io/specification/basic/transports#streamable-http)
-transport. Any MCP client that supports Streamable HTTP with custom headers can
-connect to it.
+---
 
-### Authentication
+## What you can do with it
 
-You need a CourtListener API token. Create one from your
-[profile settings](https://www.courtlistener.com/profile/api/) (free account
-required).
+A few example prompts once the server is connected:
 
-All requests must include the token in an `Authorization` header:
+- *"Find Supreme Court opinions about qualified immunity from the last five years."*
+- *"Pull every citation out of this brief and tell me which ones are still good law."*
+- *"Show me the docket for the SDNY case against Acme Corp. and subscribe me to updates."*
+- *"What dissents has Judge Sotomayor written on Fourth Amendment cases?"*
+- *"Set up a daily alert for new filings mentioning 'algorithmic discrimination'."*
+
+Under the hood the server exposes a small set of focused tools (search, citation analysis, alert management) plus a generic API-call escape hatch that covers every other CourtListener REST endpoint. See [Available tools](#available-tools).
+
+---
+
+## Requirements
+
+1. **A free CourtListener account.** Sign up at [courtlistener.com/register](https://www.courtlistener.com/register/). Accounts are free for individuals; the [terms of service](https://www.courtlistener.com/terms/) apply.
+2. **An MCP-capable client.** Anything that speaks MCP over Streamable HTTP with OAuth 2.0 will work. We test against Claude.ai, Claude Desktop, Claude Code, and Cursor.
+
+You do **not** need a separate API token to use the hosted server. Authentication is handled by signing in with your CourtListener account through your MCP client's OAuth flow.
+
+---
+
+## Connect a client
+
+The server URL for every client is the same:
 
 ```
-Authorization: Token <your-token-here>
+https://mcp.courtlistener.com/
 ```
 
-Requests without a valid token will be rejected.
+### Claude.ai and Claude Desktop
 
-> **OAuth is coming soon.** Token-in-header auth is the current mechanism, but
-> we plan to support OAuth so clients can connect without users having to
-> copy-paste API tokens. This section will be updated when it lands.
+1. Open **Settings → Connectors** (Claude.ai) or **Settings → Connectors** (Claude Desktop).
+2. Click **Add custom connector**.
+3. Enter:
+   - **Name**: `CourtListener`
+   - **URL**: `https://mcp.courtlistener.com/`
+4. Click **Add**, then **Connect**. A browser window will open for sign-in.
+5. Sign in to your CourtListener account and approve the requested permissions (`openid` and `api`).
 
-### Client configuration
+You're done. Start a new chat and the CourtListener tools will be available.
 
-Most MCP clients accept a server URL and a set of headers. The exact
-configuration format is client-specific; below is the shape of the values to
-plug in:
+### Claude Code
 
-| Field | Value |
+```bash
+claude mcp add --transport http courtlistener https://mcp.courtlistener.com/
+```
+
+The first time you call a CourtListener tool, Claude Code will open a browser window for the OAuth flow. Run `/mcp` inside Claude Code to inspect connection state.
+
+### Other MCP clients
+
+Any client that supports **Streamable HTTP transport** with **OAuth 2.0** can connect. The server publishes [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata that points clients at CourtListener as the authorization server, so most well-behaved clients can discover everything they need from the URL alone.
+
+For Cursor, Windsurf, and similar editors, look for an "Add MCP server" or "Custom MCP server" option in settings and use the URL above with HTTP transport.
+
+---
+
+## Authentication
+
+The server uses OAuth 2.0 with [Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591), so individual users do not need to pre-register their MCP client with CourtListener. The flow is standard:
+
+- **Authorization server**: `https://www.courtlistener.com/`
+- **Required scopes**: `openid`, `api`
+- **Token format**: opaque bearer tokens issued by CourtListener's OIDC provider
+- **Verification**: the MCP server validates each token against CourtListener's `/o/userinfo/` endpoint
+
+Tokens are short-lived; clients refresh them automatically. If a token is revoked or expires, the next request returns HTTP 401 with a `WWW-Authenticate` header and the client transparently re-runs the OAuth flow.
+
+The server is a thin proxy: it never stores your CourtListener credentials, and your access token is forwarded directly to the CourtListener REST API on each tool call. If you revoke the connection from your [CourtListener profile](https://www.courtlistener.com/profile/), all access stops immediately.
+
+---
+
+## Available tools
+
+All search and read tools are available to any signed-in user. Alert and subscription tools require a CourtListener account (which you already have if you've signed in).
+
+### Search and retrieval
+
+| Tool | What it does |
 | --- | --- |
-| URL | `https://mcp.courtlistener.com/` |
-| Transport | Streamable HTTP |
-| Headers | `Authorization: Token <your-token-here>` |
+| `search` | Search case law, dockets, judges, and oral arguments. Supports the same filters as [courtlistener.com/search](https://www.courtlistener.com/help/search/) (jurisdiction, date ranges, judge, citation, etc.). Returns paginated results. |
+| `get_endpoint_item` | Fetch a single item (opinion, docket, judge, etc.) by its CourtListener ID. |
+| `get_more_results` | Page through additional results from a previous `search` or `call_endpoint` call. |
+| `get_counts` | Get the total result count for a previous query (some queries compute counts lazily). |
 
-For clients that only support stdio (for example, some older Claude Desktop
-builds), you can bridge to the remote server with
-[`mcp-remote`](https://www.npmjs.com/package/mcp-remote). In Claude Desktop,
-open the config file via **Settings → Developer → Edit Config** (on macOS
-this file lives at `~/Library/Application Support/Claude/claude_desktop_config.json`;
-on Windows at `%APPDATA%\Claude\claude_desktop_config.json`) and add:
+### Generic API access
 
-```json
-{
-  "mcpServers": {
-    "courtlistener": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.courtlistener.com/",
-        "--header",
-        "Authorization: Token ${COURTLISTENER_API_TOKEN}"
-      ],
-      "env": {
-        "COURTLISTENER_API_TOKEN": "your-token-here"
-      }
-    }
-  }
-}
-```
+For endpoints that don't have a dedicated tool — financial disclosures, opinion clusters, parties, attorneys, citation graphs, and so on — these tools expose the full [CourtListener REST API](https://www.courtlistener.com/help/api/rest/v4/):
 
-### Programmatic access
+| Tool | What it does |
+| --- | --- |
+| `call_endpoint` | Call any CourtListener API endpoint with custom query parameters. |
+| `get_endpoint_schema` | Retrieve the JSON schema (filters, response fields) for a given endpoint. |
+| `get_choices` | Look up the valid values for an enum field (e.g. court IDs, case statuses). |
 
-If you want to call the server from code — for testing, scripting, or building
-your own agent — use any MCP client library. See
-[Calling the server from code](#calling-the-server-from-code) in the
-Development section for an example.
+### Citation analysis
+
+| Tool | What it does |
+| --- | --- |
+| `extract_citations` | Pull legal citations (cases, statutes, *id.*, *supra*, short cites) out of a block of text using [eyecite](https://github.com/freelawproject/eyecite). Runs entirely on the server — no API calls, no rate limits. Great for parsing briefs, opinions, or research notes. |
+| `analyze_citations` | Extract citations *and* verify each unique case citation against the CourtListener database. Returns the canonical case name, court, date, and a status (`good`, `bad`, `ambiguous`). Large jobs are batched and return a `job_id` for resumption. |
+| `resume_citation_analysis` | Continue verifying remaining citations from an `analyze_citations` job that exceeded the per-call batch limit. |
+
+### Alerts and subscriptions
+
+| Tool | What it does |
+| --- | --- |
+| `create_search_alert` | Create a [search alert](https://www.courtlistener.com/help/alerts/) with real-time, daily, weekly, or monthly frequency. |
+| `delete_search_alert` | Delete a search alert by ID. |
+| `subscribe_to_docket_alert` | Subscribe to email updates for a specific docket. |
+| `unsubscribe_from_docket_alert` | Unsubscribe from a docket alert. |
+
+These tools modify your CourtListener account state. Your client should prompt you for confirmation before calling them; if it doesn't, you can manage alerts at [courtlistener.com/profile/alerts/](https://www.courtlistener.com/profile/alerts/).
 
 ---
 
-## Running the server locally
+## Usage notes and limits
 
-You can also run the server on your own machine. Two transports are supported.
-
-### stdio (recommended for local desktop clients)
-
-The easiest way to run the stdio server is with
-[`uvx`](https://docs.astral.sh/uv/guides/tools/), which fetches the
-`courtlistener-api-client` package from PyPI and runs the
-`courtlistener-mcp` console script (backed by `courtlistener.mcp.server:main`)
-in an ephemeral environment — no manual install required. If you don't have
-`uv` yet, follow the
-[uv install instructions](https://docs.astral.sh/uv/getting-started/installation/).
-
-Authentication in stdio mode uses the `COURTLISTENER_API_TOKEN` environment
-variable (there is no request to attach headers to):
-
-```bash
-export COURTLISTENER_API_TOKEN="your-token-here"
-uvx --from 'courtlistener-api-client[mcp]' courtlistener-mcp
-```
-
-A Claude Desktop–style config entry looks like this. In Claude Desktop,
-open the config file via **Settings → Developer → Edit Config** (on macOS
-this file lives at `~/Library/Application Support/Claude/claude_desktop_config.json`;
-on Windows at `%APPDATA%\Claude\claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "courtlistener": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "courtlistener-api-client[mcp]",
-        "courtlistener-mcp"
-      ],
-      "env": {
-        "COURTLISTENER_API_TOKEN": "your-token-here"
-      }
-    }
-  }
-}
-```
-
-If you'd rather install the package into an environment yourself,
-`pip install 'courtlistener-api-client[mcp]'` exposes the same
-`courtlistener-mcp` command on your `PATH`.
-
-stdio mode does not require Redis.
-
-### HTTP (Streamable HTTP, same as the hosted server)
-
-The HTTP app lives at `courtlistener.mcp.app:app` and is served by Uvicorn in
-development or Gunicorn in production. The easiest way to run it is with
-Docker Compose, which also starts a Redis instance for session state:
-
-```bash
-docker compose up --build
-```
-
-The server will be available at `http://localhost:8080/`. Connect to it the
-same way you would connect to the hosted server, passing your token in an
-`Authorization` header.
-
-To point the server at a local CourtListener API instead of the public one,
-set `COURTLISTENER_API_BASE_URL`. Because the MCP server runs inside a
-container, use `host.docker.internal` to reach your host:
-
-```bash
-COURTLISTENER_API_BASE_URL=http://host.docker.internal:8000/api/rest/v4 \
-  docker compose up --build
-```
+- **Rate limits.** Usage is bounded by CourtListener's API rate limits; see [the API docs](https://www.courtlistener.com/help/api/rest/) for current values. The MCP server itself adds short-lived response caching for read tools to reduce duplicate calls within a session.
+- **Result size.** Search and list tools return up to 100 items per call (default 20). Use `get_more_results` to page through larger result sets.
+- **Citation analysis batching.** `analyze_citations` verifies up to ~250 unique citations per call to stay under request budgets. Anything larger returns a `job_id`; call `resume_citation_analysis` to continue.
+- **Field filtering.** Most read tools accept a `fields` parameter to return only the columns you need, which keeps tool output compact and helps the model focus on what matters.
+- **Health check.** `https://mcp.courtlistener.com/health` returns JSON with server status and the deployed Git SHA — useful for incident reports.
 
 ---
 
-## Development
+## Troubleshooting
 
-### Environment variables
+**The OAuth window won't open / sign-in loops.**
+Confirm that your client supports OAuth 2.0 with Dynamic Client Registration. Older versions of some clients only support API-key auth and won't work here. Update to the latest version.
 
-| Variable | Used in | Description |
+**Tools return "CourtListener rejected the request as unauthorized."**
+Your access token was revoked or expired mid-session. The next tool call will surface a clean 401 and your client should refresh automatically. If it doesn't, disconnect and reconnect the server in your client's settings.
+
+**"This app does not have an associated client_id" or similar OAuth errors.**
+Your client may have cached stale OAuth metadata. Remove and re-add the connector.
+
+**Search results look wrong or empty.**
+The `search` tool maps to the same engine as [courtlistener.com/search](https://www.courtlistener.com/?type=o). Try the same query in the web UI to confirm whether it's a query issue or an MCP issue. The web UI also surfaces helpful hints about syntax and available filters.
+
+**Something else.**
+Check `https://mcp.courtlistener.com/health` for server status. If it returns `healthy` but the server is misbehaving, file an issue (see [Support](#support)) with:
+
+- The Git SHA from the `/health` response
+- The tool call you made and the error message
+- Your MCP client name and version
+
+---
+
+## Privacy and data handling
+
+- **Account data.** The server reads and writes only what's necessary to run the tools you call. Search and read tools are pure proxies; alert tools modify your CourtListener alert preferences.
+- **Tokens.** Access tokens are forwarded to CourtListener on each request and cached for up to 10 minutes against an HMAC of the token (the raw token is never stored). When you revoke access from your CourtListener profile, the cache is invalidated on the next request.
+- **Session state.** The server stores short-lived per-user state in Redis — pagination cursors and citation-analysis jobs — keyed by an HMAC of the OIDC `sub` claim. This state expires after one hour of inactivity. No tool inputs or outputs are persisted.
+- **Logs.** Standard request logs (timestamps, IPs, response codes) are retained for operational debugging and are not used for any other purpose.
+
+For the full data policy that governs the underlying CourtListener service, see the [CourtListener privacy policy](https://www.courtlistener.com/terms/#privacy).
+
+---
+
+## Self-hosting / local development
+
+Most users should use the hosted server at `mcp.courtlistener.com`. If you want to run your own copy — for development, an internal deployment, or a custom configuration — the server ships as part of the `courtlistener-api-client` package on PyPI.
+
+**Quick stdio mode** (easiest, good for trying it out):
+
+```bash
+pip install "courtlistener-api-client[mcp]"
+export COURTLISTENER_API_TOKEN="your-token"  # from courtlistener.com/profile/api/
+courtlistener-mcp
+```
+
+Then point your MCP client at the `courtlistener-mcp` command as a stdio server.
+
+**HTTP mode with OAuth** (matches the hosted deployment):
+
+```bash
+git clone https://github.com/freelawproject/courtlistener-api-client
+cd courtlistener-api-client
+docker compose up
+```
+
+This launches the MCP server on `http://localhost:8080` with Redis. Required environment variables:
+
+| Variable | Required? | Description |
 | --- | --- | --- |
-| `COURTLISTENER_API_TOKEN` | stdio mode | API token used when no `Authorization` header is present. |
-| `COURTLISTENER_API_BASE_URL` | both | Override the CourtListener API base URL. Defaults to the public API; set it to point at a local CourtListener dev instance. |
-| `TARGET_ENV` | HTTP mode (Docker) | `dev` runs Uvicorn with `--reload`; `prod` runs Gunicorn. Set via the `docker-entrypoint.sh` script. |
-| `REDIS_URL` | HTTP mode | Required. URL of the Redis instance used for MCP session state. |
-| `MCP_WORKERS` | HTTP mode | Number of Gunicorn workers. Defaults to `4`. |
-| `MCP_SECRET_KEY` | HTTP mode | HMAC key used to derive per-user Redis key prefixes for session-scoped tool state (query pagination, citation analysis jobs). Set to a strong random value in production. |
-| `MCP_REQUIRE_OAUTH` | HTTP mode | When set to the literal string `true` (case-insensitive), the HTTP MCP app accepts OAuth bearer tokens and publishes RFC 9728 protected-resource metadata. Token validation itself is delegated to the CourtListener API. Any other value leaves OAuth off and falls back to legacy `Authorization: Token <api_token>` auth. Defaults to `true`. |
-| `MCP_BASE_URL` | HTTP mode + OAuth | Public URL of the MCP server, used for `/.well-known/oauth-protected-resource`. Defaults to `https://mcp.courtlistener.com` (set to `http://localhost:8080` in `docker-compose.yml`). |
-| `COURTLISTENER_OAUTH_ISSUER` | HTTP mode + OAuth | URL of the OAuth authorization server clients should register with. Advertised in `/.well-known/oauth-protected-resource`. Defaults to `https://www.courtlistener.com`. |
+| `REDIS_URL` | yes (HTTP mode) | Redis connection URL for session state. |
+| `MCP_SECRET_KEY` | yes (HTTP mode) | Strong random string used as the HMAC key for namespacing user state. |
+| `MCP_BASE_URL` | yes (HTTP mode) | Public URL of your MCP deployment (e.g. `https://mcp.example.com`). |
+| `MCP_REQUIRE_OAUTH` | no | `true` (default) to require OAuth, `false` to fall back to legacy `Authorization: Token …` headers. |
+| `COURTLISTENER_OAUTH_ISSUER` | no | OAuth issuer; defaults to `https://www.courtlistener.com`. |
+| `COURTLISTENER_API_BASE_URL` | no | Override for the upstream CourtListener API (useful when pointing at a staging instance). |
+| `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
 
-### Project layout
-
-The MCP code lives under `courtlistener/mcp/`:
-
-- `server.py` — `create_mcp_server()` builds the FastMCP instance and wires up
-  the tool-dispatch middleware. `main()` is the stdio entrypoint exposed as
-  the `courtlistener-mcp` console script.
-- `app.py` — imports `create_http_app()` from `server.py` and exposes `app`,
-  the ASGI app that Gunicorn/Uvicorn serve.
-- `middleware.py` — dispatches tool calls to the registry.
-- `tools/` — one module per tool, registered in `tools/__init__.py`.
-
-### Running against a local CourtListener
-
-See the `COURTLISTENER_API_BASE_URL` instructions in the HTTP section above.
-The same variable works in stdio mode if you prefer to iterate without Docker.
-
-### Calling the server from code
-
-Any MCP client library works against the running server — useful for smoke
-tests, one-off scripts, or building your own agent. Here's an example against
-the hosted server using the `fastmcp` Python client:
-
-```python
-import asyncio
-import os
-
-from fastmcp import Client
-from fastmcp.client.transports import StreamableHttpTransport
-
-
-async def main():
-    async with Client(
-        transport=StreamableHttpTransport(
-            "https://mcp.courtlistener.com/",
-            headers={
-                "Authorization": f"Token {os.environ['COURTLISTENER_API_TOKEN']}"
-            },
-        ),
-    ) as client:
-        result = await client.call_tool(
-            "get_endpoint_item",
-            {"endpoint_id": "courts", "item_id": "scotus"},
-        )
-        print(result)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-Swap the URL for `http://localhost:8080/` to hit a locally running HTTP
-instance instead.
-
-### Tests and linting
-
-Tests, linting, and type-checking run via `tox`:
-
-```bash
-tox
-```
-
-Run the pre-commit hooks (formatting, lint, etc.) across the whole repo with:
-
-```bash
-pre-commit run --all-files
-```
-
-CI runs the same targets on pull requests.
+Source code: [github.com/freelawproject/courtlistener-api-client](https://github.com/freelawproject/courtlistener-api-client)
 
 ---
 
-## Deployment
+## Support
 
-The hosted server is deployed from this repository. The
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) workflow runs on
-every push to `main` and:
+- **Bug reports and feature requests**: [github.com/freelawproject/courtlistener-api-client/issues](https://github.com/freelawproject/courtlistener-api-client/issues)
+- **Security issues**: see [SECURITY.md](SECURITY.md) for responsible disclosure
+- **General CourtListener questions**: [free.law/contact/](https://free.law/contact/)
+- **Twitter/X**: [@freelawproject](https://twitter.com/freelawproject)
 
-1. Builds a production Docker image (`TARGET_ENV=prod`) from the root
-   `Dockerfile` and pushes it to Docker Hub as
-   `freelawproject/courtlistener-mcp:<sha>-prod`.
-2. Force-syncs the `mcp-env` ExternalSecret in the `courtlistener-mcp`
-   namespace so fresh env values land before the rollout.
-3. Rolls out the image to the `mcp-web` deployment in the `courtlistener`
-   EKS cluster and waits for the rollout to complete.
-
-PR labels can skip parts of the pipeline:
-
-| Label | Effect |
-| --- | --- |
-| `skip-deploy` | Skip the build step (and therefore the whole deploy). |
-| `skip-web-deploy` | Build and sync secrets, but don't roll out the new image. |
+CourtListener and the MCP server are projects of [Free Law Project](https://free.law/), a 501(c)(3) nonprofit. If this server saves you time, please consider [donating](https://free.law/donate/) to keep the underlying data free and open.
