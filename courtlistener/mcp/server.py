@@ -26,7 +26,6 @@ from courtlistener.mcp.tools.utils import (
     resolve_user_hash_via_userinfo,
 )
 
-
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
