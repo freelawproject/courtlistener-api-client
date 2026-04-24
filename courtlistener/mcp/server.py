@@ -47,8 +47,6 @@ code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
 <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server,
 which exposes the <a href="https://courtlistener.com">CourtListener</a> legal
 research API to MCP-compatible clients.</p>
-<p>The MCP transport is served at <code>POST /</code>. This page exists so the
-domain is crawlable and browser visits get something useful.</p>
 <p>See the <a href="https://github.com/freelawproject/courtlistener-api-client">project repository</a> for setup instructions.</p>
 </body>
 </html>
