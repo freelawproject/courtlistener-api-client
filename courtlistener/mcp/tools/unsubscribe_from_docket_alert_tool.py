@@ -16,7 +16,7 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
 
     name: str = "unsubscribe_from_docket_alert"
     annotations = ToolAnnotations(
-        title="Unsubscribing from Docket Alert",
+        title="Unsubscribe from Docket Alert",
         readOnlyHint=False,
         destructiveHint=True,
         idempotentHint=True,

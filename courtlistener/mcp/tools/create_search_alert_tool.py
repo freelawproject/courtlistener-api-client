@@ -12,7 +12,7 @@ class CreateSearchAlertTool(MCPTool):
 
     name: str = "create_search_alert"
     annotations = ToolAnnotations(
-        title="Creating Search Alert",
+        title="Create Search Alert",
         readOnlyHint=False,
         destructiveHint=False,
         idempotentHint=False,

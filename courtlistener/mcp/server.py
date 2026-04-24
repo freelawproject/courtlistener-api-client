@@ -1,3 +1,4 @@
+import base64
 import os
 
 from fastmcp import FastMCP
@@ -9,11 +10,15 @@ from fastmcp.server.auth.auth import (
 )
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
+from mcp.types import Icon
 from pydantic import AnyHttpUrl
-from starlette.responses import JSONResponse
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import FileResponse, JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.tools.utils import (
+    BASE_DIR,
     GIT_SHA,
     MCP_BASE_URL,
     OAUTH_ISSUER,
@@ -83,7 +88,40 @@ def build_auth() -> AuthProvider | None:
 
 
 def create_mcp_server(**kwargs):
-    mcp = FastMCP("courtlistener", **kwargs)
+    assets_dir = BASE_DIR / "mcp" / "assets"
+    favicon_svg_path = assets_dir / "favicon.svg"
+    favicon_ico_path = assets_dir / "favicon.ico"
+    logo_path = assets_dir / "logo.svg"
+
+    favicon_b64 = base64.b64encode(favicon_svg_path.read_bytes()).decode(
+        "utf-8"
+    )
+    logo_b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+
+    mcp = FastMCP(
+        name="CourtListener",
+        website_url="https://courtlistener.com",
+        icons=[
+            Icon(
+                src=f"data:image/svg+xml;base64,{favicon_b64}",
+                mimeType="image/svg+xml",
+                sizes=["16x16", "32x32"],
+            ),
+            Icon(
+                src=f"data:image/svg+xml;base64,{logo_b64}",
+                mimeType="image/svg+xml",
+                sizes=[
+                    "48x48",
+                    "64x64",
+                    "96x96",
+                    "128x128",
+                    "256x256",
+                    "512x512",
+                ],
+            ),
+        ],
+        **kwargs,
+    )
 
     redis_store = kwargs.get("session_state_store")
 
@@ -93,6 +131,14 @@ def create_mcp_server(**kwargs):
         mcp.add_middleware(
             ResponseCachingMiddleware(cache_storage=redis_store)
         )
+
+    @mcp.custom_route("/favicon.svg", methods=["GET"])
+    async def favicon_svg(request):
+        return FileResponse(favicon_svg_path, media_type="image/svg+xml")
+
+    @mcp.custom_route("/favicon.ico", methods=["GET"])
+    async def favicon_ico(request):
+        return FileResponse(favicon_ico_path, media_type="image/x-icon")
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request):
@@ -121,7 +167,21 @@ def create_http_app():
         session_state_store=redis_store,
         auth=build_auth(),
     )
-    return mcp.http_app(path="/", stateless_http=True)
+    middleware = [
+        Middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=[
+                "mcp-protocol-version",
+                "mcp-session-id",
+                "Authorization",
+                "Content-Type",
+            ],
+            expose_headers=["mcp-session-id"],
+        )
+    ]
+    return mcp.http_app(path="/", stateless_http=True, middleware=middleware)
 
 
 def main():

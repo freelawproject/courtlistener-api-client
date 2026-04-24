@@ -29,7 +29,7 @@ class SearchTool(MCPTool):
 
     name: str = "search"
     annotations = ToolAnnotations(
-        title="Searching CourtListener",
+        title="Search",
         readOnlyHint=True,
         openWorldHint=True,
     )

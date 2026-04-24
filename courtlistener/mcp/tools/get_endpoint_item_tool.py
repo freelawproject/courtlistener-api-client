@@ -10,7 +10,7 @@ class GetEndpointItemTool(MCPTool):
 
     name: str = "get_endpoint_item"
     annotations = ToolAnnotations(
-        title="Getting Item by ID",
+        title="Get Item by ID",
         readOnlyHint=True,
         openWorldHint=True,
     )

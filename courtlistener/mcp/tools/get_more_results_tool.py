@@ -24,7 +24,7 @@ class GetMoreResultsTool(MCPTool):
 
     name: str = "get_more_results"
     annotations = ToolAnnotations(
-        title="Getting More Results",
+        title="Get More Results",
         readOnlyHint=True,
         openWorldHint=True,
     )
