@@ -14,7 +14,7 @@ from mcp.types import Icon
 from pydantic import AnyHttpUrl
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.tools.utils import (
@@ -25,6 +25,35 @@ from courtlistener.mcp.tools.utils import (
     REDIS_URL,
     resolve_user_hash_via_userinfo,
 )
+
+
+INDEX_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CourtListener MCP Server</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<meta name="description" content="MCP (Model Context Protocol) server for the CourtListener legal research API.">
+<style>
+body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.5; color: #222; }
+a { color: #b53c2c; }
+code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>CourtListener MCP Server</h1>
+<p>This is the HTTP endpoint for the CourtListener
+<a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server,
+which exposes the <a href="https://courtlistener.com">CourtListener</a> legal
+research API to MCP-compatible clients.</p>
+<p>The MCP transport is served at <code>POST /</code>. This page exists so the
+domain is crawlable and browser visits get something useful.</p>
+<p>See the <a href="https://github.com/freelawproject/courtlistener-api-client">project repository</a> for setup instructions.</p>
+</body>
+</html>
+"""
 
 
 class UserInfoTokenVerifier(TokenVerifier):
@@ -139,6 +168,14 @@ def create_mcp_server(**kwargs):
     @mcp.custom_route("/favicon.ico", methods=["GET"])
     async def favicon_ico(request):
         return FileResponse(favicon_ico_path, media_type="image/x-icon")
+
+    # GET / serves a minimal HTML landing page so the domain is crawlable
+    # and Google's favicon service has a page to discover the favicon from.
+    # The MCP transport itself only handles POST/DELETE on /, so the methods
+    # don't collide.
+    @mcp.custom_route("/", methods=["GET"])
+    async def index(request):
+        return HTMLResponse(INDEX_HTML)
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request):
