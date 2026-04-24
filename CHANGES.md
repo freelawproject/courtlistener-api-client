@@ -5,6 +5,8 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+- Serve MCP server icons (favicon at small sizes, full logo at larger sizes) via the FastMCP `icons` metadata, and expose `/favicon.svg` and `/favicon.ico` routes so Google's favicon service can pick up the logo for the directory listing.
+- Enable CORS on the HTTP MCP app with `Access-Control-Allow-Origin: *` and the MCP-specific headers (`mcp-protocol-version`, `mcp-session-id`, `Authorization`, `Content-Type`), so browser-based MCP clients (Inspector, Claude.ai OAuth discovery) can complete preflight and send authenticated requests.
 - Extract API token from Authorization header for HTTP MCP server.
 - Add tool annotation hints to MCP tools.
 - Add human-readable titles to all MCP tools via ToolAnnotations.
