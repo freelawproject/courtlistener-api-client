@@ -25,7 +25,7 @@ class CallEndpointTool(MCPTool):
 
     name: str = "call_endpoint"
     annotations = ToolAnnotations(
-        title="Calling API Endpoint",
+        title="Call API Endpoint",
         readOnlyHint=True,
         openWorldHint=True,
     )

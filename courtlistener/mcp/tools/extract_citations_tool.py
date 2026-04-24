@@ -26,7 +26,7 @@ class ExtractCitationsTool(MCPTool):
 
     name: str = "extract_citations"
     annotations = ToolAnnotations(
-        title="Extracting Citations",
+        title="Extract Citations",
         readOnlyHint=True,
         openWorldHint=False,
     )

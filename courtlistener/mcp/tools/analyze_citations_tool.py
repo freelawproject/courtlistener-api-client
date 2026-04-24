@@ -53,7 +53,7 @@ class AnalyzeCitationsTool(MCPTool):
 
     name: str = "analyze_citations"
     annotations = ToolAnnotations(
-        title="Analyzing Citations",
+        title="Analyze Citations",
         readOnlyHint=True,
         openWorldHint=True,
     )

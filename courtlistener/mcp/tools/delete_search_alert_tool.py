@@ -12,7 +12,7 @@ class DeleteSearchAlertTool(MCPTool):
 
     name: str = "delete_search_alert"
     annotations = ToolAnnotations(
-        title="Deleting Search Alert",
+        title="Delete Search Alert",
         readOnlyHint=False,
         destructiveHint=True,
         idempotentHint=True,

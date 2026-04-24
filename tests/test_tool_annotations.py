@@ -39,20 +39,20 @@ LOCAL_ONLY_TOOLS = {
 }
 
 EXPECTED_TITLES = {
-    "search": "Searching CourtListener",
-    "get_endpoint_schema": "Getting Endpoint Schema",
-    "call_endpoint": "Calling API Endpoint",
-    "get_endpoint_item": "Getting Item by ID",
-    "get_choices": "Getting Field Choices",
-    "get_counts": "Getting Result Count",
-    "get_more_results": "Getting More Results",
-    "extract_citations": "Extracting Citations",
-    "analyze_citations": "Analyzing Citations",
-    "resume_citation_analysis": "Resuming Citation Analysis",
-    "create_search_alert": "Creating Search Alert",
-    "delete_search_alert": "Deleting Search Alert",
-    "subscribe_to_docket_alert": "Subscribing to Docket Alert",
-    "unsubscribe_from_docket_alert": "Unsubscribing from Docket Alert",
+    "search": "Search",
+    "get_endpoint_schema": "Get Endpoint Schema",
+    "call_endpoint": "Call API Endpoint",
+    "get_endpoint_item": "Get Item by ID",
+    "get_choices": "Get Field Choices",
+    "get_counts": "Get Result Count",
+    "get_more_results": "Get More Results",
+    "extract_citations": "Extract Citations",
+    "analyze_citations": "Analyze Citations",
+    "resume_citation_analysis": "Resume Citation Analysis",
+    "create_search_alert": "Create Search Alert",
+    "delete_search_alert": "Delete Search Alert",
+    "subscribe_to_docket_alert": "Subscribe to Docket Alert",
+    "unsubscribe_from_docket_alert": "Unsubscribe from Docket Alert",
 }
 
 

@@ -28,7 +28,7 @@ class ResumeCitationAnalysisTool(MCPTool):
 
     name: str = "resume_citation_analysis"
     annotations = ToolAnnotations(
-        title="Resuming Citation Analysis",
+        title="Resume Citation Analysis",
         readOnlyHint=True,
         openWorldHint=True,
     )
