@@ -168,10 +168,7 @@ def create_mcp_server(**kwargs):
     async def favicon_ico(request):
         return FileResponse(favicon_ico_path, media_type="image/x-icon")
 
-    # GET / serves a minimal HTML landing page so the domain is crawlable
-    # and Google's favicon service has a page to discover the favicon from.
-    # The MCP transport itself only handles POST/DELETE on /, so the methods
-    # don't collide.
+    # GET / serves HTML; the MCP transport owns POST/DELETE on the same path.
     @mcp.custom_route("/", methods=["GET"])
     async def index(request):
         return HTMLResponse(INDEX_HTML)
