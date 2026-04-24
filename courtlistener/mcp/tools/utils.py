@@ -6,6 +6,7 @@ import os
 import uuid
 from datetime import date, datetime
 from itertools import islice
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -17,6 +18,8 @@ from courtlistener import CourtListener
 from courtlistener.resource import ResourceIterator
 
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).parents[2]
 
 DEFAULT_NUM_RESULTS = 20
 MAX_NUM_RESULTS = 100

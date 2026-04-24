@@ -15,7 +15,7 @@ class GetCountsTool(MCPTool):
 
     name: str = "get_counts"
     annotations = ToolAnnotations(
-        title="Getting Result Count",
+        title="Get Result Count",
         readOnlyHint=True,
         openWorldHint=True,
     )
