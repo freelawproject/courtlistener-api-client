@@ -50,6 +50,7 @@ INDEX_HTML = """<!DOCTYPE html>
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#b53c2c">
+<meta name="google-site-verification" content="C8dEEUUkQm1uhzt8FLvr1mAKcuEOkMiTi5a0nFgs5Qw" />
 <meta name="description" content="MCP (Model Context Protocol) server for the CourtListener legal research API.">
 <style>
 body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.5; color: #222; }
