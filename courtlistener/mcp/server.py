@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 
 from fastmcp import FastMCP
@@ -14,7 +15,12 @@ from mcp.types import Icon
 from pydantic import AnyHttpUrl
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse
+from starlette.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    Response,
+)
 
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.tools.utils import (
@@ -32,8 +38,18 @@ INDEX_HTML = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CourtListener MCP Server</title>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/x-icon" sizes="16x16 32x32" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+<link rel="icon" type="image/png" sizes="256x256" href="/favicon-256x256.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png">
+<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#b53c2c">
 <meta name="description" content="MCP (Model Context Protocol) server for the CourtListener legal research API.">
 <style>
 body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.5; color: #222; }
@@ -51,6 +67,50 @@ research API to MCP-compatible clients.</p>
 </body>
 </html>
 """
+
+ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
+
+PNG_ICON_FILES = (
+    "favicon-16x16.png",
+    "favicon-32x32.png",
+    "favicon-48x48.png",
+    "favicon-96x96.png",
+    "favicon-192x192.png",
+    "favicon-256x256.png",
+    "favicon-512x512.png",
+    "apple-touch-icon.png",
+)
+
+WEB_MANIFEST = json.dumps(
+    {
+        "name": "CourtListener MCP Server",
+        "short_name": "CourtListener MCP",
+        "description": (
+            "MCP server for the CourtListener legal research API."
+        ),
+        "start_url": "/",
+        "display": "browser",
+        "background_color": "#ffffff",
+        "theme_color": "#b53c2c",
+        "icons": [
+            {
+                "src": "/favicon-192x192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+            },
+            {
+                "src": "/favicon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+            },
+            {
+                "src": "/favicon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml",
+            },
+        ],
+    }
+)
 
 
 class UserInfoTokenVerifier(TokenVerifier):
@@ -160,11 +220,42 @@ def create_mcp_server(**kwargs):
 
     @mcp.custom_route("/favicon.svg", methods=["GET"])
     async def favicon_svg(request):
-        return FileResponse(favicon_svg_path, media_type="image/svg+xml")
+        return FileResponse(
+            favicon_svg_path,
+            media_type="image/svg+xml",
+            headers=ICON_CACHE_HEADERS,
+        )
 
     @mcp.custom_route("/favicon.ico", methods=["GET"])
     async def favicon_ico(request):
-        return FileResponse(favicon_ico_path, media_type="image/x-icon")
+        return FileResponse(
+            favicon_ico_path,
+            media_type="image/x-icon",
+            headers=ICON_CACHE_HEADERS,
+        )
+
+    def _make_png_handler(file_path):
+        async def handler(request):
+            return FileResponse(
+                file_path,
+                media_type="image/png",
+                headers=ICON_CACHE_HEADERS,
+            )
+
+        return handler
+
+    for filename in PNG_ICON_FILES:
+        mcp.custom_route(f"/{filename}", methods=["GET"])(
+            _make_png_handler(assets_dir / filename)
+        )
+
+    @mcp.custom_route("/manifest.webmanifest", methods=["GET"])
+    async def manifest(request):
+        return Response(
+            WEB_MANIFEST,
+            media_type="application/manifest+json",
+            headers=ICON_CACHE_HEADERS,
+        )
 
     # GET / serves HTML; the MCP transport owns POST/DELETE on the same path.
     @mcp.custom_route("/", methods=["GET"])
