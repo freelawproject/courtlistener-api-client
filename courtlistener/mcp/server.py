@@ -53,7 +53,7 @@ code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
 <p>This is the HTTP endpoint for the CourtListener Model Context Protocol server,
 which exposes the <a href="https://courtlistener.com">CourtListener</a> legal
 research API to MCP-compatible clients.</p>
-<p>See the <a href="https://wiki.free.law/c/courtlistener/help/api/mcp">MCP documentation</a> on the Free Law wiki for setup instructions.</p>
+<p>See the <a href="https://wiki.free.law/c/courtlistener/help/api/mcp">MCP documentation</a> on the Free Law Wiki for setup instructions.</p>
 </body>
 </html>
 """

@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "courtlistener-api-client"
-version = "0.0.6"
+version = "1.0.0"
 description = "Official Python SDK for the CourtListener API"
 authors = [{ name = "Free Law Project", email = "info@free.law" }]
 requires-python = ">=3.10"
