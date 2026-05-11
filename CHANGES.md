@@ -8,7 +8,7 @@ Features:
 - Integrate Sentry error reporting in the HTTP MCP server via `sentry-sdk`'s `MCPIntegration`. Configured by the optional `SENTRY_DSN` env var; leaving it unset keeps the SDK in no-op mode so local/dev runs are unaffected.
 
 Changes:
--
+- Add fallback handling for HTTP errors in MCP tool handler middleware.
 
 Fixes:
 -

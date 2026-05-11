@@ -1,5 +1,6 @@
 import json
 
+import httpx
 from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import Middleware, MiddlewareContext
@@ -55,7 +56,10 @@ class ToolHandlerMiddleware(Middleware):
                     "CourtListener rejected the request as unauthorized. "
                     "Your session may have expired; retry to re-authenticate."
                 ) from exc
-            raise
+        except (httpx.TimeoutException, httpx.HTTPError) as exc:
+            raise ToolError(
+                f"Upstream CourtListener request failed: {exc}"
+            ) from exc
 
         if isinstance(result, dict):
             result = json.dumps(result, default=json_default, indent=2)
