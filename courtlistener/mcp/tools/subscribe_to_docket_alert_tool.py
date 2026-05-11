@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -32,9 +33,13 @@ class SubscribeToDocketAlertTool(MCPTool):
             "required": ["docket"],
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> dict:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict | str:
         docket = arguments["docket"]
 
         with self.get_client() as client:
-            alert = client.docket_alerts.subscribe(docket)
-            return alert
+            try:
+                return client.docket_alerts.subscribe(docket)
+            except CourtListenerAPIError as e:
+                if e.status_code != 400:
+                    raise
+                return f"Could not subscribe to docket {docket}: {e.detail}"

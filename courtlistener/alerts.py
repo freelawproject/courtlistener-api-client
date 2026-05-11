@@ -178,6 +178,9 @@ class DocketAlerts(Resource):
 
     def subscribe(self, docket: int) -> dict[str, Any]:
         """Subscribe to a docket (convenience for create with type=1)."""
+        for alert in self.list(docket=docket):
+            return {**alert, "already_subscribed": True}
+
         return self.create(docket, alert_type=1)
 
     def unsubscribe(self, docket: int) -> None:

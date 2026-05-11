@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
@@ -11,6 +12,7 @@ from courtlistener.alerts import (
     SearchAlerts,
     normalize_search_query,
 )
+from courtlistener.exceptions import CourtListenerAPIError
 
 # ---------------------------------------------------------------------------
 # Unit tests – normalize_search_query
@@ -109,6 +111,57 @@ class TestSearchAlertsValidation:
         alerts = SearchAlerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.update(1, unknown_field="value")
+
+
+def _page(results):
+    return {
+        "count": len(results),
+        "next": None,
+        "previous": None,
+        "results": results,
+    }
+
+
+class TestDocketAlertsSubscribeIdempotent:
+    """Issue #121: ``subscribe`` is idempotent at the SDK layer."""
+
+    def test_creates_when_no_existing_subscription(self):
+        mock_client = MagicMock()
+        created = {"id": 1, "docket": 5, "alert_type": 1}
+        mock_client._request.side_effect = [_page([]), created]
+
+        da = DocketAlerts(mock_client)
+        result = da.subscribe(docket=5)
+
+        assert result == created
+        assert "already_subscribed" not in result
+
+    def test_returns_existing_with_flag(self):
+        mock_client = MagicMock()
+        existing = {"id": 1, "docket": 5, "alert_type": 1}
+        mock_client._request.side_effect = [_page([existing])]
+
+        da = DocketAlerts(mock_client)
+        result = da.subscribe(docket=5)
+
+        assert result["id"] == 1
+        assert result["already_subscribed"] is True
+        # Pre-flight list only — no POST.
+        assert mock_client._request.call_count == 1
+
+    def test_create_400_still_raises(self):
+        mock_client = MagicMock()
+        other_error = CourtListenerAPIError(
+            400,
+            {"docket": ["Invalid pk."]},
+            MagicMock(spec=httpx.Response, status_code=400),
+        )
+        mock_client._request.side_effect = [_page([]), other_error]
+
+        da = DocketAlerts(mock_client)
+        with pytest.raises(CourtListenerAPIError) as exc_info:
+            da.subscribe(docket=5)
+        assert exc_info.value.status_code == 400
 
 
 class TestDocketAlertsValidation:

@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 
@@ -58,17 +59,21 @@ class CreateSearchAlertTool(MCPTool):
             "required": ["name", "query", "rate"],
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> dict:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict | str:
         name = arguments["name"]
         query = arguments["query"]
         rate = arguments["rate"]
         alert_type = arguments.get("alert_type")
 
         with self.get_client() as client:
-            alert = client.alerts.create(
-                name=name,
-                query=query,
-                rate=rate,
-                alert_type=alert_type,
-            )
-            return alert
+            try:
+                return client.alerts.create(
+                    name=name,
+                    query=query,
+                    rate=rate,
+                    alert_type=alert_type,
+                )
+            except CourtListenerAPIError as e:
+                if e.status_code != 400:
+                    raise
+                return f"Could not create search alert: {e.detail}"
