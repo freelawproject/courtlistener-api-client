@@ -20,6 +20,7 @@ from starlette.responses import (
 
 from courtlistener.mcp.auth import UserInfoTokenVerifier
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
+from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.tools.utils import (
     BASE_DIR,
     GIT_SHA,
@@ -73,6 +74,7 @@ def create_mcp_server(**kwargs):
 
     mcp = FastMCP(
         name="CourtListener",
+        instructions=GLOBAL_INSTRUCTIONS,
         website_url="https://courtlistener.com",
         icons=[
             Icon(
