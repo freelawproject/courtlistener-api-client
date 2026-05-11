@@ -92,7 +92,7 @@ class AnalyzeCitationsTool(MCPTool):
         with self.get_client() as client:
             if opinion_id is not None:
                 opinion = client.opinions.get(opinion_id)
-                text = opinion.get("plain_text")
+                text = opinion.get("html_with_citations")
                 if not text:
                     raise ValueError("Text not available for opinion ID.")
 
