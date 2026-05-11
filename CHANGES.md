@@ -5,6 +5,18 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+-
+
+Changes:
+-
+
+Fixes:
+-
+
+
+### 1.0.0 - 2026-05-11
+
+Features:
 - Serve MCP server icons (favicon at small sizes, full logo at larger sizes) via the FastMCP `icons` metadata, and expose `/favicon.svg` and `/favicon.ico` routes so Google's favicon service can pick up the logo for the directory listing. Also serve a minimal HTML landing page at `GET /` (the MCP transport itself only handles `POST`/`DELETE`, so methods don't collide) — this gives Googlebot something crawlable and includes explicit `<link rel="icon">` tags pointing at the favicon, which is what Google's favicon cache actually keys off.
 - Enable CORS on the HTTP MCP app with `Access-Control-Allow-Origin: *` and the MCP-specific headers (`mcp-protocol-version`, `mcp-session-id`, `Authorization`, `Content-Type`), so browser-based MCP clients (Inspector, Claude.ai OAuth discovery) can complete preflight and send authenticated requests.
 - Extract API token from Authorization header for HTTP MCP server.
