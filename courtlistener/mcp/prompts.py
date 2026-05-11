@@ -4,7 +4,7 @@ CourtListener MCP server: access to the CourtListener legal research API.
 # Data available
 
 The `search` tool covers four primary collections:
-- RECAP (federal court filings and dockets from PACER)
+- RECAP (federal court cases/dockets, filings, parties, and attorneys from PACER)
 - Opinions (case law / court decisions)
 - Judges
 - Oral arguments (audio recordings of appellate arguments)
