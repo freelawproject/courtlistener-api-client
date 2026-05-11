@@ -32,6 +32,7 @@ Changes:
 - Force use of single worker per pod in production.
 - Switch MCP server to stateless HTTP. Session-scoped tool state (query pagination, citation analysis jobs) is now stored in Redis under per-user keys derived from an HMAC of the API token, so any worker can serve any request. Adds `MCP_SECRET_KEY` for the HMAC key.
 - Verify MCP OAuth tokens against CourtListener's OIDC userinfo endpoint instead of passing them through unchecked, and namespace Redis session state by a stable hash of the resolved `sub` claim rather than the raw access token. Pagination and citation-analysis state now survive access-token rotation, and revoked or invalid tokens produce a proper HTTP 401 with `WWW-Authenticate` so MCP clients re-run OAuth automatically. Downstream 401s from the CourtListener REST API evict the token cache so the next request surfaces the same re-auth signal. Requires the `openid` and `api` scopes, advertised in the protected-resource metadata; adds `MCP_TOKEN_CACHE_TTL` (seconds, default 600) and `COURTLISTENER_OAUTH_USERINFO_URL` for overriding the userinfo endpoint.
+- Point index html to the Free Law wiki for MCP setup instructions.
 
 Fixes:
 - Fix JSON serialization of dates and datetimes in MCP tools.
