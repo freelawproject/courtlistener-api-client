@@ -41,6 +41,7 @@ Fixes:
 - Add valid search types to create search alert tool and client helper.
 - Warn in `analyze_citations` output when a verified cluster's case name diverges from the input name, clarify the "occurrences vs unique strings vs unique case clusters" counts in the header, and auto-resolve ambiguous results whose candidate clusters share the same name (surfacing the other cluster IDs).
 - Fix `analyze_citations` tool to use the `html_with_citations` field for the opinion text.
+- Gracefully error handling for alerts tools.
 
 ### 0.0.6 - 2026-03-19
 
