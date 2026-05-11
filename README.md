@@ -2,7 +2,7 @@
 
 A Python client for the [CourtListener API](https://www.courtlistener.com/help/api/rest/v4), providing access to millions of legal opinions, dockets, judges, and more from [Free Law Project](https://free.law/).
 
-> **Using an LLM?** This repo also ships the **CourtListener MCP server**, which exposes the API to any [Model Context Protocol](https://modelcontextprotocol.io) client (Claude Desktop, Cursor, etc.). ~~Free Law Project hosts it at [`mcp.courtlistener.com`](https://mcp.courtlistener.com/).~~ **(Coming Soon.)** See [MCP_README.md](MCP_README.md) for connection details and for running it locally.
+> **Using an LLM?** This repo also ships the **CourtListener MCP server**, which exposes the API to any Model Context Protocol client (Claude Desktop, Cursor, etc.). See [MCP_README.md](MCP_README.md) for connection details and for running it locally. Free Law Project hosts it at [`mcp.courtlistener.com`](https://mcp.courtlistener.com/). See the [MCP documentation](https://wiki.free.law/c/courtlistener/help/api/mcp) on the wiki for setup instructions.
 
 ## Installation
 
