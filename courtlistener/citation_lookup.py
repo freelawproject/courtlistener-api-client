@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+
+from courtlistener.exceptions import CourtListenerAPIError
 
 if TYPE_CHECKING:
     from courtlistener.client import CourtListener
 
 MAX_TEXT_LENGTH = 64_000
 THROTTLE_STATUS = 429
+MAX_RETRY_WAIT_SECONDS = 90.0
 
 
 class CitationLookup:
@@ -23,7 +28,12 @@ class CitationLookup:
     def __init__(self, client: CourtListener) -> None:
         self._client = client
 
-    def lookup_text(self, text: str) -> list[dict[str, Any]]:
+    def lookup_text(
+        self,
+        text: str,
+        *,
+        retry_on_rate_limit: bool = False,
+    ) -> list[dict[str, Any]]:
         """Look up all citations in a block of text.
 
         Sends text to CourtListener's citation-lookup endpoint, which
@@ -32,6 +42,11 @@ class CitationLookup:
 
         Args:
             text: Legal text containing citations (max 64,000 chars).
+            retry_on_rate_limit: If True, a whole-request 429 response
+                triggers a single retry after sleeping until the
+                ``wait_until`` timestamp in the error body (capped at
+                ``MAX_RETRY_WAIT_SECONDS``). If the second attempt also
+                429s, the error is raised.
 
         Returns:
             List of citation results. Each result contains:
@@ -45,15 +60,28 @@ class CitationLookup:
 
         Raises:
             ValueError: If text exceeds 64,000 characters.
+            CourtListenerAPIError: On API errors (including 429 when
+                retry is disabled or the retry also fails).
         """
         if len(text) > MAX_TEXT_LENGTH:
             raise ValueError(
                 f"Text length {len(text)} exceeds the maximum of "
                 f"{MAX_TEXT_LENGTH} characters."
             )
-        result = self._client._request(
-            "POST", self.ENDPOINT, data={"text": text}
-        )
+        try:
+            result = self._client._request(
+                "POST", self.ENDPOINT, data={"text": text}
+            )
+        except CourtListenerAPIError as e:
+            if not retry_on_rate_limit or e.status_code != THROTTLE_STATUS:
+                raise
+            wait = _wait_until_seconds(e.detail)
+            if wait is None:
+                raise
+            time.sleep(wait)
+            result = self._client._request(
+                "POST", self.ENDPOINT, data={"text": text}
+            )
         assert isinstance(result, list)
         return result
 
@@ -151,6 +179,36 @@ class CitationLookup:
             remaining = remaining[first_throttled_start:]
 
         return all_results
+
+
+def parse_wait_until(detail: Any) -> datetime | None:
+    """Parse the ``wait_until`` timestamp from a 429 error body.
+
+    Returns a timezone-aware datetime, or None if the body shape is
+    unexpected or the value can't be parsed. Naive timestamps are
+    interpreted as UTC.
+    """
+    if not isinstance(detail, dict):
+        return None
+    wait_until = detail.get("wait_until")
+    if not isinstance(wait_until, str):
+        return None
+    try:
+        target = datetime.fromisoformat(wait_until)
+    except ValueError:
+        return None
+    if target.tzinfo is None:
+        target = target.replace(tzinfo=timezone.utc)
+    return target
+
+
+def _wait_until_seconds(detail: Any) -> float | None:
+    """Seconds to sleep before retrying a 429, clamped to the cap, or None."""
+    target = parse_wait_until(detail)
+    if target is None:
+        return None
+    seconds = (target - datetime.now(timezone.utc)).total_seconds()
+    return max(0.0, min(seconds, MAX_RETRY_WAIT_SECONDS))
 
 
 def _split_text(text: str) -> list[tuple[int, str]]:
