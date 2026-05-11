@@ -1,13 +1,10 @@
 import base64
-import json
 import os
 
 from fastmcp import FastMCP
 from fastmcp.server.auth.auth import (
-    AccessToken,
     AuthProvider,
     RemoteAuthProvider,
-    TokenVerifier,
 )
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
@@ -19,9 +16,9 @@ from starlette.responses import (
     FileResponse,
     HTMLResponse,
     JSONResponse,
-    Response,
 )
 
+from courtlistener.mcp.auth import UserInfoTokenVerifier
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.tools.utils import (
     BASE_DIR,
@@ -29,8 +26,9 @@ from courtlistener.mcp.tools.utils import (
     MCP_BASE_URL,
     OAUTH_ISSUER,
     REDIS_URL,
-    resolve_user_hash_via_userinfo,
 )
+
+ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
 
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -38,18 +36,9 @@ INDEX_HTML = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CourtListener MCP Server</title>
-<link rel="icon" type="image/x-icon" sizes="16x16 32x32" href="/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
-<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
-<link rel="icon" type="image/png" sizes="256x256" href="/favicon-256x256.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png">
-<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#b53c2c">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="google-site-verification" content="C8dEEUUkQm1uhzt8FLvr1mAKcuEOkMiTi5a0nFgs5Qw" />
 <meta name="description" content="MCP (Model Context Protocol) server for the CourtListener legal research API.">
 <style>
@@ -60,130 +49,27 @@ code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
 </head>
 <body>
 <h1>CourtListener MCP Server</h1>
-<p>This is the HTTP endpoint for the CourtListener
-<a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server,
+<p>This is the HTTP endpoint for the CourtListener Model Context Protocol server,
 which exposes the <a href="https://courtlistener.com">CourtListener</a> legal
 research API to MCP-compatible clients.</p>
-<p>See the <a href="https://github.com/freelawproject/courtlistener-api-client">project repository</a> for setup instructions.</p>
+<p>See the <a href="https://wiki.free.law/c/courtlistener/help/api/mcp">MCP documentation</a> on the Free Law wiki for setup instructions.</p>
 </body>
 </html>
 """
-
-ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
-
-PNG_ICON_FILES = (
-    "favicon-16x16.png",
-    "favicon-32x32.png",
-    "favicon-48x48.png",
-    "favicon-96x96.png",
-    "favicon-192x192.png",
-    "favicon-256x256.png",
-    "favicon-512x512.png",
-    "apple-touch-icon.png",
-)
-
-WEB_MANIFEST = json.dumps(
-    {
-        "name": "CourtListener MCP Server",
-        "short_name": "CourtListener MCP",
-        "description": (
-            "MCP server for the CourtListener legal research API."
-        ),
-        "start_url": "/",
-        "display": "browser",
-        "background_color": "#ffffff",
-        "theme_color": "#b53c2c",
-        "icons": [
-            {
-                "src": "/favicon-192x192.png",
-                "sizes": "192x192",
-                "type": "image/png",
-            },
-            {
-                "src": "/favicon-512x512.png",
-                "sizes": "512x512",
-                "type": "image/png",
-            },
-            {
-                "src": "/favicon.svg",
-                "sizes": "any",
-                "type": "image/svg+xml",
-            },
-        ],
-    }
-)
-
-
-class UserInfoTokenVerifier(TokenVerifier):
-    """Verify OAuth tokens by calling CL's OIDC userinfo endpoint.
-
-    Caches token→user_hash mappings in Redis so a burst of tool calls
-    from one session collapses to a single userinfo round-trip. The
-    cached ``user_hash`` is a stable HMAC of the OIDC ``sub`` claim, so
-    session state in Redis survives access-token rotation (previously,
-    a refresh silently orphaned the user's namespace).
-
-    Revocation semantics:
-    - A freshly-rejected token surfaces here as a 401 from userinfo →
-      ``verify_token`` returns ``None`` → the auth middleware sends a
-      proper 401 with ``WWW-Authenticate`` so the MCP client re-auths.
-    - A token revoked mid-cache keeps working until the TTL expires or
-      until ``ToolHandlerMiddleware`` sees a 401 from a downstream CL
-      API call, invalidates the cache entry, and forces re-verification
-      on the next request.
-
-    Required scopes (advertised in the protected-resource metadata so
-    MCP clients include them in the authorize request):
-    - ``openid``: needed by DOT's ``/o/userinfo/`` endpoint.
-    - ``api``: CL's custom scope for REST API access.
-    """
-
-    def __init__(self, *, base_url: str) -> None:
-        super().__init__(
-            base_url=base_url,
-            required_scopes=["openid", "api"],
-        )
-
-    async def verify_token(self, token: str) -> AccessToken | None:
-        if not token:
-            return None
-        user_hash = await resolve_user_hash_via_userinfo(token)
-        if user_hash is None:
-            return None
-        # Userinfo doesn't return the token's scopes, but a 200 from it
-        # proves the token carries ``openid`` (DOT enforces that). The
-        # ``api`` scope is enforced downstream by CL's REST API itself.
-        # Echoing the required set back here satisfies the middleware's
-        # scope check without a second round-trip to introspection.
-        return AccessToken(
-            token=token,
-            client_id="courtlistener-mcp",
-            scopes=list(self.required_scopes),
-            claims={"user_hash": user_hash},
-        )
-
-
-def build_auth() -> AuthProvider | None:
-    """Return an ``AuthProvider`` when OAuth is configured, else ``None``."""
-    if os.getenv("MCP_REQUIRE_OAUTH", "true").lower() != "true":
-        return None
-    return RemoteAuthProvider(
-        token_verifier=UserInfoTokenVerifier(base_url=MCP_BASE_URL),
-        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
-        base_url=MCP_BASE_URL,
-    )
 
 
 def create_mcp_server(**kwargs):
     assets_dir = BASE_DIR / "mcp" / "assets"
     favicon_svg_path = assets_dir / "favicon.svg"
     favicon_ico_path = assets_dir / "favicon.ico"
-    logo_path = assets_dir / "logo.svg"
+    apple_touch_path = assets_dir / "apple-touch-icon.png"
 
     favicon_b64 = base64.b64encode(favicon_svg_path.read_bytes()).decode(
         "utf-8"
     )
-    logo_b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+    apple_touch_b64 = base64.b64encode(apple_touch_path.read_bytes()).decode(
+        "utf-8"
+    )
 
     mcp = FastMCP(
         name="CourtListener",
@@ -195,16 +81,9 @@ def create_mcp_server(**kwargs):
                 sizes=["16x16", "32x32"],
             ),
             Icon(
-                src=f"data:image/svg+xml;base64,{logo_b64}",
-                mimeType="image/svg+xml",
-                sizes=[
-                    "48x48",
-                    "64x64",
-                    "96x96",
-                    "128x128",
-                    "256x256",
-                    "512x512",
-                ],
+                src=f"data:image/png;base64,{apple_touch_b64}",
+                mimeType="image/png",
+                sizes=["180x180"],
             ),
         ],
         **kwargs,
@@ -219,6 +98,7 @@ def create_mcp_server(**kwargs):
             ResponseCachingMiddleware(cache_storage=redis_store)
         )
 
+    # Static asset routes
     @mcp.custom_route("/favicon.svg", methods=["GET"])
     async def favicon_svg(request):
         return FileResponse(
@@ -235,34 +115,20 @@ def create_mcp_server(**kwargs):
             headers=ICON_CACHE_HEADERS,
         )
 
-    def _make_png_handler(file_path):
-        async def handler(request):
-            return FileResponse(
-                file_path,
-                media_type="image/png",
-                headers=ICON_CACHE_HEADERS,
-            )
-
-        return handler
-
-    for filename in PNG_ICON_FILES:
-        mcp.custom_route(f"/{filename}", methods=["GET"])(
-            _make_png_handler(assets_dir / filename)
-        )
-
-    @mcp.custom_route("/manifest.webmanifest", methods=["GET"])
-    async def manifest(request):
-        return Response(
-            WEB_MANIFEST,
-            media_type="application/manifest+json",
+    @mcp.custom_route("/apple-touch-icon.png", methods=["GET"])
+    async def apple_touch_icon(request):
+        return FileResponse(
+            apple_touch_path,
+            media_type="image/png",
             headers=ICON_CACHE_HEADERS,
         )
 
-    # GET / serves HTML; the MCP transport owns POST/DELETE on the same path.
+    # Home page route
     @mcp.custom_route("/", methods=["GET"])
     async def index(request):
         return HTMLResponse(INDEX_HTML)
 
+    # Health check route
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(request):
         services = {"mcp": True}
@@ -280,6 +146,17 @@ def create_mcp_server(**kwargs):
         )
 
     return mcp
+
+
+def build_auth() -> AuthProvider | None:
+    """Return an ``AuthProvider`` when OAuth is configured, else ``None``."""
+    if os.getenv("MCP_REQUIRE_OAUTH", "true").lower() != "true":
+        return None
+    return RemoteAuthProvider(
+        token_verifier=UserInfoTokenVerifier(base_url=MCP_BASE_URL),
+        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
+        base_url=MCP_BASE_URL,
+    )
 
 
 def create_http_app():

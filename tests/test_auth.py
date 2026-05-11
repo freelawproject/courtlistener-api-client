@@ -203,7 +203,7 @@ class TestServerAuthWiring:
         makes userinfo accept the token at all; ``api`` is what CL's
         REST API expects downstream.
         """
-        from courtlistener.mcp.server import UserInfoTokenVerifier
+        from courtlistener.mcp.auth import UserInfoTokenVerifier
 
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         assert set(verifier.required_scopes) == {"openid", "api"}
@@ -215,11 +215,11 @@ class TestServerAuthWiring:
         """
         import asyncio
 
-        from courtlistener.mcp.server import UserInfoTokenVerifier
+        from courtlistener.mcp.auth import UserInfoTokenVerifier
 
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         with patch(
-            "courtlistener.mcp.server.resolve_user_hash_via_userinfo",
+            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
             new=AsyncMock(return_value="fake-user-hash"),
         ):
             token = asyncio.run(verifier.verify_token("anything-goes"))
@@ -236,11 +236,11 @@ class TestServerAuthWiring:
         """
         import asyncio
 
-        from courtlistener.mcp.server import UserInfoTokenVerifier
+        from courtlistener.mcp.auth import UserInfoTokenVerifier
 
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         with patch(
-            "courtlistener.mcp.server.resolve_user_hash_via_userinfo",
+            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
             new=AsyncMock(return_value=None),
         ):
             token = asyncio.run(verifier.verify_token("revoked-or-bad"))
@@ -253,7 +253,7 @@ class TestServerAuthWiring:
         """
         import asyncio
 
-        from courtlistener.mcp.server import UserInfoTokenVerifier
+        from courtlistener.mcp.auth import UserInfoTokenVerifier
 
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         assert asyncio.run(verifier.verify_token("")) is None
