@@ -34,6 +34,7 @@ Changes:
 - Verify MCP OAuth tokens against CourtListener's OIDC userinfo endpoint instead of passing them through unchecked, and namespace Redis session state by a stable hash of the resolved `sub` claim rather than the raw access token. Pagination and citation-analysis state now survive access-token rotation, and revoked or invalid tokens produce a proper HTTP 401 with `WWW-Authenticate` so MCP clients re-run OAuth automatically. Downstream 401s from the CourtListener REST API evict the token cache so the next request surfaces the same re-auth signal. Requires the `openid` and `api` scopes, advertised in the protected-resource metadata; adds `MCP_TOKEN_CACHE_TTL` (seconds, default 600) and `COURTLISTENER_OAUTH_USERINFO_URL` for overriding the userinfo endpoint.
 - Point index html to the Free Law wiki for MCP setup instructions.
 - Add MCP server instructions to the global prompt.
+- Add `retry_on_rate_limit` parameter to `citation_lookup` helper for retrying on 429s.
 
 Fixes:
 - Fix JSON serialization of dates and datetimes in MCP tools.

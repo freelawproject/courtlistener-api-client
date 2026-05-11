@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -20,6 +21,8 @@ from eyecite.models import (
     Resource as CitationResource,
 )
 from eyecite.utils import DISALLOWED_NAMES
+
+from courtlistener.citation_lookup import parse_wait_until
 
 # Delimiter used between citations in the compact string sent to the
 # citation-lookup API.  Semicolon-space is a natural Bluebook list
@@ -175,6 +178,56 @@ def canonical_key(cite: FullCitation) -> str:
     return f"{g['volume']} {g['reporter']} {g['page']}"
 
 
+def format_rate_limit_note(detail: Any, *, resumable_with: str) -> str:
+    """Build a one-line note describing the upstream rate limit.
+
+    Always returns a usable message — when ``wait_until`` can't be
+    parsed, falls back to advice without a timestamp. ``resumable_with``
+    names the tool to call next (e.g. ``resume_citation_analysis``).
+    """
+    target = parse_wait_until(detail)
+    base = (
+        f"Rate limited by the upstream API. Call `{resumable_with}` to "
+        f"retry; set `wait=true` to have the server sleep through the "
+        f"rate-limit window."
+    )
+    if target is None:
+        return base
+    seconds = max(
+        0, int((target - datetime.now(timezone.utc)).total_seconds())
+    )
+    return (
+        f"Rate limited by the upstream API (retry in ~{seconds}s, "
+        f"wait_until={target.isoformat()}). Call `{resumable_with}` "
+        f"with `wait=true` to have the server sleep through the window."
+    )
+
+
+def format_unresolved_section(unresolved: list[CitationBase]) -> list[str]:
+    """Render the Unresolved section, deduped by (label, matched text).
+
+    Eyecite emits every textual occurrence of short forms (``id.``,
+    ``supra``, repeated short cites), so the raw list is noisy. Collapse
+    identical rows into one with a reference count, matching how the
+    resolved-cases section presents repeats.
+    """
+    counts: dict[tuple[str, str], int] = {}
+    order: list[tuple[str, str]] = []
+    for c in unresolved:
+        key = (citation_type_label(c), c.matched_text() or "")
+        if key not in counts:
+            order.append(key)
+        counts[key] = counts.get(key, 0) + 1
+
+    lines = ["\nUnresolved:"]
+    for i, key in enumerate(order, 1):
+        label, text = key
+        n = counts[key]
+        suffix = f" — {n} reference(s)" if n > 1 else ""
+        lines.append(f'  {i}. [{label}] "{text}"{suffix}')
+    return lines
+
+
 def format_resolved_citations(
     cites: list[CitationBase],
     resolutions: Any,
@@ -251,10 +304,7 @@ def format_resolved_citations(
                     parts.append(f'       [{label}] "{c.matched_text()}"')
 
     if unresolved:
-        parts.append("\nUnresolved:")
-        for i, c in enumerate(unresolved, 1):
-            label = citation_type_label(c)
-            parts.append(f'  {i}. [{label}] "{c.matched_text()}"')
+        parts.extend(format_unresolved_section(unresolved))
 
     return "\n".join(parts)
 
@@ -645,10 +695,7 @@ def format_analysis(
 
     # Unresolved
     if unresolved:
-        parts.append("\nUnresolved:")
-        for i, c in enumerate(unresolved, 1):
-            label = citation_type_label(c)
-            parts.append(f'  {i}. [{label}] "{c.matched_text()}"')
+        parts.extend(format_unresolved_section(unresolved))
 
     return "\n".join(parts)
 

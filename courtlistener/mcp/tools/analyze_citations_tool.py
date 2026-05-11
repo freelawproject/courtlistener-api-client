@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+from typing import Any
+
 from eyecite import get_citations, resolve_citations
 from eyecite.models import FullCaseCitation
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
     canonical_key,
     citation_type_label,
     format_analysis,
+    format_rate_limit_note,
     input_case_name,
     process_api_results,
 )
@@ -163,11 +167,18 @@ class AnalyzeCitationsTool(MCPTool):
 
             pending = list(sendable)
 
+            rate_limit_detail: Any = None
             if sendable:
                 batch = pending[:MAX_CITATIONS_PER_REQUEST]
                 compact_text = build_compact_string(batch)
-                results = client.citation_lookup.lookup_text(compact_text)
-                process_api_results(results, batch, verified, pending)
+                try:
+                    results = client.citation_lookup.lookup_text(compact_text)
+                except CourtListenerAPIError as e:
+                    if e.status_code != 429:
+                        raise
+                    rate_limit_detail = e.detail
+                else:
+                    process_api_results(results, batch, verified, pending)
 
             # Step 4: Store in user-scoped session store
             analysis_id = make_id()
@@ -194,4 +205,9 @@ class AnalyzeCitationsTool(MCPTool):
                 pending,
                 input_case_names,
             )
+            if rate_limit_detail is not None:
+                output += "\n\n" + format_rate_limit_note(
+                    rate_limit_detail,
+                    resumable_with="resume_citation_analysis",
+                )
             return output
