@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Any
 
-from courtlistener.citation_lookup import parse_wait_until
-
 from eyecite.models import (
     CitationBase,
     FullCaseCitation,
@@ -23,6 +21,8 @@ from eyecite.models import (
     Resource as CitationResource,
 )
 from eyecite.utils import DISALLOWED_NAMES
+
+from courtlistener.citation_lookup import parse_wait_until
 
 # Delimiter used between citations in the compact string sent to the
 # citation-lookup API.  Semicolon-space is a natural Bluebook list
@@ -193,7 +193,9 @@ def format_rate_limit_note(detail: Any, *, resumable_with: str) -> str:
     )
     if target is None:
         return base
-    seconds = max(0, int((target - datetime.now(timezone.utc)).total_seconds()))
+    seconds = max(
+        0, int((target - datetime.now(timezone.utc)).total_seconds())
+    )
     return (
         f"Rate limited by the upstream API (retry in ~{seconds}s, "
         f"wait_until={target.isoformat()}). Call `{resumable_with}` "

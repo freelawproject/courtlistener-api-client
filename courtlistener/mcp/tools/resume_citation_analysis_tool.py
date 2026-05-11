@@ -5,9 +5,11 @@ from __future__ import annotations
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
     build_compact_string,
+    format_rate_limit_note,
     format_resume,
     process_api_results,
 )
@@ -44,12 +46,25 @@ class ResumeCitationAnalysisTool(MCPTool):
                         "analyze_citations call."
                     ),
                 },
+                "wait": {
+                    "type": "boolean",
+                    "description": (
+                        "If true, the server sleeps through the upstream "
+                        "rate-limit window (capped at ~90s) and retries "
+                        "automatically. Use this after a previous call "
+                        "reported a short wait_until. Default false: the "
+                        "tool returns immediately on rate limit so you can "
+                        "tell the user before waiting."
+                    ),
+                    "default": False,
+                },
             },
             "required": ["job_id"],
         }
 
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         job_id = arguments["job_id"]
+        wait = bool(arguments.get("wait", False))
         with self.get_client() as client:
             job = await get_session_citation_analysis(job_id, client)
             if job is None:
@@ -64,7 +79,21 @@ class ResumeCitationAnalysisTool(MCPTool):
             # Verify next batch
             batch = pending[:MAX_CITATIONS_PER_REQUEST]
             compact_text = build_compact_string(batch)
-            results = client.citation_lookup.lookup_text(compact_text)
+            try:
+                results = client.citation_lookup.lookup_text(
+                    compact_text, retry_on_rate_limit=wait
+                )
+            except CourtListenerAPIError as e:
+                if e.status_code != 429:
+                    raise
+                return (
+                    format_resume(job_id, job, set())
+                    + "\n\n"
+                    + format_rate_limit_note(
+                        e.detail,
+                        resumable_with="resume_citation_analysis",
+                    )
+                )
 
             previously_verified = set(job["verified"].keys())
             process_api_results(
