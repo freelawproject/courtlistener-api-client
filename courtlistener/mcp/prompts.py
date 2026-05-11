@@ -7,7 +7,7 @@ The `search` tool covers four primary collections:
 - RECAP (federal court cases/dockets, filings, parties, and attorneys from PACER)
 - Opinions (case law / court decisions)
 - Judges (their financial disclosures are not searchable, but are available via the regular API)
-- Oral arguments (audio recordings of appellate arguments)
+- Oral arguments (audio recordings and transcripts of appellate arguments)
 
 For richer detail on individual objects (opinions, dockets, parties, clusters,
 courts, etc.) use `get_endpoint_schema` to discover the available REST
