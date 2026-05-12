@@ -12,7 +12,7 @@ Changes:
 - Add error message for rate limit exceeded errors.
 
 Fixes:
--
+- Catch falsy `SENTRY_DSN` var.
 
 
 ### 1.0.0 - 2026-05-11
