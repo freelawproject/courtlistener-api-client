@@ -67,8 +67,6 @@ class ToolHandlerMiddleware(Middleware):
             raise ToolError(
                 f"Upstream CourtListener request failed: {exc}"
             ) from exc
-        except Exception as exc:
-            raise ToolError(f"An unexpected error occurred: {exc}") from exc
 
         if isinstance(result, dict):
             result = json.dumps(result, default=json_default, indent=2)
