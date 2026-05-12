@@ -43,7 +43,7 @@ dependencies = [
 [project.optional-dependencies]
 mcp = [
     "eyecite>=2.6.0",
-    "fastmcp>=3.2.4",
+    "fastmcp==3.2.4",
     "gunicorn>=25.3.0",
     "redis>=5.0.0",
     "sentry-sdk>=2.0.0",

@@ -17,6 +17,7 @@ from starlette.responses import (
     HTMLResponse,
     JSONResponse,
 )
+from starlette.routing import Route
 
 from courtlistener.mcp.auth import UserInfoTokenVerifier
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
@@ -161,6 +162,26 @@ def build_auth() -> AuthProvider | None:
     )
 
 
+async def protected_resource_metadata(request):
+    # Hand-rolled override of FastMCP/MCP SDK's auto-generated
+    # /.well-known/oauth-protected-resource. The SDK types
+    # `authorization_servers` as `list[AnyHttpUrl]`, and Pydantic normalizes
+    # naked-host URLs by appending `/`, producing
+    # `https://www.courtlistener.com/`. DOT's authorization-server metadata
+    # advertises `issuer` as `https://www.courtlistener.com` (no slash). RFC
+    # 8414 §3 requires byte-identical match, and strict clients (e.g.
+    # Anthropic's MCP directory connector) abort the OAuth flow on mismatch.
+    return JSONResponse(
+        {
+            "resource": f"{MCP_BASE_URL.rstrip('/')}/",
+            "authorization_servers": [OAUTH_ISSUER.rstrip("/")],
+            "scopes_supported": ["openid", "api"],
+            "bearer_methods_supported": ["header"],
+        },
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 def create_http_app():
     if REDIS_URL is None:
         raise ValueError("REDIS_URL is required for HTTP mode")
@@ -183,7 +204,20 @@ def create_http_app():
             expose_headers=["mcp-session-id"],
         )
     ]
-    return mcp.http_app(path="/", stateless_http=True, middleware=middleware)
+    app = mcp.http_app(path="/", stateless_http=True, middleware=middleware)
+    # FastMCP appends `@custom_route` handlers *after* the auth provider's
+    # routes, so we can't intercept the well-known path via `custom_route`.
+    # Prepend directly to the Starlette router (first-match-wins) so our
+    # corrected metadata is served instead of the SDK's default.
+    app.router.routes.insert(
+        0,
+        Route(
+            "/.well-known/oauth-protected-resource",
+            endpoint=protected_resource_metadata,
+            methods=["GET", "OPTIONS"],
+        ),
+    )
+    return app
 
 
 def main():
