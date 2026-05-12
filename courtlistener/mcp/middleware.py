@@ -56,10 +56,19 @@ class ToolHandlerMiddleware(Middleware):
                     "CourtListener rejected the request as unauthorized. "
                     "Your session may have expired; retry to re-authenticate."
                 ) from exc
+            elif exc.status_code == 429:
+                raise ToolError(
+                    f"Rate limit exceeded: {exc}. For higher rate limits, "
+                    "you can upgrade your membership at https://donate.free.law/forms/membership"
+                ) from exc
+            else:
+                raise ToolError(f"CourtListener API error: {exc}") from exc
         except (httpx.TimeoutException, httpx.HTTPError) as exc:
             raise ToolError(
                 f"Upstream CourtListener request failed: {exc}"
             ) from exc
+        except Exception as exc:
+            raise ToolError(f"An unexpected error occurred: {exc}") from exc
 
         if isinstance(result, dict):
             result = json.dumps(result, default=json_default, indent=2)

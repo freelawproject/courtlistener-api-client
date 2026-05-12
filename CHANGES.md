@@ -9,6 +9,7 @@ Features:
 
 Changes:
 - Add fallback handling for HTTP errors in MCP tool handler middleware.
+- Add error message for rate limit exceeded errors.
 
 Fixes:
 -
