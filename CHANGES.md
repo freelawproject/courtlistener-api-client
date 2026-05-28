@@ -10,6 +10,7 @@ Features:
 Changes:
 - Add fallback handling for HTTP errors in MCP tool handler middleware.
 - Add error message for rate limit exceeded errors.
+- Add `SENTRY_TRACES_SAMPLE_RATE` env var to control the sample rate for Sentry traces.
 
 Fixes:
 - Catch falsy `SENTRY_DSN` variable.
