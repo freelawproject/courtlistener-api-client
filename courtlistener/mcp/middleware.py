@@ -68,7 +68,7 @@ class ToolHandlerMiddleware(Middleware):
                 f"Upstream CourtListener request failed: {exc}"
             ) from exc
 
-        if isinstance(result, dict):
+        if isinstance(result, (dict, list)):
             result = json.dumps(result, default=json_default, indent=2)
         if isinstance(result, str):
             return ToolResult(

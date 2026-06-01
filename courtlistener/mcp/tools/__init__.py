@@ -19,9 +19,11 @@ from courtlistener.mcp.tools.get_endpoint_schema_tool import (
 )
 from courtlistener.mcp.tools.get_more_results_tool import GetMoreResultsTool
 from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
 from courtlistener.mcp.tools.resume_citation_analysis_tool import (
     ResumeCitationAnalysisTool,
 )
+from courtlistener.mcp.tools.search_document_tool import SearchDocumentTool
 from courtlistener.mcp.tools.search_tool import SearchTool
 from courtlistener.mcp.tools.subscribe_to_docket_alert_tool import (
     SubscribeToDocketAlertTool,
@@ -38,6 +40,8 @@ mcp_tool_registry: list[type[MCPTool]] = [
     GetChoicesTool,
     GetCountsTool,
     GetMoreResultsTool,
+    ReadDocumentTool,
+    SearchDocumentTool,
     ExtractCitationsTool,
     AnalyzeCitationsTool,
     ResumeCitationAnalysisTool,
