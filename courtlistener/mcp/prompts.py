@@ -21,13 +21,23 @@ the response payload to the fields you name. CourtListener responses can be
 very large; using `fields` aggressively reduces token usage and latency.
 Default to requesting only the fields you actually need.
 
-# Opinion text fields
+# Reading document text
 
-Opinion records carry the full opinion text in several fields, which can be
-enormous. Exclude these unless you need the document text. When you do need
-the text, prefer the `html_with_citations` field — it consolidates the best
-available source (often replacing raw `plain_text`, `html`, `html_lawbox`,
-etc.) and includes inline citation markup.
+To read the text of an opinion or RECAP document, use the dedicated
+`read_document` and `search_document` tools rather than fetching raw text
+fields from the endpoints directly. These tools cache documents across users,
+support paginated reading by character chunk, and let you grep for snippets
+without loading the whole document. For opinions, they use the
+`html_with_citations` field (the most reliable text source, with inline
+citation markup); for RECAP documents, they use `plain_text`.
+
+When fetching opinion or RECAP document records via `call_endpoint` or
+`get_endpoint_item`, exclude text fields (`html_with_citations`, `plain_text`,
+`html`, `html_lawbox`, etc.) from the `fields` argument — they can be
+enormous and are better accessed through `read_document`.
+
+Avoid trying to fetch PDFs directly, as the courtlistener storages urls are not
+fetchable for AI agents.
 
 # Linking to dockets and opinions
 
