@@ -191,7 +191,7 @@ def get_redis() -> redis.Redis:
             raise RuntimeError(
                 "REDIS_URL is not set; cannot access session store."
             )
-        redis_client = redis.from_url(url, decode_responses=True)
+        redis_client = redis.from_url(url, decode_responses=True, protocol=3)
     return redis_client
 
 
@@ -327,6 +327,59 @@ async def store_session_query(
     query_id: str, data: dict, client: CourtListener
 ) -> None:
     await set_user_scoped(client, f"query:{query_id}", data)
+
+
+# Document cache helpers.
+#
+# Keyed by doc_type and doc_id — not user-scoped — so the same document
+# is only fetched from the API once regardless of which user requests it.
+DOCUMENT_TTL_SECONDS = 86400  # 24 hours
+
+_DOC_TYPE_CONFIG: dict[str, tuple[str, str]] = {
+    "opinion": ("opinions", "html_with_citations"),
+    "recap_document": ("recap_documents", "plain_text"),
+}
+
+
+def doc_cache_key(doc_type: str, doc_id: int) -> str:
+    return f"mcp:doc:{doc_type}:{doc_id}"
+
+
+async def get_cached_document(doc_type: str, doc_id: int) -> str | None:
+    return await get_redis().get(doc_cache_key(doc_type, doc_id))
+
+
+async def store_cached_document(doc_type: str, doc_id: int, text: str) -> None:
+    await get_redis().set(
+        doc_cache_key(doc_type, doc_id),
+        text,
+        ex=DOCUMENT_TTL_SECONDS,
+    )
+
+
+async def fetch_document_text(
+    doc_type: str, doc_id: int, client: CourtListener
+) -> str | None:
+    """Return full document text, fetching from the API on cache miss.
+
+    Shared between read_document and search_document tools so the same
+    document is only pulled from the API once per 24-hour window.
+    """
+    if doc_type not in _DOC_TYPE_CONFIG:
+        raise ValueError(f"Unknown doc_type: {doc_type!r}")
+
+    cached = await get_cached_document(doc_type, doc_id)
+    if cached is not None:
+        return cached
+
+    resource_name, field = _DOC_TYPE_CONFIG[doc_type]
+    item = getattr(client, resource_name).get(doc_id, fields=[field])
+    text = item.get(field) or ""
+
+    if text:
+        await store_cached_document(doc_type, doc_id, text)
+
+    return text or None
 
 
 async def get_session_citation_analysis(
