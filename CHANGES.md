@@ -15,6 +15,7 @@ Changes:
 
 Fixes:
 - Catch falsy `SENTRY_DSN` variable.
+- Fix `endpoint_get_schema` tool to inline refs in the schema.
 
 
 ### 1.0.0 - 2026-05-11
