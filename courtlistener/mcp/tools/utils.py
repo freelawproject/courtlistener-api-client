@@ -133,6 +133,44 @@ def prepare_choices_str(
     return choices_str
 
 
+def inline_refs(node, defs, seen=None):
+    """Recursively replace JSON-Schema ``$ref`` pointers with their definitions."""
+    if isinstance(node, list):
+        return [inline_refs(item, defs, seen) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    ref = node.get("$ref")
+    if ref is not None:
+        name = ref.rsplit("/", 1)[-1]
+        nodes_seen = seen or frozenset()
+        if name in nodes_seen:
+            return {"type": "object"}
+        target = defs.get(name, {})
+        resolved = inline_refs(target, defs, nodes_seen | {name})
+        siblings = {
+            key: inline_refs(value, defs, seen)
+            for key, value in node.items()
+            if key != "$ref"
+        }
+        return {**resolved, **siblings}
+
+    return {key: inline_refs(value, defs, seen) for key, value in node.items()}
+
+
+def strip_schema_keys(node, keys):
+    """Recursively drop ``keys`` from every dict in a schema tree."""
+    if isinstance(node, list):
+        return [strip_schema_keys(item, keys) for item in node]
+    if isinstance(node, dict):
+        return {
+            key: strip_schema_keys(value, keys)
+            for key, value in node.items()
+            if key not in keys
+        }
+    return node
+
+
 def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
     choices_str = prepare_choices_str(
         filter.get("choices"),
@@ -142,10 +180,11 @@ def prepare_filter(filter, endpoint_id: str = "", field_name: str = ""):
     filter["description"] = (
         filter.get("description", "") + "\n\n" + choices_str
     ).strip()
-    for key in ["choices", "title", "related_class_name", "default"]:
-        if key in filter:
-            del filter[key]
-    return filter
+    if "choices" in filter:
+        del filter["choices"]
+    return strip_schema_keys(
+        filter, {"title", "related_class_name", "default"}
+    )
 
 
 def prepare_count(count: int | str | None, query_id: str) -> int | str | None:
@@ -335,7 +374,7 @@ async def store_session_query(
 # is only fetched from the API once regardless of which user requests it.
 DOCUMENT_TTL_SECONDS = 86400  # 24 hours
 
-_DOC_TYPE_CONFIG: dict[str, tuple[str, str]] = {
+DOC_TYPE_CONFIG: dict[str, tuple[str, str]] = {
     "opinion": ("opinions", "html_with_citations"),
     "recap_document": ("recap_documents", "plain_text"),
 }
@@ -365,14 +404,14 @@ async def fetch_document_text(
     Shared between read_document and search_document tools so the same
     document is only pulled from the API once per 24-hour window.
     """
-    if doc_type not in _DOC_TYPE_CONFIG:
+    if doc_type not in DOC_TYPE_CONFIG:
         raise ValueError(f"Unknown doc_type: {doc_type!r}")
 
     cached = await get_cached_document(doc_type, doc_id)
     if cached is not None:
         return cached
 
-    resource_name, field = _DOC_TYPE_CONFIG[doc_type]
+    resource_name, field = DOC_TYPE_CONFIG[doc_type]
     item = getattr(client, resource_name).get(doc_id, fields=[field])
     text = item.get(field) or ""
 

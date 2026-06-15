@@ -2,7 +2,7 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.mcp.tools.utils import prepare_filter
+from courtlistener.mcp.tools.utils import inline_refs, prepare_filter
 from courtlistener.models import ENDPOINTS
 
 
@@ -46,10 +46,13 @@ class GetEndpointSchemaTool(MCPTool):
         endpoint_id = arguments.get("endpoint_id")
         for endpoint in ENDPOINTS.values():
             if endpoint.endpoint_id == endpoint_id:
-                properties = endpoint.model_json_schema()["properties"]
+                full_schema = endpoint.model_json_schema()
+                defs = full_schema.get("$defs", {})
+                properties = full_schema["properties"]
                 updated_properties = {}
                 for filter_name, filter in properties.items():
                     if "const" not in filter:
+                        filter = inline_refs(filter, defs)
                         updated_properties[filter_name] = prepare_filter(
                             filter,
                             endpoint_id=endpoint_id,
