@@ -145,7 +145,7 @@ class SearchDocumentTool(MCPTool):
             "snippets": snippets,
         }
 
-    async def __call__(self, arguments: dict, ctx: Context) -> dict | list:
+    async def __call__(self, arguments: dict, ctx: Context) -> dict:
         opinion_id = arguments.get("opinion_id")
         recap_document_id = arguments.get("recap_document_id")
 
@@ -175,4 +175,6 @@ class SearchDocumentTool(MCPTool):
                 for doc_id in doc_ids
             ]
 
-        return results if multi else results[0]
+        if multi:
+            return {"results": results}
+        return results[0]

@@ -12,6 +12,7 @@ Changes:
 - Add fallback handling for HTTP errors in MCP tool handler middleware.
 - Add error message for rate limit exceeded errors.
 - Add `SENTRY_TRACES_SAMPLE_RATE` env var to control the sample rate for Sentry traces.
+- Make `search_document` tool always return a dict, even for multi-document searches.
 
 Fixes:
 - Catch falsy `SENTRY_DSN` variable.
