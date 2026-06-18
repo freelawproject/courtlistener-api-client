@@ -28,6 +28,7 @@ class ExtractCitationsTool(MCPTool):
     annotations = ToolAnnotations(
         title="Extract Citations",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=False,
     )
 

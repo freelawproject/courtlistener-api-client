@@ -13,6 +13,7 @@ Changes:
 - Add error message for rate limit exceeded errors.
 - Add `SENTRY_TRACES_SAMPLE_RATE` env var to control the sample rate for Sentry traces.
 - Make `search_document` tool always return a dict, even for multi-document searches.
+- Add `destructiveHint` to all MCP tool annotations.
 
 Fixes:
 - Catch falsy `SENTRY_DSN` variable.

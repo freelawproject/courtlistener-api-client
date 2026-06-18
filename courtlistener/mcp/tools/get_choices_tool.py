@@ -15,6 +15,7 @@ class GetChoicesTool(MCPTool):
     annotations = ToolAnnotations(
         title="Get Field Choices",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=False,
     )
 
