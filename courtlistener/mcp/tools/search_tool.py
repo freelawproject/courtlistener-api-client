@@ -31,6 +31,7 @@ class SearchTool(MCPTool):
     annotations = ToolAnnotations(
         title="Search",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

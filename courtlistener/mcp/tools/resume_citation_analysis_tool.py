@@ -32,6 +32,7 @@ class ResumeCitationAnalysisTool(MCPTool):
     annotations = ToolAnnotations(
         title="Resume Citation Analysis",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

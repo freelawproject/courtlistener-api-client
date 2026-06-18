@@ -40,6 +40,7 @@ class ReadDocumentTool(MCPTool):
     annotations = ToolAnnotations(
         title="Read Document",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

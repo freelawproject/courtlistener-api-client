@@ -17,6 +17,7 @@ class GetCountsTool(MCPTool):
     annotations = ToolAnnotations(
         title="Get Result Count",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

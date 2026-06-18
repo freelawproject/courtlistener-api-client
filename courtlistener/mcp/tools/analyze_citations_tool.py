@@ -59,6 +59,7 @@ class AnalyzeCitationsTool(MCPTool):
     annotations = ToolAnnotations(
         title="Analyze Citations",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

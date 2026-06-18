@@ -12,6 +12,7 @@ class GetEndpointItemTool(MCPTool):
     annotations = ToolAnnotations(
         title="Get Item by ID",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 

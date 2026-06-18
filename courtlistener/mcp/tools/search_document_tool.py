@@ -33,6 +33,7 @@ class SearchDocumentTool(MCPTool):
     annotations = ToolAnnotations(
         title="Search Document",
         readOnlyHint=True,
+        destructiveHint=False,
         openWorldHint=True,
     )
 
