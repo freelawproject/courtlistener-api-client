@@ -16,6 +16,7 @@ from starlette.responses import (
     FileResponse,
     HTMLResponse,
     JSONResponse,
+    PlainTextResponse,
 )
 from starlette.routing import Route
 
@@ -31,6 +32,8 @@ from courtlistener.mcp.tools.utils import (
 )
 
 ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
+
+OPENAI_APPS_CHALLENGE_TOKEN = "ushyOxMubkOSSd-cpKisbLBC-lV9BC9BnUfazOo8OWo"
 
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -130,6 +133,11 @@ def create_mcp_server(**kwargs):
     @mcp.custom_route("/", methods=["GET"])
     async def index(request):
         return HTMLResponse(INDEX_HTML)
+
+    # OpenAI Apps directory domain-verification challenge
+    @mcp.custom_route("/.well-known/openai-apps-challenge", methods=["GET"])
+    async def openai_apps_challenge(request):
+        return PlainTextResponse(OPENAI_APPS_CHALLENGE_TOKEN)
 
     # Health check route
     @mcp.custom_route("/health", methods=["GET"])

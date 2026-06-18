@@ -381,3 +381,38 @@ class TestHealthEndpoint:
         body = response.json()
         assert body["status"] == "healthy"
         assert body["services"] == {"mcp": True}
+
+
+class TestOpenAIAppsChallenge:
+    """The OpenAI Apps domain-verification challenge must be served
+    publicly (unauthenticated) so OpenAI can fetch it even when OAuth is
+    enabled on the MCP routes."""
+
+    def test_challenge_is_unauthenticated_under_oauth(self):
+        """GET /.well-known/openai-apps-challenge returns the token as
+        plain text with no Authorization header, even when the HTTP app
+        has an OAuth ``AuthProvider`` attached."""
+        from starlette.testclient import TestClient
+
+        with patch.dict(
+            "os.environ",
+            {
+                "MCP_REQUIRE_OAUTH": "true",
+                "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
+                "MCP_BASE_URL": "https://mcp.example.test",
+            },
+        ):
+            import importlib
+
+            import courtlistener.mcp.server as server_mod
+
+            importlib.reload(server_mod)
+            mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
+            token = server_mod.OPENAI_APPS_CHALLENGE_TOKEN
+
+        app = mcp.http_app(path="/")
+        with TestClient(app) as http_client:
+            response = http_client.get("/.well-known/openai-apps-challenge")
+        assert response.status_code == 200
+        assert response.text == token
+        assert response.headers["content-type"].startswith("text/plain")
