@@ -14,7 +14,7 @@ Changes:
 - Add `SENTRY_TRACES_SAMPLE_RATE` env var to control the sample rate for Sentry traces.
 - Make `search_document` tool always return a dict, even for multi-document searches.
 - Add `destructiveHint` to all MCP tool annotations.
-- Add OpenAI Apps domain-verification challenge route to MCP server.
+- Add OpenAI Apps domain-verification challenge token to MCP server.
 
 Fixes:
 - Catch falsy `SENTRY_DSN` variable.
