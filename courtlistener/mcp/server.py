@@ -33,7 +33,7 @@ from courtlistener.mcp.tools.utils import (
 
 ICON_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
 
-OPENAI_APPS_CHALLENGE_TOKEN = "ushyOxMubkOSSd-cpKisbLBC-lV9BC9BnUfazOo8OWo"
+OPENAI_APPS_CHALLENGE_TOKEN = "oR-QatCh96AHxvH1yYTS7_oP4ByrYVSuoCmAifKJyVg"
 
 INDEX_HTML = """<!DOCTYPE html>
 <html lang="en">
