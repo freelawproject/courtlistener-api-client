@@ -17,6 +17,9 @@ READ_ONLY_TOOLS = {
     "extract_citations",
     "analyze_citations",
     "resume_citation_analysis",
+    "search_wiki",
+    "read_wiki_page",
+    "list_wiki_pages",
 }
 
 WRITE_TOOLS = {
@@ -57,6 +60,9 @@ EXPECTED_TITLES = {
     "delete_search_alert": "Delete Search Alert",
     "subscribe_to_docket_alert": "Subscribe to Docket Alert",
     "unsubscribe_from_docket_alert": "Unsubscribe from Docket Alert",
+    "search_wiki": "Search the Wiki",
+    "read_wiki_page": "Read Wiki Page",
+    "list_wiki_pages": "List Wiki Pages",
 }
 
 

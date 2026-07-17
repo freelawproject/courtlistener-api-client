@@ -71,9 +71,17 @@ class UserInfoTokenVerifier(TokenVerifier):
     """
 
     def __init__(self, *, base_url: str) -> None:
+        # ``wiki:read`` is consumed by the Free Law wiki, not by CL:
+        # the wiki tools forward the bearer token to the wiki's API,
+        # which introspects it against CL and requires that scope
+        # before serving anything beyond public pages. Listing it here
+        # puts it in the authorize request, so users consent to wiki
+        # access explicitly. Deploy ordering: CL must define the scope
+        # (cl/settings/third_party/oauth2_provider.py) before this
+        # ships, or authorize requests will be rejected as invalid.
         super().__init__(
             base_url=base_url,
-            required_scopes=["openid", "api"],
+            required_scopes=["openid", "api", "wiki:read"],
         )
 
     async def verify_token(self, token: str) -> AccessToken | None:

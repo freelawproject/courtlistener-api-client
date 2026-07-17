@@ -60,5 +60,13 @@ USERINFO_TIMEOUT_SECONDS = 10
 DEFAULT_NUM_RESULTS = 20
 MAX_NUM_RESULTS = 100
 
+# Free Law wiki data API (freelawproject/wiki, wiki/api/). The wiki
+# accepts the same CL-issued OAuth bearer token this server already
+# holds for the request; without one it serves public pages only.
+WIKI_API_BASE_URL = os.getenv("WIKI_API_BASE_URL", "https://wiki.free.law")
+
+# Timeout for wiki API calls.
+WIKI_API_TIMEOUT_SECONDS = int(os.getenv("WIKI_API_TIMEOUT", "15"))
+
 # Domain-verification token for the OpenAI Apps directory listing.
 OPENAI_APPS_CHALLENGE_TOKEN = "oR-QatCh96AHxvH1yYTS7_oP4ByrYVSuoCmAifKJyVg"

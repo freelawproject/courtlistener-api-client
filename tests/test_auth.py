@@ -201,12 +201,13 @@ class TestServerAuthWiring:
         advertised in protected-resource metadata and MCP clients
         include them in the authorize request. ``openid`` is what
         makes userinfo accept the token at all; ``api`` is what CL's
-        REST API expects downstream.
+        REST API expects downstream; ``wiki:read`` is what the Free
+        Law wiki's API requires when the wiki tools forward the token.
         """
         from courtlistener.mcp.auth import UserInfoTokenVerifier
 
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
-        assert set(verifier.required_scopes) == {"openid", "api"}
+        assert set(verifier.required_scopes) == {"openid", "api", "wiki:read"}
 
     def test_userinfo_verifier_accepts_when_userinfo_succeeds(self):
         """Successful userinfo lookup → AccessToken carrying the
@@ -226,7 +227,7 @@ class TestServerAuthWiring:
         assert token is not None
         assert token.token == "anything-goes"
         assert token.claims.get("user_hash") == "fake-user-hash"
-        assert set(token.scopes) == {"openid", "api"}
+        assert set(token.scopes) == {"openid", "api", "wiki:read"}
 
     def test_userinfo_verifier_rejects_when_userinfo_fails(self):
         """Userinfo returning ``None`` (401/non-200/network error) →
