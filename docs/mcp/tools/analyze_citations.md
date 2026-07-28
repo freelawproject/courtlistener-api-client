@@ -5,8 +5,8 @@
 **Analyze Citations**
 
 - **Source:** `courtlistener/mcp/tools/analyze_citations_tool.py`
-- **Estimated definition size:** ~420 tokens (description ~244, input schema ~84; cl100k_base)
-- **Parameters:** 2 (0 required)
+- **Estimated definition size:** ~445 tokens (description ~213, input schema ~142; cl100k_base)
+- **Parameters:** 3 (0 required)
 - **Raw input schema:** [`analyze_citations.inputs.json`](./analyze_citations.inputs.json)
 
 ## Description
@@ -17,10 +17,6 @@ Extracts all citations locally using eyecite, then verifies each
 unique case citation against CourtListener's database via the
 citation-lookup API. Returns case name, date, citation count,
 and verification status for each citation.
-
-Uses a compact string strategy: only unique citation strings are
-sent to the API (not the full document text), minimizing payload
-size and API usage.
 
 For documents with more than 250 unique case citations, the first
 batch is verified immediately and a job_id is returned. Use
@@ -61,3 +57,9 @@ Legal text to analyze. Citations will be extracted locally and verified against 
 integer · optional
 
 Alternatively, if the opinion is available in CourtListener, you can provide the opinion ID
+
+### `cluster_id`
+
+integer · optional
+
+ID of an opinion cluster (the `cluster_id` in search results).  Analyzes the case's main opinion; ids for any concurrences or dissents are named in the output so they can be analyzed separately.

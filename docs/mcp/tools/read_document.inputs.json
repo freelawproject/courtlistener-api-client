@@ -9,6 +9,10 @@
       "type": "integer",
       "description": "ID of the RECAP document to read."
     },
+    "cluster_id": {
+      "type": "integer",
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Reads the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`."
+    },
     "chunk_index": {
       "anyOf": [
         {

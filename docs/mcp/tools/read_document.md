@@ -5,8 +5,8 @@
 **Read Document**
 
 - **Source:** `courtlistener/mcp/tools/read_document_tool.py`
-- **Estimated definition size:** ~531 tokens (description ~255, input schema ~195; cl100k_base)
-- **Parameters:** 4 (0 required)
+- **Estimated definition size:** ~558 tokens (description ~227, input schema ~252; cl100k_base)
+- **Parameters:** 5 (0 required)
 - **Raw input schema:** [`read_document.inputs.json`](./read_document.inputs.json)
 
 ## Description
@@ -17,9 +17,6 @@ Fetches the document text and either returns it in full or as one or
 more paginated chunks.  For opinions, uses the ``html_with_citations``
 field (the most complete text representation).  For RECAP documents,
 uses ``plain_text``.
-
-Document text is cached for 24 hours so repeated reads—whether by
-the same user or different users—only hit the API once.
 
 **Usage patterns**
 
@@ -57,6 +54,12 @@ ID of the opinion to read.
 integer · optional
 
 ID of the RECAP document to read.
+
+### `cluster_id`
+
+integer · optional
+
+ID of an opinion cluster (the `cluster_id` in search results).  Reads the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`.
 
 ### `chunk_index`
 
