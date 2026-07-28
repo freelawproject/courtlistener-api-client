@@ -9,6 +9,7 @@ from courtlistener.mcp.settings import (
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
+    add_opinion_ids,
     collect_results,
     filter_results_by_fields,
     prepare_count,
@@ -107,6 +108,7 @@ class SearchTool(MCPTool):
 
             response = client.search.list(**arguments)
             results = collect_results(response, num_results)
+            add_opinion_ids(results)
 
             query_id = await prepare_query_id(response, client, fields=fields)
             count = prepare_count(response.current_page.count, query_id)

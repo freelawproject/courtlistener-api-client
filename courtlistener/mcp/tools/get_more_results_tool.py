@@ -8,6 +8,7 @@ from courtlistener.mcp.settings import (
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
+    add_opinion_ids,
     collect_results,
     filter_results_by_fields,
     has_more_results,
@@ -75,6 +76,7 @@ class GetMoreResultsTool(MCPTool):
                 return f"No more results available for query {query_id!r}."
 
             results = collect_results(response, num_results)
+            add_opinion_ids(results)
 
             updated_data = {"response": response.dump()}
             fields = query.get("fields")
