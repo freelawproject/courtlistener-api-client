@@ -421,7 +421,7 @@ class TestAnalyzeCitationsClusterId:
             output = run(tool({"cluster_id": 5}, None))
         client.opinions.get.assert_called_once_with(10)
         assert "the main opinion of 2 in cluster 5" in output
-        assert "[11]" in output
+        assert "opinion_id: 11" in output
         assert "No citations found." in output
 
     def test_single_opinion_cluster_adds_no_note(self):

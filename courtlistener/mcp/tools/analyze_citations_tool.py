@@ -111,15 +111,20 @@ class AnalyzeCitationsTool(MCPTool):
 
         note = ""
         with self.get_client() as client:
+            siblings = ""
             if cluster_id is not None:
                 resolved = resolve_cluster_opinion_ids(cluster_id, client)
                 opinion_id = resolved[0]
                 if len(resolved) > 1:
+                    siblings = (
+                        "Analyze the others separately, one call per "
+                        "opinion_id: "
+                        f"{', '.join(str(i) for i in resolved[1:])}."
+                    )
                     note = (
                         f"Analyzed opinion {opinion_id}, the main opinion "
                         f"of {len(resolved)} in cluster {cluster_id}. "
-                        "Analyze the others separately with opinion_id: "
-                        f"{resolved[1:]}.\n\n"
+                        f"{siblings}\n\n"
                     )
 
             if opinion_id is not None:
@@ -129,7 +134,7 @@ class AnalyzeCitationsTool(MCPTool):
                     if cluster_id is not None:
                         raise ValueError(
                             f"Text not available for opinion {opinion_id} "
-                            f"of cluster {cluster_id}."
+                            f"of cluster {cluster_id}. {siblings}".strip()
                         )
                     raise ValueError(
                         "Text not available for opinion ID. If this id "
