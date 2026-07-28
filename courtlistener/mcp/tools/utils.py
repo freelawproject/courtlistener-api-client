@@ -69,7 +69,15 @@ def filter_results_by_fields(
     if not fields:
         return results, False
     missing = any(k not in result for result in results for k in fields)
-    filtered = [{k: v for k, v in r.items() if k in fields} for r in results]
+    filtered = [
+        {
+            k: v
+            for k, v in r.items()
+            # Always keep opinion_id to avoid cluster_id confusion
+            if k in fields or k == "opinion_id"
+        }
+        for r in results
+    ]
     return filtered, missing
 
 
