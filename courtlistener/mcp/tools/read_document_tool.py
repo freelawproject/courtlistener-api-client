@@ -4,7 +4,10 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.mcp.tools.utils import fetch_document_text
+from courtlistener.mcp.tools.utils import (
+    fetch_document_text,
+    resolve_cluster_opinion_ids,
+)
 
 DEFAULT_CHUNK_SIZE = 8000
 MAX_CHUNKS_PER_CALL = 10
@@ -17,9 +20,6 @@ class ReadDocumentTool(MCPTool):
     more paginated chunks.  For opinions, uses the ``html_with_citations``
     field (the most complete text representation).  For RECAP documents,
     uses ``plain_text``.
-
-    Document text is cached for 24 hours so repeated reads—whether by
-    the same user or different users—only hit the API once.
 
     **Usage patterns**
 
@@ -56,6 +56,15 @@ class ReadDocumentTool(MCPTool):
                     "type": "integer",
                     "description": "ID of the RECAP document to read.",
                 },
+                "cluster_id": {
+                    "type": "integer",
+                    "description": (
+                        "ID of an opinion cluster (the `cluster_id` in "
+                        "search results).  Reads the case's main "
+                        "opinion; ids for any concurrences or dissents "
+                        "are returned in `sibling_opinion_ids`."
+                    ),
+                },
                 "chunk_index": {
                     "anyOf": [
                         {"type": "integer", "minimum": 0},
@@ -87,38 +96,63 @@ class ReadDocumentTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> dict:
         opinion_id = arguments.get("opinion_id")
         recap_document_id = arguments.get("recap_document_id")
+        cluster_id = arguments.get("cluster_id")
 
-        if (opinion_id is None) == (recap_document_id is None):
+        provided = [
+            value
+            for value in (opinion_id, recap_document_id, cluster_id)
+            if value is not None
+        ]
+        if len(provided) != 1:
             raise ValueError(
-                "Provide exactly one of opinion_id or recap_document_id."
+                "Provide exactly one of opinion_id, recap_document_id, "
+                "or cluster_id."
             )
-
-        if opinion_id is not None:
-            doc_type, doc_id = "opinion", opinion_id
-        else:
-            doc_type, doc_id = "recap_document", recap_document_id
 
         chunk_index = arguments.get("chunk_index")
         chunk_size = arguments.get("chunk_size", DEFAULT_CHUNK_SIZE)
 
+        siblings: list[int] = []
         with self.get_client() as client:
-            text = await fetch_document_text(doc_type, doc_id, client)
+            if cluster_id is not None:
+                resolved = resolve_cluster_opinion_ids(cluster_id, client)
+                doc_type, doc_id = "opinion", resolved[0]
+                siblings = resolved[1:]
+            elif opinion_id is not None:
+                doc_type, doc_id = "opinion", opinion_id
+            else:
+                assert recap_document_id is not None  # for mypy
+                doc_type, doc_id = "recap_document", recap_document_id
+
+            try:
+                text = await fetch_document_text(doc_type, doc_id, client)
+            except Exception as exc:
+                # In cluster mode the resolution already succeeded, so
+                # keep the sibling ids usable instead of losing them to
+                # a bare error on the first opinion.
+                if cluster_id is None:
+                    raise
+                failure: dict = {
+                    "doc_type": doc_type,
+                    "doc_id": doc_id,
+                    "error": str(exc),
+                }
+                if siblings:
+                    failure["sibling_opinion_ids"] = siblings
+                return failure
+
+        result: dict = {"doc_type": doc_type, "doc_id": doc_id}
+        if siblings:
+            result["sibling_opinion_ids"] = siblings
 
         if not text:
-            return {
-                "doc_type": doc_type,
-                "doc_id": doc_id,
-                "error": "No text is available for this document.",
-            }
+            result["error"] = "No text is available for this document."
+            return result
 
         total_chars = len(text)
         total_chunks = math.ceil(total_chars / chunk_size)
 
-        result: dict = {
-            "doc_type": doc_type,
-            "doc_id": doc_id,
-            "total_chars": total_chars,
-        }
+        result["total_chars"] = total_chars
 
         if chunk_index is None:
             result["text"] = text

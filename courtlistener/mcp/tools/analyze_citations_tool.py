@@ -34,10 +34,6 @@ class AnalyzeCitationsTool(MCPTool):
     citation-lookup API. Returns case name, date, citation count,
     and verification status for each citation.
 
-    Uses a compact string strategy: only unique citation strings are
-    sent to the API (not the full document text), minimizing payload
-    size and API usage.
-
     For documents with more than 250 unique case citations, the first
     batch is verified immediately and a job_id is returned. Use
     resume_citation_analysis to continue verifying remaining citations.
