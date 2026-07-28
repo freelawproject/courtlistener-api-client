@@ -223,3 +223,59 @@ async def fetch_document_text(
         await session.store_document(doc_type, doc_id, text)
 
     return text or None
+
+
+ORDERED_OPINION_TYPES = (
+    ("020lead", "lead-opinion"),
+    ("010combined", "combined-opinion"),
+    ("015unamimous", "unanimous-opinion"),  # misspelled in the API
+    ("025plurality", "plurality-opinion"),
+    ("080onthemerits", "on-the-merits"),
+)
+OPINION_TYPE_RANK = {
+    spelling: rank
+    for rank, spellings in enumerate(ORDERED_OPINION_TYPES)
+    for spelling in spellings
+}
+
+
+def opinion_sort_key(opinion: dict) -> tuple[int, int, int]:
+    """Rank an opinion so the court's main opinion sorts first."""
+    ordering_key = opinion.get("ordering_key")
+    opinion_type: str = opinion.get("type") or ""
+    return (
+        ordering_key if isinstance(ordering_key, int) else 99999,
+        OPINION_TYPE_RANK.get(opinion_type, len(ORDERED_OPINION_TYPES)),
+        opinion.get("id") or 0,
+    )
+
+
+def add_opinion_ids(results: list[dict]) -> None:
+    """Copy each opinion search result's main opinion id to top level."""
+    for result in results:
+        opinions = [
+            opinion
+            for opinion in result.get("opinions") or []
+            if isinstance(opinion, dict) and opinion.get("id") is not None
+        ]
+        if opinions:
+            main = min(opinions, key=opinion_sort_key)
+            result.setdefault("opinion_id", main["id"])
+
+
+def resolve_cluster_opinion_ids(
+    cluster_id: int, client: CourtListener
+) -> list[int]:
+    """Return a cluster's opinion ids, main opinion first."""
+    response = client.opinions.list(
+        cluster=cluster_id, fields=["id", "type", "ordering_key"]
+    )
+    opinions = [
+        opinion
+        for opinion in collect_results(response, 20)
+        if opinion.get("id") is not None
+    ]
+    if not opinions:
+        raise ValueError(f"Cluster {cluster_id} has no opinions.")
+    opinions.sort(key=opinion_sort_key)
+    return [opinion["id"] for opinion in opinions]
