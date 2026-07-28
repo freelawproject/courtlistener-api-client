@@ -57,6 +57,11 @@ without loading the whole document. For opinions, they use the
 `html_with_citations` field (the most reliable text source, with inline
 citation markup); for RECAP documents, they use `plain_text`.
 
+Opinion ids and cluster ids are separate id-spaces. A search result's
+`cluster_id` is NOT an opinion id — pass the result's top-level `opinion_id`
+to these tools, or pass `cluster_id` and they will resolve the cluster's
+opinion(s) for you.
+
 When fetching opinion or RECAP document records via `call_endpoint` or
 `get_endpoint_item`, exclude text fields (`html_with_citations`, `plain_text`,
 `html`, `html_lawbox`, etc.) from the fields you request — they can be
@@ -72,7 +77,9 @@ ID (normally a case-name slug). Without it, the link 404s. When you don't
 have a slug, repeat the resource name as the trailing segment:
 
     https://www.courtlistener.com/docket/{docket_id}/docket/
-    https://www.courtlistener.com/opinion/{opinion_id}/opinion/
+    https://www.courtlistener.com/opinion/{cluster_id}/opinion/
+
+Note that opinion URLs take the *cluster* id, not an opinion id.
 
 This is the safest format — it always resolves correctly even though it
 looks redundant.
