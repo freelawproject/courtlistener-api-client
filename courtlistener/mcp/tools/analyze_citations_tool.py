@@ -20,7 +20,10 @@ from courtlistener.mcp.tools.citation_utils import (
     process_api_results,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.mcp.tools.utils import make_id
+from courtlistener.mcp.tools.utils import (
+    make_id,
+    resolve_cluster_opinion_ids,
+)
 
 
 class AnalyzeCitationsTool(MCPTool):
@@ -30,10 +33,6 @@ class AnalyzeCitationsTool(MCPTool):
     unique case citation against CourtListener's database via the
     citation-lookup API. Returns case name, date, citation count,
     and verification status for each citation.
-
-    Uses a compact string strategy: only unique citation strings are
-    sent to the API (not the full document text), minimizing payload
-    size and API usage.
 
     For documents with more than 250 unique case citations, the first
     batch is verified immediately and a job_id is returned. Use
@@ -80,6 +79,16 @@ class AnalyzeCitationsTool(MCPTool):
                         "in CourtListener, you can provide the opinion ID"
                     ),
                 },
+                "cluster_id": {
+                    "type": "integer",
+                    "description": (
+                        "ID of an opinion cluster (the `cluster_id` in "
+                        "search results).  Analyzes the case's main "
+                        "opinion; ids for any concurrences or dissents "
+                        "are named in the output so they can be "
+                        "analyzed separately."
+                    ),
+                },
             },
             "required": [],
             "additionalProperties": False,
@@ -88,23 +97,57 @@ class AnalyzeCitationsTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         text = arguments.get("text")
         opinion_id = arguments.get("opinion_id")
-        if (text is not None) == (opinion_id is not None):
+        cluster_id = arguments.get("cluster_id")
+
+        provided = [
+            value
+            for value in (text, opinion_id, cluster_id)
+            if value is not None
+        ]
+        if len(provided) != 1:
             raise ValueError(
-                "Exactly one of text or opinion ID must be provided."
+                "Provide exactly one of text, opinion_id, or cluster_id."
             )
 
+        note = ""
         with self.get_client() as client:
+            siblings = ""
+            if cluster_id is not None:
+                resolved = resolve_cluster_opinion_ids(cluster_id, client)
+                opinion_id = resolved[0]
+                if len(resolved) > 1:
+                    siblings = (
+                        "Analyze the others separately, one call per "
+                        "opinion_id: "
+                        f"{', '.join(str(i) for i in resolved[1:])}."
+                    )
+                    note = (
+                        f"Analyzed opinion {opinion_id}, the main opinion "
+                        f"of {len(resolved)} in cluster {cluster_id}. "
+                        f"{siblings}\n\n"
+                    )
+
             if opinion_id is not None:
                 opinion = client.opinions.get(opinion_id)
                 text = opinion.get("html_with_citations")
                 if not text:
-                    raise ValueError("Text not available for opinion ID.")
+                    if cluster_id is not None:
+                        raise ValueError(
+                            f"Text not available for opinion {opinion_id} "
+                            f"of cluster {cluster_id}. {siblings}".strip()
+                        )
+                    raise ValueError(
+                        "Text not available for opinion ID. If this id "
+                        "came from a search result it may be a "
+                        "cluster_id, which is a separate id-space; pass "
+                        "it as cluster_id instead."
+                    )
 
             # Step 1: Local extraction and resolution
             assert text is not None  # for mypy
             cites = get_citations(text)
             if not cites:
-                return "No citations found."
+                return note + "No citations found."
 
             resolutions = resolve_citations(cites)
 
@@ -210,4 +253,4 @@ class AnalyzeCitationsTool(MCPTool):
                     rate_limit_detail,
                     resumable_with="resume_citation_analysis",
                 )
-            return output
+            return note + output

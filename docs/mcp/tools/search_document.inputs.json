@@ -33,6 +33,10 @@
       ],
       "description": "ID or list of IDs of RECAP documents to search (up to 10)."
     },
+    "cluster_id": {
+      "type": "integer",
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`."
+    },
     "query": {
       "type": "string",
       "description": "Literal phrase to search for (case-insensitive). Up to 20 matches are returned per document."

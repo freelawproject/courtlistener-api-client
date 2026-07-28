@@ -5,10 +5,10 @@
 The following changes are not yet released, but are code complete:
 
 Features:
--
+- Add support for cluster_id in search_document, read_document, and analyze_citations tools.
 
 Changes:
--
+- Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
 
 Fixes:
 -
