@@ -9,6 +9,7 @@ Features:
 
 Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
+- Add terms and privacy policy to index.html.
 
 Fixes:
 -
