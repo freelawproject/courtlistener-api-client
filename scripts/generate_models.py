@@ -784,6 +784,14 @@ def get_endpoint_data(use_cache: bool = True) -> dict[str, Any]:
                 endpoint_field["related_class_name"] = related_endpoint.get(
                     "class_name"
                 )
+                if related_endpoint and not endpoint_field.get("description"):
+                    related_id = endpoint_field["related_endpoint_id"]
+                    endpoint_field["description"] = (
+                        f"Related filter: pass a {related_id} record's "
+                        f"id, or a dict of {related_id} sub-filters "
+                        f"(sent as {endpoint_field['id']}__<subfilter> "
+                        "lookups). Not an enumerated choice field."
+                    )
 
             if not endpoint_field["types"]:
                 print(
