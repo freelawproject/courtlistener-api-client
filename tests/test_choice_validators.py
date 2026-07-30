@@ -184,3 +184,86 @@ class TestRelatedPassthrough:
         # docket resolves to DocketsEndpoint and must keep validating.
         with pytest.raises(ValidationError):
             ClustersEndpoint(docket={"not_a_real_docket_field": 1})
+
+
+class TestDidYouMeanErrors:
+    """Invalid-choice errors suggest near misses instead of dumping the
+    full choice dict (court alone is 470 entries / ~10k chars). The bad
+    ids here are the most common model hallucinations from Sentry MCP-G.
+    """
+
+    def error_for(self, court):
+        with pytest.raises(ValidationError) as exc_info:
+            court_of(court=court)
+        return str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        "bad,expected_suggestion",
+        [
+            ("njsupct", "nysupct"),
+            ("texapp2", "texapp"),
+            ("fladistctapp1", "fladistctapp"),
+            ("ganctapp", "gactapp"),
+            ("okno", "oknd"),
+        ],
+    )
+    def test_hallucinated_ids_get_suggestions(self, bad, expected_suggestion):
+        msg = self.error_for(bad)
+        assert "Did you mean" in msg
+        assert expected_suggestion in msg
+
+    def test_choice_dict_not_dumped(self):
+        msg = self.error_for("njsupct")
+        assert "Supreme Court of the United States" not in msg
+        assert len(msg) < 600
+
+    def test_mixed_tokens_suggest_only_invalid(self):
+        # 'scotus' is valid; suggestions should target 'texapp2' only.
+        msg = self.error_for("scotus texapp2")
+        assert "texapp" in msg
+        assert "Did you mean" in msg
+
+    def test_points_to_get_choices(self):
+        assert "get_choices" in self.error_for("njsupct")
+
+    def test_single_choice_field_also_compact(self):
+        from courtlistener.models.endpoints.opinion_search import (
+            OpinionSearchEndpoint,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            OpinionSearchEndpoint(type="o", order_by="relevance desc")
+        msg = str(exc_info.value)
+        assert "Did you mean" in msg or "get_choices" in msg
+        assert len(msg) < 600
+
+
+class TestSuggestionQuality:
+    """Review nits on PR 228: case-only mismatches must still get
+    suggestions, and multi-word typos must be matched whole rather
+    than split into per-word suggestion noise.
+    """
+
+    def error_for(self, court):
+        with pytest.raises(ValidationError) as exc_info:
+            court_of(court=court)
+        return str(exc_info.value)
+
+    def test_case_only_mismatch_gets_suggestion(self):
+        msg = self.error_for("SCOTUS")
+        assert "scotus" in msg
+
+    def test_multiword_typo_matched_whole(self):
+        msg = self.error_for("Supreme Court")
+        # Whole-string matches, not per-word fragments.
+        assert "Supreme Court" in msg.split("Did you mean")[1]
+        assert "prsupreme" not in msg
+        assert "ortc" not in msg
+
+    def test_comma_containing_typo_matched_whole(self):
+        msg = self.error_for("District Court, D. Nonexistent")
+        assert "District Court, D." in msg.split("Did you mean")[1]
+
+    def test_genuine_list_still_suggests_per_token(self):
+        msg = self.error_for("scotus texapp2")
+        assert "texapp" in msg

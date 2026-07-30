@@ -13,12 +13,15 @@ if TYPE_CHECKING:
 
 def did_you_mean(value: Any, choices: Iterable[Any]) -> str:
     """Suggest near-miss matches for value from choices."""
+    originals: dict[str, str] = {}
+    for choice in choices:
+        originals.setdefault(str(choice).casefold(), str(choice))
     matches = difflib.get_close_matches(
-        str(value), [str(choice) for choice in choices], n=3, cutoff=0.6
+        str(value).casefold(), list(originals), n=3, cutoff=0.6
     )
     if not matches:
         return ""
-    return f" Did you mean: {', '.join(matches)}?"
+    return f" Did you mean: {', '.join(originals[m] for m in matches)}?"
 
 
 def flatten_filters(
@@ -166,6 +169,23 @@ def get_valid_choice(
     return None
 
 
+def invalid_choice_error(
+    field_name: str | None,
+    value: Any,
+    invalid_parts: list[Any],
+    choice_dict: dict[str, str] | dict[int, str],
+) -> ValueError:
+    """Build a compact invalid-choice error with near-miss suggestions."""
+    candidates = list(choice_dict) + list(choice_dict.values())
+    suggestions = "".join(
+        did_you_mean(part, candidates) for part in invalid_parts
+    )
+    return ValueError(
+        f"Invalid value '{value}' for {field_name}.{suggestions} "
+        "MCP clients can use the `get_choices` tool to list valid values."
+    )
+
+
 def choice_validator(value: Any, info: ValidationInfo) -> None | int | str:
     if value is None:
         return None
@@ -173,7 +193,7 @@ def choice_validator(value: Any, info: ValidationInfo) -> None | int | str:
     valid_value = get_valid_choice(value, choice_dict)
     if valid_value is not None:
         return valid_value
-    raise ValueError(f"{info.field_name} must be one of {choice_dict}")
+    raise invalid_choice_error(info.field_name, value, [value], choice_dict)
 
 
 def multiple_choice_validator(
@@ -197,13 +217,19 @@ def multiple_choice_validator(
             if isinstance(cleaned, str)
             else []
         )
-        if len(tokens) > 1:
-            token_values = [get_valid_choice(t, choice_dict) for t in tokens]
-            if all(v is not None for v in token_values):
-                valid_values.extend(token_values)  # type: ignore[arg-type]
-                continue
-        raise ValueError(
-            f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
+        token_values = [get_valid_choice(t, choice_dict) for t in tokens]
+        if len(tokens) > 1 and all(v is not None for v in token_values):
+            valid_values.extend(token_values)  # type: ignore[arg-type]
+            continue
+        # Suggest per token only when some token is independently valid
+        if len(tokens) > 1 and any(v is not None for v in token_values):
+            invalid_parts = [
+                t for t, v in zip(tokens, token_values) if v is None
+            ]
+        else:
+            invalid_parts = [cleaned]
+        raise invalid_choice_error(
+            info.field_name, value, invalid_parts, choice_dict
         )
     return valid_values[0] if len(valid_values) == 1 else valid_values
 
