@@ -155,6 +155,11 @@ def get_valid_choice(
     for value, display_name in choice_dict.items():
         if choice == display_name:
             return value
+    # Tolerate string-typed numerics for int-keyed choices
+    if isinstance(choice, str) and choice.lstrip("-").isdigit():
+        as_int = int(choice)
+        if as_int in choice_dict:
+            return as_int
     return None
 
 
@@ -175,14 +180,28 @@ def multiple_choice_validator(
         return None
     choice_dict = get_choice_dict_from_info(info)
     values_list = values if isinstance(values, list) else [values]
-    valid_values = []
+    valid_values: list[int | str] = []
     for value in values_list:
-        valid_value = get_valid_choice(value, choice_dict)
-        if valid_value is None:
-            raise ValueError(
-                f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
-            )
-        valid_values.append(valid_value)
+        # Strip stray leading/trailing delimiters
+        cleaned = value.strip(" ,\t\r\n") if isinstance(value, str) else value
+        valid_value = get_valid_choice(cleaned, choice_dict)
+        if valid_value is not None:
+            valid_values.append(valid_value)
+            continue
+        # Fallback for space- or comma-separated values
+        tokens = (
+            [t for t in re.split(r"[,\s]+", cleaned) if t]
+            if isinstance(cleaned, str)
+            else []
+        )
+        if len(tokens) > 1:
+            token_values = [get_valid_choice(t, choice_dict) for t in tokens]
+            if all(v is not None for v in token_values):
+                valid_values.extend(token_values)  # type: ignore[arg-type]
+                continue
+        raise ValueError(
+            f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
+        )
     return valid_values[0] if len(valid_values) == 1 else valid_values
 
 

@@ -6,6 +6,7 @@ The following changes are not yet released, but are code complete:
 
 Features:
 - Add support for cluster_id in search_document, read_document, and analyze_citations tools.
+- Add support for space or comma-separated values for multiple-choice fields.
 
 Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
