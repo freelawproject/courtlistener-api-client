@@ -13,12 +13,15 @@ if TYPE_CHECKING:
 
 def did_you_mean(value: Any, choices: Iterable[Any]) -> str:
     """Suggest near-miss matches for value from choices."""
+    originals: dict[str, str] = {}
+    for choice in choices:
+        originals.setdefault(str(choice).casefold(), str(choice))
     matches = difflib.get_close_matches(
-        str(value), [str(choice) for choice in choices], n=3, cutoff=0.6
+        str(value).casefold(), list(originals), n=3, cutoff=0.6
     )
     if not matches:
         return ""
-    return f" Did you mean: {', '.join(matches)}?"
+    return f" Did you mean: {', '.join(originals[m] for m in matches)}?"
 
 
 def flatten_filters(
@@ -214,16 +217,17 @@ def multiple_choice_validator(
             if isinstance(cleaned, str)
             else []
         )
-        if len(tokens) > 1:
-            token_values = [get_valid_choice(t, choice_dict) for t in tokens]
-            if all(v is not None for v in token_values):
-                valid_values.extend(token_values)  # type: ignore[arg-type]
-                continue
-        invalid_parts = [
-            t
-            for t in (tokens or [cleaned])
-            if get_valid_choice(t, choice_dict) is None
-        ]
+        token_values = [get_valid_choice(t, choice_dict) for t in tokens]
+        if len(tokens) > 1 and all(v is not None for v in token_values):
+            valid_values.extend(token_values)  # type: ignore[arg-type]
+            continue
+        # Suggest per token only when some token is independently valid
+        if len(tokens) > 1 and any(v is not None for v in token_values):
+            invalid_parts = [
+                t for t, v in zip(tokens, token_values) if v is None
+            ]
+        else:
+            invalid_parts = [cleaned]
         raise invalid_choice_error(
             info.field_name, value, invalid_parts, choice_dict
         )
