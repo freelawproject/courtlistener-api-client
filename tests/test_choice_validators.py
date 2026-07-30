@@ -184,3 +184,55 @@ class TestRelatedPassthrough:
         # docket resolves to DocketsEndpoint and must keep validating.
         with pytest.raises(ValidationError):
             ClustersEndpoint(docket={"not_a_real_docket_field": 1})
+
+
+class TestDidYouMeanErrors:
+    """Invalid-choice errors suggest near misses instead of dumping the
+    full choice dict (court alone is 470 entries / ~10k chars). The bad
+    ids here are the most common model hallucinations from Sentry MCP-G.
+    """
+
+    def error_for(self, court):
+        with pytest.raises(ValidationError) as exc_info:
+            court_of(court=court)
+        return str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        "bad,expected_suggestion",
+        [
+            ("njsupct", "nysupct"),
+            ("texapp2", "texapp"),
+            ("fladistctapp1", "fladistctapp"),
+            ("ganctapp", "gactapp"),
+            ("okno", "oknd"),
+        ],
+    )
+    def test_hallucinated_ids_get_suggestions(self, bad, expected_suggestion):
+        msg = self.error_for(bad)
+        assert "Did you mean" in msg
+        assert expected_suggestion in msg
+
+    def test_choice_dict_not_dumped(self):
+        msg = self.error_for("njsupct")
+        assert "Supreme Court of the United States" not in msg
+        assert len(msg) < 600
+
+    def test_mixed_tokens_suggest_only_invalid(self):
+        # 'scotus' is valid; suggestions should target 'texapp2' only.
+        msg = self.error_for("scotus texapp2")
+        assert "texapp" in msg
+        assert "Did you mean" in msg
+
+    def test_points_to_get_choices(self):
+        assert "get_choices" in self.error_for("njsupct")
+
+    def test_single_choice_field_also_compact(self):
+        from courtlistener.models.endpoints.opinion_search import (
+            OpinionSearchEndpoint,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            OpinionSearchEndpoint(type="o", order_by="relevance desc")
+        msg = str(exc_info.value)
+        assert "Did you mean" in msg or "get_choices" in msg
+        assert len(msg) < 600

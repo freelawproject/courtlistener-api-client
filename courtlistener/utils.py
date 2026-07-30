@@ -166,6 +166,23 @@ def get_valid_choice(
     return None
 
 
+def invalid_choice_error(
+    field_name: str | None,
+    value: Any,
+    invalid_parts: list[Any],
+    choice_dict: dict[str, str] | dict[int, str],
+) -> ValueError:
+    """Build a compact invalid-choice error with near-miss suggestions."""
+    candidates = list(choice_dict) + list(choice_dict.values())
+    suggestions = "".join(
+        did_you_mean(part, candidates) for part in invalid_parts
+    )
+    return ValueError(
+        f"Invalid value '{value}' for {field_name}.{suggestions} "
+        "MCP clients can use the `get_choices` tool to list valid values."
+    )
+
+
 def choice_validator(value: Any, info: ValidationInfo) -> None | int | str:
     if value is None:
         return None
@@ -173,7 +190,7 @@ def choice_validator(value: Any, info: ValidationInfo) -> None | int | str:
     valid_value = get_valid_choice(value, choice_dict)
     if valid_value is not None:
         return valid_value
-    raise ValueError(f"{info.field_name} must be one of {choice_dict}")
+    raise invalid_choice_error(info.field_name, value, [value], choice_dict)
 
 
 def multiple_choice_validator(
@@ -202,8 +219,13 @@ def multiple_choice_validator(
             if all(v is not None for v in token_values):
                 valid_values.extend(token_values)  # type: ignore[arg-type]
                 continue
-        raise ValueError(
-            f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
+        invalid_parts = [
+            t
+            for t in (tokens or [cleaned])
+            if get_valid_choice(t, choice_dict) is None
+        ]
+        raise invalid_choice_error(
+            info.field_name, value, invalid_parts, choice_dict
         )
     return valid_values[0] if len(valid_values) == 1 else valid_values
 
