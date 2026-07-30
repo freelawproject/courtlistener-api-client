@@ -43,6 +43,16 @@ class TestGetChoices:
         result = await call(endpoint_id="dockets", field_name="court")
         assert result["choices"] == []
         assert "related-object filter" in result["note"]
+        assert "court='scotus'" in result["note"]
+
+    @pytest.mark.asyncio
+    async def test_related_example_adapts_to_related_model(self):
+        # assigned_to relates to people (int ids), so the example must
+        # not be the court-specific 'scotus'.
+        result = await call(endpoint_id="dockets", field_name="assigned_to")
+        assert "people record's id" in result["note"]
+        assert "assigned_to=12345" in result["note"]
+        assert "scotus" not in result["note"]
 
     @pytest.mark.asyncio
     async def test_unknown_field_errors_with_suggestion(self):

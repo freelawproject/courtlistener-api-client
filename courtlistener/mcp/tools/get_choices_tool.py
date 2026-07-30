@@ -9,6 +9,26 @@ from courtlistener.models import ENDPOINTS
 from courtlistener.utils import did_you_mean
 
 
+def related_example(
+    field_name: str, field_info, related_class_name: str
+) -> tuple[str, str]:
+    """Return ``(related_endpoint_id, example)`` for a related filter."""
+    related_id = related_class_name
+    for endpoint in ENDPOINTS.values():
+        if endpoint.__name__ == related_class_name:
+            related_id = endpoint.endpoint_id
+            break
+
+    id_types = get_args(field_info.annotation)
+    if related_id == "courts":
+        example = f"{field_name}='scotus'"
+    elif str in id_types:
+        example = f"{field_name}='some-id'"
+    else:
+        example = f"{field_name}=12345"
+    return related_id, example
+
+
 class GetChoicesTool(MCPTool):
     """Get the valid choices for a field on a CourtListener API endpoint.
 
@@ -42,7 +62,7 @@ class GetChoicesTool(MCPTool):
 
     async def __call__(
         self, arguments: dict, ctx: Context
-    ) -> dict[str, list[dict]]:
+    ) -> dict[str, list[dict] | str]:
         endpoint_id: str = arguments["endpoint_id"]
         field_name: str = arguments["field_name"]
 
@@ -76,12 +96,15 @@ class GetChoicesTool(MCPTool):
             if not choices:
                 if extra.get("related_class_name"):
                     # If a related field, explain to use id or related query
+                    related_id, example = related_example(
+                        field_name, field_info, extra["related_class_name"]
+                    )
                     note = (
                         f"Field '{field_name}' on endpoint "
                         f"'{endpoint_id}' is a related-object filter, "
-                        "not a choice field: pass the related record's "
-                        f"id (e.g. {field_name}='scotus' for courts) "
-                        "or a dict of its subfields."
+                        f"not a choice field: pass a {related_id} "
+                        f"record's id (e.g. {example}) or a dict of "
+                        f"{related_id} subfields."
                     )
                 else:
                     # If a free-text field, explain
