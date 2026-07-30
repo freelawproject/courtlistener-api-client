@@ -117,7 +117,13 @@ def related_validator(
     model = get_endpoint_model_from_info(info)
     field = model.model_fields[str(info.field_name)]
     extra = getattr(field, "json_schema_extra", None) or {}
+    if not isinstance(value, dict):
+        raise ValueError(f"Invalid value '{value}' for {info.field_name}")
+    value = {k: v for k, v in value.items() if v is not None}
     related_class_name = extra.get("related_class_name", None)
+    if related_class_name is None:
+        # Return raw value if there isn't a schema for the related field.
+        return value
     related_model = None
     for model in ENDPOINTS.values():
         if model.__name__ == related_class_name:
@@ -125,9 +131,6 @@ def related_validator(
             break
     if related_model is None:
         raise ValueError(f"Related model for {info.field_name} not found")
-    if not isinstance(value, dict):
-        raise ValueError(f"Invalid value '{value}' for {info.field_name}")
-    value = {k: v for k, v in value.items() if v is not None}
     return related_model.model_validate(value).model_dump(by_alias=True)
 
 

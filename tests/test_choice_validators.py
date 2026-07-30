@@ -151,13 +151,36 @@ class TestIntChoiceFields:
             self.prayers_status(status="99")
 
 
-def test_related_field_without_schema_extra_raises_cleanly():
-    """Sentry MCP-1J: FieldInfo.json_schema_extra defaults to None (the
-    attribute always exists, so a getattr default never applies). A
-    related-field filter on a field with no configured related model
-    must raise a ValidationError, not AttributeError.
+class TestRelatedPassthrough:
+    """Sentry MCP-1J: related filters whose target has no standalone
+    endpoint (clusters.citations -> Citation) crashed with
+    AttributeError because FieldInfo.json_schema_extra defaults to None
+    (the attribute always exists, so a getattr default never applies).
+    Such fields now pass the sub-filter dict through unvalidated; the
+    API validates server-side.
     """
-    from courtlistener.models.endpoints.clusters import ClustersEndpoint
 
-    with pytest.raises(ValidationError):
-        ClustersEndpoint(citations={"page": "60", "volume": "662"})
+    def test_citations_dict_passes_through(self):
+        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+
+        model = ClustersEndpoint(citations={"page": "60", "volume": "662"})
+        assert model.citations == {"page": "60", "volume": "662"}
+
+    def test_none_subfilters_dropped(self):
+        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+
+        model = ClustersEndpoint(citations={"volume": "662", "page": None})
+        assert model.citations == {"volume": "662"}
+
+    def test_non_dict_still_rejected(self):
+        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+
+        with pytest.raises(ValidationError, match="citations"):
+            ClustersEndpoint(citations=[1, 2])
+
+    def test_validated_related_field_still_validates(self):
+        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+
+        # docket resolves to DocketsEndpoint and must keep validating.
+        with pytest.raises(ValidationError):
+            ClustersEndpoint(docket={"not_a_real_docket_field": 1})
