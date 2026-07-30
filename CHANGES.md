@@ -9,6 +9,7 @@ Features:
 - Add support for space or comma-separated values for multiple-choice fields.
 - Add support for related fields that don't have a schema.
 - Add near-miss suggestions to invalid-choice errors.
+- Better response when a model uses `get_choices` tool on a non-choice field.
 
 Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.

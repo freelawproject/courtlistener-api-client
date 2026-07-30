@@ -58,6 +58,7 @@ class OpinionsCitedEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a opinions record\u0027s id, or a dict of opinions sub-filters (sent as citing_opinion__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "OpinionsEndpoint",
             },
@@ -68,6 +69,7 @@ class OpinionsCitedEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a opinions record\u0027s id, or a dict of opinions sub-filters (sent as cited_opinion__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "OpinionsEndpoint",
             },

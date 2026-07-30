@@ -735,6 +735,7 @@ class PositionsEndpoint(Endpoint):
         None | dict[str, Any] | str,
         Field(
             None,
+            description="Related filter: pass a courts record\u0027s id, or a dict of courts sub-filters (sent as court__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "CourtsEndpoint",
             },
@@ -745,6 +746,7 @@ class PositionsEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a retention-events record\u0027s id, or a dict of retention-events sub-filters (sent as retention_events__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "RetentionEventsEndpoint",
             },

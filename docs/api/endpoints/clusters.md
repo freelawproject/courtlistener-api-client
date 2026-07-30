@@ -176,11 +176,15 @@ Whether a document should be blocked from indexing by search engines
 
 integer
 
+Related filter: pass a dockets record's id, or a dict of dockets sub-filters (sent as docket__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`dockets`](./dockets.md)
 
 ### `panel`
 
 integer
+
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as panel__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`people`](./people.md)
 
@@ -188,11 +192,15 @@ Related endpoint: [`people`](./people.md)
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as non_participating_judges__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `sub_opinions`
 
 integer
+
+Related filter: pass a opinions record's id, or a dict of opinions sub-filters (sent as sub_opinions__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`opinions`](./opinions.md)
 

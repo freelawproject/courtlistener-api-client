@@ -129,6 +129,7 @@ class EducationsEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a people record\u0027s id, or a dict of people sub-filters (sent as person__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PeopleEndpoint",
             },
@@ -139,6 +140,7 @@ class EducationsEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a schools record\u0027s id, or a dict of schools sub-filters (sent as school__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "SchoolsEndpoint",
             },

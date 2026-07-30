@@ -253,6 +253,7 @@ class ClustersEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a dockets record\u0027s id, or a dict of dockets sub-filters (sent as docket__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "DocketsEndpoint",
             },
@@ -263,6 +264,7 @@ class ClustersEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a people record\u0027s id, or a dict of people sub-filters (sent as panel__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PeopleEndpoint",
             },
@@ -273,6 +275,7 @@ class ClustersEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a people record\u0027s id, or a dict of people sub-filters (sent as non_participating_judges__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PeopleEndpoint",
             },
@@ -283,6 +286,7 @@ class ClustersEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a opinions record\u0027s id, or a dict of opinions sub-filters (sent as sub_opinions__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "OpinionsEndpoint",
             },

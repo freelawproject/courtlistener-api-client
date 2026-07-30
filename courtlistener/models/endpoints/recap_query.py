@@ -141,6 +141,7 @@ class RecapQueryEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a docket-entries record\u0027s id, or a dict of docket-entries sub-filters (sent as docket_entry__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "DocketEntriesEndpoint",
             },
@@ -151,6 +152,7 @@ class RecapQueryEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a tags record\u0027s id, or a dict of tags sub-filters (sent as tags__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "TagsEndpoint",
             },

@@ -41,4 +41,6 @@ integer
 
 integer
 
+Related filter: pass a tags record's id, or a dict of tags sub-filters (sent as tag__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`tags`](./tags.md)

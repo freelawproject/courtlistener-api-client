@@ -66,11 +66,15 @@ Lookups: `iexact`, `istartswith`, `startswith`
 
 integer
 
+Related filter: pass a dockets record's id, or a dict of dockets sub-filters (sent as docket__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`dockets`](./dockets.md)
 
 ### `attorney`
 
 integer
+
+Related filter: pass a attorneys record's id, or a dict of attorneys sub-filters (sent as attorney__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`attorneys`](./attorneys.md)
 

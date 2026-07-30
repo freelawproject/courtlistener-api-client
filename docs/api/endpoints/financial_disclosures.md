@@ -60,6 +60,8 @@ integer
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as person__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `date_created`
@@ -96,11 +98,15 @@ Have we successfully extracted the data from PDF?
 
 integer
 
+Related filter: pass a agreements record's id, or a dict of agreements sub-filters (sent as agreements__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`agreements`](./agreements.md)
 
 ### `debts`
 
 integer
+
+Related filter: pass a debts record's id, or a dict of debts sub-filters (sent as debts__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`debts`](./debts.md)
 
@@ -108,11 +114,15 @@ Related endpoint: [`debts`](./debts.md)
 
 integer
 
+Related filter: pass a gifts record's id, or a dict of gifts sub-filters (sent as gifts__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`gifts`](./gifts.md)
 
 ### `investments`
 
 integer
+
+Related filter: pass a investments record's id, or a dict of investments sub-filters (sent as investments__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`investments`](./investments.md)
 
@@ -120,11 +130,15 @@ Related endpoint: [`investments`](./investments.md)
 
 integer
 
+Related filter: pass a non-investment-incomes record's id, or a dict of non-investment-incomes sub-filters (sent as non_investment_incomes__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`non_investment_incomes`](./non_investment_incomes.md)
 
 ### `positions`
 
 integer
+
+Related filter: pass a positions record's id, or a dict of positions sub-filters (sent as positions__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`positions`](./positions.md)
 
@@ -132,11 +146,15 @@ Related endpoint: [`positions`](./positions.md)
 
 integer
 
+Related filter: pass a reimbursements record's id, or a dict of reimbursements sub-filters (sent as reimbursements__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`reimbursements`](./reimbursements.md)
 
 ### `spouse_incomes`
 
 integer
+
+Related filter: pass a spouse-incomes record's id, or a dict of spouse-incomes sub-filters (sent as spouse_incomes__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`spouse_incomes`](./spouse_incomes.md)
 
