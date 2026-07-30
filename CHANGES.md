@@ -15,6 +15,7 @@ Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
 - Add terms and privacy policy to index.html.
 - Fingerprint validation errors by model and field for Sentry.
+- Exempt routine token rotation errors from Sentry.
 
 Fixes:
 - Handle json_schema_extra when it exists but is None.

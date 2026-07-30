@@ -1,12 +1,15 @@
 """Sentry exemption for triaged known-noise tool errors.
 
 Routine 429 throttling raises ``SentryExemptToolError``, which the
-``before_send`` hook drops. Everything else — including 401 session
-expiry and upstream 5xx — still reports to Sentry.
+``before_send`` hook drops. 401s are split by how the token passed
+admission: cache-verified tokens that CL rejects are routine
+mid-session rotation (exempt), while freshly-verified tokens that CL
+rejects mean the authorization server and API disagree (reported).
+Upstream 5xx always reports.
 """
 
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
@@ -59,8 +62,45 @@ class TestMiddlewareErrorClassification:
         assert "Rate limit exceeded" in str(excinfo.value)
         assert "donate.free.law" in str(excinfo.value)
 
+    def _fake_access_token(self, monkeypatch, cached):
+        token = MagicMock()
+        token.token = "tok"
+        token.claims = {"user_hash": "uh", "cached": cached}
+        monkeypatch.setattr(
+            "courtlistener.mcp.middleware.get_access_token", lambda: token
+        )
+        session = MagicMock()
+        session.invalidate_token = AsyncMock()
+        monkeypatch.setattr(
+            "courtlistener.mcp.middleware.get_session", lambda: session
+        )
+        return session
+
     @pytest.mark.asyncio
-    async def test_401_still_reports(self, monkeypatch):
+    async def test_401_on_cached_token_is_exempt(self, monkeypatch):
+        """Cache-verified token rejected by CL = routine mid-session
+        expiry/rotation: cache busted, error exempt from Sentry."""
+        session = self._fake_access_token(monkeypatch, cached=True)
+        error = _api_error(401, {"detail": "Invalid token."})
+        with pytest.raises(SentryExemptToolError) as excinfo:
+            await _call_tool_raising(monkeypatch, error)
+        assert "retry to re-authenticate" in str(excinfo.value)
+        session.invalidate_token.assert_awaited_once_with("tok")
+
+    @pytest.mark.asyncio
+    async def test_401_on_freshly_verified_token_reports(self, monkeypatch):
+        """Fresh userinfo said valid, CL said invalid: AS/API disagree.
+        This is the outage signature and must keep reporting."""
+        self._fake_access_token(monkeypatch, cached=False)
+        error = _api_error(401, {"detail": "Invalid token."})
+        with pytest.raises(ToolError) as excinfo:
+            await _call_tool_raising(monkeypatch, error)
+        assert not isinstance(excinfo.value, SentryExemptToolError)
+
+    @pytest.mark.asyncio
+    async def test_401_without_token_context_reports(self, monkeypatch):
+        """No access token in context (can't tell cached from fresh):
+        report, conservatively."""
         error = _api_error(401, {"detail": "Invalid token."})
         with pytest.raises(ToolError) as excinfo:
             await _call_tool_raising(monkeypatch, error)

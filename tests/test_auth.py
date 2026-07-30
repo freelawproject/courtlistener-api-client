@@ -220,13 +220,31 @@ class TestServerAuthWiring:
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         with patch(
             "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
-            new=AsyncMock(return_value="fake-user-hash"),
+            new=AsyncMock(return_value=("fake-user-hash", False)),
         ):
             token = asyncio.run(verifier.verify_token("anything-goes"))
         assert token is not None
         assert token.token == "anything-goes"
         assert token.claims.get("user_hash") == "fake-user-hash"
+        assert token.claims.get("cached") is False
         assert set(token.scopes) == {"openid", "api"}
+
+    def test_userinfo_verifier_marks_cache_hits(self):
+        """A cache-served verification is flagged in the claims so the
+        middleware can triage downstream 401s (routine rotation vs.
+        AS/API disagreement)."""
+        import asyncio
+
+        from courtlistener.mcp.auth import UserInfoTokenVerifier
+
+        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
+        with patch(
+            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
+            new=AsyncMock(return_value=("fake-user-hash", True)),
+        ):
+            token = asyncio.run(verifier.verify_token("cached-token"))
+        assert token is not None
+        assert token.claims.get("cached") is True
 
     def test_userinfo_verifier_rejects_when_userinfo_fails(self):
         """Userinfo returning ``None`` (401/non-200/network error) →
@@ -241,7 +259,7 @@ class TestServerAuthWiring:
         verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
         with patch(
             "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
-            new=AsyncMock(return_value=None),
+            new=AsyncMock(return_value=(None, False)),
         ):
             token = asyncio.run(verifier.verify_token("revoked-or-bad"))
         assert token is None

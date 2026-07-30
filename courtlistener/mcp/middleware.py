@@ -35,29 +35,26 @@ class ToolHandlerMiddleware(Middleware):
             result = await mcp_tool(arguments, ctx)
         except CourtListenerAPIError as exc:
             if exc.status_code == 401:
-                # CL rejected a token our verifier previously accepted
-                # (revoked or rotated mid-cache). Drop the cache entry so
-                # the next MCP request re-runs userinfo, fails verification,
-                # and gets a proper HTTP 401 from the auth middleware —
-                # which is what triggers the client's OAuth refresh flow.
-                #
-                # We can't emit the 401 for *this* request from inside the
-                # tool handler (the HTTP response has already committed to
-                # 200 for the JSON-RPC envelope). The tool-level error
-                # below is the best we can do here; the follow-up request
-                # gets the clean signal.
+                # Bust the cache if token rejected by CL
                 try:
                     access_token = get_access_token()
                 except RuntimeError:
                     access_token = None
                 if access_token is not None:
                     await get_session().invalidate_token(access_token.token)
-                raise ToolError(
+                message = (
                     "CourtListener rejected the request as unauthorized. "
                     "Your session may have expired; retry to re-authenticate."
-                ) from exc
+                )
+                if access_token is not None and access_token.claims.get(
+                    "cached"
+                ):
+                    # If it was cached, this is expected. Make exempt.
+                    raise SentryExemptToolError(message) from exc
+                # Otherwise, this is a real disagreement between CL and MCP.
+                raise ToolError(message) from exc
             elif exc.status_code == 429:
-                # Exempt: Routine API rate limit errors.
+                # Routine API rate limit errors are exempt.
                 raise SentryExemptToolError(
                     f"Rate limit exceeded: {exc}. For higher rate limits, "
                     "you can upgrade your membership at https://donate.free.law/forms/membership"
