@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Any
 
-from fastmcp.exceptions import ToolError
 from fastmcp.server.context import Context
 from fastmcp.server.dependencies import get_access_token, get_http_request
 from fastmcp.tools import Tool

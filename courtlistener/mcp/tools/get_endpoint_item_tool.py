@@ -2,7 +2,10 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.mcp.tools.utils import endpoint_id_property, normalize_fields
+from courtlistener.mcp.tools.utils import (
+    endpoint_id_property,
+    normalize_fields,
+)
 from courtlistener.models import ENDPOINTS
 
 

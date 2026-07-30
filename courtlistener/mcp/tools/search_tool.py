@@ -12,11 +12,11 @@ from courtlistener.mcp.tools.utils import (
     add_opinion_ids,
     collect_results,
     filter_results_by_fields,
+    normalize_fields,
     prepare_count,
     prepare_filter,
     prepare_has_more_str,
     prepare_query_id,
-    normalize_fields,
 )
 from courtlistener.models import ENDPOINTS
 

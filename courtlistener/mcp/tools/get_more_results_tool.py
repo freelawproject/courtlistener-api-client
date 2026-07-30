@@ -12,8 +12,8 @@ from courtlistener.mcp.tools.utils import (
     collect_results,
     filter_results_by_fields,
     has_more_results,
-    prepare_has_more_str,
     normalize_fields,
+    prepare_has_more_str,
 )
 from courtlistener.resource import ResourceIterator
 
