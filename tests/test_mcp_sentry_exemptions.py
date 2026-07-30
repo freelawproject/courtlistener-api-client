@@ -196,3 +196,60 @@ class TestValidationErrorFingerprint:
         result = before_send(event, {"exc_info": (RuntimeError, err, None)})
         assert result is event
         assert "fingerprint" not in result
+
+
+class TestToolArgumentFingerprint:
+    """Argument-schema failures get partitioned by tool + argument so
+    the monolithic bucket (Sentry MCP-2H) splits into per-cause issues.
+    The error stays a ToolError subclass, so the model-facing message
+    is unchanged.
+    """
+
+    def _error_for(self, tool, arguments):
+        from courtlistener.mcp.exceptions import ToolArgumentValidationError
+        from courtlistener.mcp.tools import MCP_TOOLS
+
+        with pytest.raises(ToolArgumentValidationError) as exc_info:
+            MCP_TOOLS[tool].validate_arguments(arguments)
+        return exc_info.value
+
+    def test_unexpected_property_names_the_argument(self):
+        # The MCP-2H sample: models passing call_endpoint's `query`
+        # shape to search. error.path is empty for
+        # additionalProperties, so names are recovered from arguments.
+        exc = self._error_for("search", {"type": "o", "query": {"q": "x"}})
+        assert exc.tool_name == "search"
+        assert exc.argument_names == ["query"]
+        assert isinstance(exc, ToolError)
+
+    def test_missing_required_names_the_argument(self):
+        # `required` violations also have an empty error.path; the
+        # missing names come from the schema's required list.
+        exc = self._error_for("search", {"q": "test"})
+        assert exc.argument_names == ["type"]
+
+    def test_bad_value_names_the_argument(self):
+        exc = self._error_for("search", {"type": "o", "fields": 123})
+        assert exc.argument_names == ["fields"]
+
+    def test_before_send_partitions_by_tool_and_argument(self):
+        from courtlistener.mcp.exceptions import before_send
+
+        exc = self._error_for("search", {"type": "o", "query": {}})
+        event = {}
+        result = before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert result is event
+        assert result["fingerprint"] == ["{{ default }}", "search", "query"]
+
+    def test_different_causes_get_different_fingerprints(self):
+        from courtlistener.mcp.exceptions import before_send
+
+        def fingerprint(tool, arguments):
+            exc = self._error_for(tool, arguments)
+            event = {}
+            before_send(event, {"exc_info": (type(exc), exc, None)})
+            return event["fingerprint"]
+
+        assert fingerprint(
+            "search", {"type": "o", "query": {}}
+        ) != fingerprint("search", {"type": "o", "fields": 123})

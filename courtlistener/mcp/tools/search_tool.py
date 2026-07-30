@@ -12,6 +12,7 @@ from courtlistener.mcp.tools.utils import (
     add_opinion_ids,
     collect_results,
     filter_results_by_fields,
+    normalize_fields,
     prepare_count,
     prepare_filter,
     prepare_has_more_str,
@@ -59,6 +60,7 @@ class SearchTool(MCPTool):
             "fields": {
                 "anyOf": [
                     {"items": {"type": "string"}, "type": "array"},
+                    {"type": "string"},
                     {"type": "null"},
                 ],
                 "description": (
@@ -103,7 +105,7 @@ class SearchTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> Any:
         """Call the search tool."""
         with self.get_client() as client:
-            fields = arguments.pop("fields", None)
+            fields = normalize_fields(arguments.pop("fields", None))
             num_results = arguments.pop("num_results", DEFAULT_NUM_RESULTS)
 
             response = client.search.list(**arguments)

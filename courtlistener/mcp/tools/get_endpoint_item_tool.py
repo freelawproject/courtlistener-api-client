@@ -2,7 +2,10 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.mcp.tools.utils import endpoint_id_property
+from courtlistener.mcp.tools.utils import (
+    endpoint_id_property,
+    normalize_fields,
+)
 from courtlistener.models import ENDPOINTS
 
 
@@ -35,6 +38,7 @@ class GetEndpointItemTool(MCPTool):
                 "fields": {
                     "anyOf": [
                         {"type": "array", "items": {"type": "string"}},
+                        {"type": "string"},
                         {"type": "null"},
                     ],
                     "description": (
@@ -53,7 +57,7 @@ class GetEndpointItemTool(MCPTool):
         """Call the get_endpoint_item tool."""
         endpoint_id = arguments.get("endpoint_id")
         item_id = arguments.get("item_id")
-        fields = arguments.get("fields")
+        fields = normalize_fields(arguments.get("fields"))
 
         if not isinstance(item_id, int | str):
             raise ValueError("Item ID must be a string or integer")
