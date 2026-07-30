@@ -556,12 +556,9 @@ def get_related_endpoint_id(
         related_endpoint_id = (
             lookup_types.split("'")[1].replace(" ", "-").lower()
         )
-        related_endpoint_id = RELATED_ENDPOINT_MAP.get(
+        return RELATED_ENDPOINT_MAP.get(
             related_endpoint_id, related_endpoint_id
         )
-        if related_endpoint_id is None:
-            print(f"Related endpoint {related_endpoint_id} not found")
-        return related_endpoint_id
     return None
 
 
@@ -768,6 +765,13 @@ def get_endpoint_data(use_cache: bool = True) -> dict[str, Any]:
                 related_endpoint = endpoints.get(
                     endpoint_field["related_endpoint_id"], {}
                 )
+                if not related_endpoint:
+                    print(
+                        f"PASSTHROUGH: {endpoint['id']}."
+                        f"{endpoint_field['id']} relates to "
+                        f"'{endpoint_field['related_endpoint_id']}', "
+                        "which has no standalone endpoint"
+                    )
                 related_id_field = related_endpoint.get("fields", {}).get(
                     "id", {}
                 )
