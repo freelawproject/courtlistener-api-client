@@ -13,6 +13,7 @@ from courtlistener.mcp.tools.utils import (
     filter_results_by_fields,
     has_more_results,
     prepare_has_more_str,
+    normalize_fields,
 )
 from courtlistener.resource import ResourceIterator
 
@@ -84,7 +85,9 @@ class GetMoreResultsTool(MCPTool):
                 updated_data["fields"] = fields
             await get_session().store_query(query_id, updated_data, client)
 
-            filtered_results, _ = filter_results_by_fields(results, fields)
+            filtered_results, _ = filter_results_by_fields(
+                results, normalize_fields(fields)
+            )
 
             outputs = {
                 "query_id": query_id,
