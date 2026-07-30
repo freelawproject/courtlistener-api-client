@@ -175,14 +175,24 @@ def multiple_choice_validator(
         return None
     choice_dict = get_choice_dict_from_info(info)
     values_list = values if isinstance(values, list) else [values]
-    valid_values = []
+    valid_values: list[int | str] = []
     for value in values_list:
         valid_value = get_valid_choice(value, choice_dict)
-        if valid_value is None:
-            raise ValueError(
-                f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
-            )
-        valid_values.append(valid_value)
+        if valid_value is not None:
+            valid_values.append(valid_value)
+            continue
+        # Fallback for space- or comma-separated values
+        tokens = (
+            [t for t in re.split(r"[,\s]+", value) if t]
+            if isinstance(value, str)
+            else []
+        )
+        if len(tokens) > 1 and all(t in choice_dict for t in tokens):
+            valid_values.extend(tokens)
+            continue
+        raise ValueError(
+            f"Invalid value '{value}' for {info.field_name}. Must be in {choice_dict}"
+        )
     return valid_values[0] if len(valid_values) == 1 else valid_values
 
 
