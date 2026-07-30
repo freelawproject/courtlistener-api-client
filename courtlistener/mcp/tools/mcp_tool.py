@@ -72,12 +72,19 @@ class MCPTool:
         )
 
     @cached_property
+    def input_schema(self) -> dict:
+        """Cached input schema for the tool."""
+        return self.get_input_schema()
+
+    @cached_property
     def input_validator(self) -> Draft202012Validator:
         """Cached validator for the tool's input schema."""
-        return Draft202012Validator(self.get_input_schema())
+        return Draft202012Validator(self.input_schema)
 
     def validate_arguments(self, arguments: dict) -> None:
         """Check arguments against the tool's input schema."""
+        if self.name is None:
+            raise ValueError("name must be set")
         arguments = {
             key: value for key, value in arguments.items() if value is not None
         }
@@ -101,7 +108,7 @@ class MCPTool:
             elif error.validator == "additionalProperties":
                 # Unexpected keys aren't in error.path; recover them
                 # so Sentry partitions by the unexpected argument.
-                known = self.get_input_schema().get("properties", {})
+                known = self.input_schema.get("properties", {})
                 argument_names.update(
                     key for key in arguments if key not in known
                 )
