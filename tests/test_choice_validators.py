@@ -65,6 +65,17 @@ class TestCourtChoiceValidation:
             court=["Supreme Court of the United States", "ca1"]
         ) == ["scotus", "ca1"]
 
+    def test_trailing_comma_single_value(self):
+        assert court_of(court="scotus,") == "scotus"
+
+    def test_leading_and_trailing_space_single_value(self):
+        assert court_of(court=" scotus ") == "scotus"
+
+    def test_display_name_with_trailing_comma(self):
+        assert (
+            court_of(court="Supreme Court of the United States,") == "scotus"
+        )
+
     def test_space_separated_with_invalid_token_fails(self):
         with pytest.raises(ValidationError, match="scotus banana"):
             court_of(court="scotus banana")
@@ -106,3 +117,35 @@ def test_no_multiple_choice_value_contains_whitespace():
                     f"with whitespace or comma: {value!r}"
                 )
     assert checked > 0, "no multiple-choice fields found; detection broken?"
+
+
+class TestIntChoiceFields:
+    """Int-keyed choice fields (e.g. prayers `status`) get the same
+    separated-string and stringified-number tolerance."""
+
+    def prayers_status(self, **kwargs):
+        from courtlistener.models.endpoints.prayers import PrayersEndpoint
+
+        return PrayersEndpoint(**kwargs).status
+
+    def test_int_value_unchanged(self):
+        assert self.prayers_status(status=1) == 1
+
+    def test_stringified_int(self):
+        assert self.prayers_status(status="1") == 1
+
+    def test_space_separated_ints(self):
+        # Multi-value REST filters serialize to the `__in` lookup form;
+        # the separated string must land identically to a real list.
+        assert self.prayers_status(status="1 2") == self.prayers_status(
+            status=[1, 2]
+        )
+
+    def test_comma_separated_ints(self):
+        assert self.prayers_status(status="1,2") == self.prayers_status(
+            status=[1, 2]
+        )
+
+    def test_invalid_int_fails(self):
+        with pytest.raises(ValidationError, match="Invalid value"):
+            self.prayers_status(status="99")
