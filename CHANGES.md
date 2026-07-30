@@ -13,7 +13,7 @@ Changes:
 - Add terms and privacy policy to index.html.
 
 Fixes:
--
+- Handle json_schema_extra when it exists but is None.
 
 ### 1.1.0 - 2026-07-21
 

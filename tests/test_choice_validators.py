@@ -149,3 +149,15 @@ class TestIntChoiceFields:
     def test_invalid_int_fails(self):
         with pytest.raises(ValidationError, match="Invalid value"):
             self.prayers_status(status="99")
+
+
+def test_related_field_without_schema_extra_raises_cleanly():
+    """Sentry MCP-1J: FieldInfo.json_schema_extra defaults to None (the
+    attribute always exists, so a getattr default never applies). A
+    related-field filter on a field with no configured related model
+    must raise a ValidationError, not AttributeError.
+    """
+    from courtlistener.models.endpoints.clusters import ClustersEndpoint
+
+    with pytest.raises(ValidationError):
+        ClustersEndpoint(citations={"page": "60", "volume": "662"})

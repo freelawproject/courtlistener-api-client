@@ -116,7 +116,7 @@ def related_validator(
 
     model = get_endpoint_model_from_info(info)
     field = model.model_fields[str(info.field_name)]
-    extra = getattr(field, "json_schema_extra", {})
+    extra = getattr(field, "json_schema_extra", None) or {}
     related_class_name = extra.get("related_class_name", None)
     related_model = None
     for model in ENDPOINTS.values():
@@ -137,7 +137,7 @@ def get_choice_dict_from_info(
     """Get the choice dictionary for a field."""
     model = get_endpoint_model_from_info(info)
     field = model.model_fields[str(info.field_name)]
-    extra = getattr(field, "json_schema_extra", {})
+    extra = getattr(field, "json_schema_extra", None) or {}
     choices = extra.get("choices", [])
     return {choice["value"]: choice["display_name"] for choice in choices}
 
