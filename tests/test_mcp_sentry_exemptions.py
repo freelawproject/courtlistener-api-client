@@ -94,3 +94,65 @@ class TestBeforeSend:
     def test_keeps_events_without_exc_info(self):
         event = {"event_id": "abc"}
         assert before_send(event, {}) is event
+
+
+class TestValidationErrorFingerprint:
+    """ValidationErrors get partitioned by model + failing field so the
+    old monolithic bucket (Sentry MCP-G) splits into per-field issues.
+    """
+
+    def _validation_error(self, **kwargs):
+        from pydantic import ValidationError
+
+        from courtlistener.models.endpoints.opinion_search import (
+            OpinionSearchEndpoint,
+        )
+
+        try:
+            OpinionSearchEndpoint(type="o", **kwargs)
+        except ValidationError as exc:
+            return exc
+        raise AssertionError("expected ValidationError")
+
+    def test_fingerprint_includes_model_and_field(self):
+        from courtlistener.mcp.exceptions import validation_error_fingerprint
+
+        exc = self._validation_error(court="njsupct")
+        assert validation_error_fingerprint(exc) == [
+            "{{ default }}",
+            "OpinionSearchEndpoint",
+            "court",
+        ]
+
+    def test_different_fields_get_different_fingerprints(self):
+        from courtlistener.mcp.exceptions import validation_error_fingerprint
+
+        court = validation_error_fingerprint(
+            self._validation_error(court="njsupct")
+        )
+        order_by = validation_error_fingerprint(
+            self._validation_error(order_by="relevance desc")
+        )
+        assert court != order_by
+
+    def test_before_send_sets_fingerprint(self):
+        from courtlistener.mcp.exceptions import before_send
+
+        exc = self._validation_error(court="njsupct")
+        event = {}
+        result = before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert result is event
+        assert result["fingerprint"] == [
+            "{{ default }}",
+            "OpinionSearchEndpoint",
+            "court",
+        ]
+
+    def test_before_send_leaves_other_errors_alone(self):
+        from courtlistener.mcp.exceptions import before_send
+
+        event = {}
+        err = RuntimeError("boom")
+        result = before_send(event, {"exc_info": (RuntimeError, err, None)})
+        assert result is event
+        assert "fingerprint" not in result
