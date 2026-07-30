@@ -110,6 +110,7 @@ class DocketEntriesEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a dockets record\u0027s id, or a dict of dockets sub-filters (sent as docket__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "DocketsEndpoint",
             },
@@ -120,6 +121,7 @@ class DocketEntriesEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a recap-documents record\u0027s id, or a dict of recap-documents sub-filters (sent as recap_documents__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "RecapDocumentsEndpoint",
             },

@@ -89,11 +89,15 @@ Lookups: `gt`, `gte`, `isnull`, `lt`, `lte`, `range`
 
 integer
 
+Related filter: pass a dockets record's id, or a dict of dockets sub-filters (sent as docket__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`dockets`](./dockets.md)
 
 ### `recap_documents`
 
 integer
+
+Related filter: pass a recap-documents record's id, or a dict of recap-documents sub-filters (sent as recap_documents__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`recap_documents`](./recap_documents.md)
 

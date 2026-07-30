@@ -71,6 +71,8 @@ The EIN assigned by the IRS
 
 integer
 
+Related filter: pass a educations record's id, or a dict of educations sub-filters (sent as educations__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`educations`](./educations.md)
 
 ### `order_by`

@@ -446,11 +446,15 @@ Whether a document should be blocked from indexing by search engines
 
 string
 
+Related filter: pass a courts record's id, or a dict of courts sub-filters (sent as court__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`courts`](./courts.md)
 
 ### `clusters`
 
 integer
+
+Related filter: pass a clusters record's id, or a dict of clusters sub-filters (sent as clusters__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`clusters`](./clusters.md)
 
@@ -458,11 +462,15 @@ Related endpoint: [`clusters`](./clusters.md)
 
 integer
 
+Related filter: pass a docket-entries record's id, or a dict of docket-entries sub-filters (sent as docket_entries__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`docket_entries`](./docket_entries.md)
 
 ### `audio_files`
 
 integer
+
+Related filter: pass a audio record's id, or a dict of audio sub-filters (sent as audio_files__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`audio`](./audio.md)
 
@@ -470,17 +478,23 @@ Related endpoint: [`audio`](./audio.md)
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as assigned_to__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `referred_to`
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as referred_to__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `parties`
 
 integer
+
+Related filter: pass a parties record's id, or a dict of parties sub-filters (sent as parties__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`parties`](./parties.md)
 
