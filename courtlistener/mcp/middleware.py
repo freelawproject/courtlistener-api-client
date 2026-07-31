@@ -11,6 +11,7 @@ from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
     UnauthorizedToolError,
+    UpstreamCourtListenerError,
 )
 from courtlistener.mcp.session import get_session, json_default
 from courtlistener.mcp.tools import MCP_TOOLS
@@ -62,11 +63,19 @@ class ToolHandlerMiddleware(Middleware):
                     f"Rate limit exceeded: {exc}. For higher rate limits, "
                     "you can upgrade your membership at https://donate.free.law/forms/membership"
                 ) from exc
+            elif exc.status_code >= 500:
+                raise UpstreamCourtListenerError(
+                    f"CourtListener API error: {exc}",
+                    tool_name=name,
+                    status=str(exc.status_code),
+                ) from exc
             else:
                 raise ToolError(f"CourtListener API error: {exc}") from exc
         except (httpx.TimeoutException, httpx.HTTPError) as exc:
-            raise ToolError(
-                f"Upstream CourtListener request failed: {exc}"
+            raise UpstreamCourtListenerError(
+                f"Upstream CourtListener request failed: {exc}",
+                tool_name=name,
+                status="connection",
             ) from exc
 
         if isinstance(result, dict):

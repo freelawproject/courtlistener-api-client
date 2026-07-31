@@ -19,6 +19,7 @@ from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
     UnauthorizedToolError,
+    UpstreamCourtListenerError,
     before_send,
 )
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
@@ -107,10 +108,26 @@ class TestMiddlewareErrorClassification:
             await _call_tool_raising(monkeypatch, error)
 
     @pytest.mark.asyncio
-    async def test_upstream_500_still_reports(self, monkeypatch):
+    async def test_upstream_500_raises_typed_error(self, monkeypatch):
         error = _api_error(500, {"detail": "Internal Server Error."})
+        with pytest.raises(UpstreamCourtListenerError) as excinfo:
+            await _call_tool_raising(monkeypatch, error)
+        assert excinfo.value.tool_name == "fake_tool"
+        assert excinfo.value.status == "500"
+
+    @pytest.mark.asyncio
+    async def test_transport_failure_raises_typed_error(self, monkeypatch):
+        error = httpx.ConnectError("[Errno 104] Connection reset by peer")
+        with pytest.raises(UpstreamCourtListenerError) as excinfo:
+            await _call_tool_raising(monkeypatch, error)
+        assert excinfo.value.status == "connection"
+
+    @pytest.mark.asyncio
+    async def test_4xx_stays_plain_tool_error(self, monkeypatch):
+        error = _api_error(404, {"detail": "Not found."})
         with pytest.raises(ToolError) as excinfo:
             await _call_tool_raising(monkeypatch, error)
+        assert not isinstance(excinfo.value, UpstreamCourtListenerError)
         assert not isinstance(excinfo.value, SentryExemptToolError)
 
 
@@ -272,3 +289,35 @@ class TestUnauthorizedFingerprint:
             return event["fingerprint"]
 
         assert fingerprint("search") == fingerprint("analyze_citations")
+
+
+class TestUpstreamFingerprint:
+    """Upstream failures are keyed by status alone: a 500 spike and a
+    502 spike are different upstream conditions, but which tool tripped
+    one is irrelevant and lives in the `tool` tag instead.
+    """
+
+    def _fingerprint(self, tool, status):
+        exc = UpstreamCourtListenerError(
+            "upstream", tool_name=tool, status=status
+        )
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        return event
+
+    def test_before_send_sets_fingerprint_and_tags(self):
+        event = self._fingerprint("search", "502")
+        assert event["fingerprint"] == ["courtlistener-upstream", "502"]
+        assert event["tags"] == {"tool": "search", "upstream_status": "502"}
+
+    def test_different_tools_share_a_fingerprint(self):
+        assert (
+            self._fingerprint("search", "502")["fingerprint"]
+            == self._fingerprint("read_document", "502")["fingerprint"]
+        )
+
+    def test_different_statuses_get_different_fingerprints(self):
+        assert (
+            self._fingerprint("search", "500")["fingerprint"]
+            != self._fingerprint("search", "502")["fingerprint"]
+        )

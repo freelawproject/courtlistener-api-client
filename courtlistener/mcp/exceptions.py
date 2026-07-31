@@ -25,6 +25,15 @@ class UnauthorizedToolError(ToolError):
         self.tool_name = tool_name
 
 
+class UpstreamCourtListenerError(ToolError):
+    """The upstream CL request failed: 5xx or transport error."""
+
+    def __init__(self, message: str, tool_name: str, status: str) -> None:
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.status = status
+
+
 def validation_error_fields(exc: ValidationError) -> list[str]:
     """Top-level field names that failed validation."""
     return sorted(
@@ -42,6 +51,7 @@ def before_send(event, hint):
     - ToolArgumentValidationErrors tagged by tool and arguments.
     - ValidationErrors tagged by model and fields.
     - UnauthorizedToolErrors tagged by tool.
+    - UpstreamCourtListenerErrors keyed by status, tagged by tool and status.
     """
     exc_info = hint.get("exc_info")
     exc = exc_info[1] if exc_info is not None else None
@@ -50,6 +60,14 @@ def before_send(event, hint):
     if isinstance(exc, UnauthorizedToolError):
         event["fingerprint"] = ["unauthorized-tool-call"]
         event.setdefault("tags", {}).update({"tool": exc.tool_name})
+    elif isinstance(exc, UpstreamCourtListenerError):
+        event["fingerprint"] = ["courtlistener-upstream", exc.status]
+        event.setdefault("tags", {}).update(
+            {
+                "tool": exc.tool_name,
+                "upstream_status": exc.status,
+            }
+        )
     elif isinstance(exc, ToolArgumentValidationError):
         event["fingerprint"] = ["tool-argument-validation"]
         event.setdefault("tags", {}).update(
