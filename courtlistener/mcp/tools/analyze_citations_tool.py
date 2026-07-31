@@ -52,7 +52,7 @@ class AnalyzeCitationsTool(MCPTool):
     canonical name, a WARNING is emitted flagging a possible
     hallucinated citation.
 
-    Input should include exactly one of opinion_id, recap_document_id, or cluster_id.
+    Input should include exactly one of opinion_id or cluster_id.
     """
 
     name: str = "analyze_citations"
