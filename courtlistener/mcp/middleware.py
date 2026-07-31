@@ -8,7 +8,10 @@ from fastmcp.tools import ToolResult
 from mcp.types import TextContent
 
 from courtlistener.exceptions import CourtListenerAPIError
-from courtlistener.mcp.exceptions import SentryExemptToolError
+from courtlistener.mcp.exceptions import (
+    SentryExemptToolError,
+    UnauthorizedToolError,
+)
 from courtlistener.mcp.session import get_session, json_default
 from courtlistener.mcp.tools import MCP_TOOLS
 
@@ -52,7 +55,7 @@ class ToolHandlerMiddleware(Middleware):
                     # If it was cached, this is expected. Make exempt.
                     raise SentryExemptToolError(message) from exc
                 # Otherwise, this is a real disagreement between CL and MCP.
-                raise ToolError(message) from exc
+                raise UnauthorizedToolError(message, tool_name=name) from exc
             elif exc.status_code == 429:
                 # Routine API rate limit errors are exempt.
                 raise SentryExemptToolError(
