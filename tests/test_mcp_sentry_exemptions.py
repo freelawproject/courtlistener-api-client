@@ -123,6 +123,23 @@ class TestMiddlewareErrorClassification:
         assert excinfo.value.status == "connection"
 
     @pytest.mark.asyncio
+    async def test_invalid_fields_maps_to_argument_validation(
+        self, monkeypatch
+    ):
+        """The library's fields check is argument validation the input
+        schema can't express; the middleware reclassifies it so it
+        lands in the tool-argument Sentry issue."""
+        from courtlistener.exceptions import InvalidFieldsError
+        from courtlistener.mcp.exceptions import ToolArgumentValidationError
+
+        error = InvalidFieldsError("Invalid fields: ['case_nam'].")
+        with pytest.raises(ToolArgumentValidationError) as excinfo:
+            await _call_tool_raising(monkeypatch, error)
+        assert excinfo.value.tool_name == "fake_tool"
+        assert excinfo.value.argument_names == ["fields"]
+        assert "case_nam" in str(excinfo.value)
+
+    @pytest.mark.asyncio
     async def test_4xx_stays_plain_tool_error(self, monkeypatch):
         error = _api_error(404, {"detail": "Not found."})
         with pytest.raises(ToolError) as excinfo:
@@ -289,6 +306,45 @@ class TestUnauthorizedFingerprint:
             return event["fingerprint"]
 
         assert fingerprint("search") == fingerprint("analyze_citations")
+
+
+class TestSessionDataFingerprint:
+    """Stale query/job ids get their own issue, separate from the
+    tool-argument bucket: they're usually TTL expiry, and a spike
+    points at Redis/session-store health rather than model behavior.
+    """
+
+    def test_before_send_sets_fingerprint_and_tags(self):
+        from courtlistener.mcp.exceptions import SessionDataNotFoundError
+
+        exc = SessionDataNotFoundError(
+            "Query ID 'abc123' not found.",
+            tool_name="get_more_results",
+            argument_name="query_id",
+        )
+        event = {}
+        result = before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert result is event
+        assert result["fingerprint"] == ["session-data-not-found"]
+        assert result["tags"] == {
+            "tool": "get_more_results",
+            "field": "query_id",
+        }
+
+    def test_query_and_job_ids_share_a_fingerprint(self):
+        from courtlistener.mcp.exceptions import SessionDataNotFoundError
+
+        def fingerprint(tool, argument_name):
+            exc = SessionDataNotFoundError(
+                "not found", tool_name=tool, argument_name=argument_name
+            )
+            event = {}
+            before_send(event, {"exc_info": (type(exc), exc, None)})
+            return event["fingerprint"]
+
+        assert fingerprint("get_counts", "query_id") == fingerprint(
+            "resume_citation_analysis", "job_id"
+        )
 
 
 class TestUpstreamFingerprint:
