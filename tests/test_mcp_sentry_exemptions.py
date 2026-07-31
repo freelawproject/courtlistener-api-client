@@ -18,6 +18,7 @@ from fastmcp.exceptions import ToolError
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
+    UnauthorizedToolError,
     before_send,
 )
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
@@ -93,18 +94,17 @@ class TestMiddlewareErrorClassification:
         This is the outage signature and must keep reporting."""
         self._fake_access_token(monkeypatch, cached=False)
         error = _api_error(401, {"detail": "Invalid token."})
-        with pytest.raises(ToolError) as excinfo:
+        with pytest.raises(UnauthorizedToolError) as excinfo:
             await _call_tool_raising(monkeypatch, error)
-        assert not isinstance(excinfo.value, SentryExemptToolError)
+        assert excinfo.value.tool_name == "fake_tool"
 
     @pytest.mark.asyncio
     async def test_401_without_token_context_reports(self, monkeypatch):
         """No access token in context (can't tell cached from fresh):
         report, conservatively."""
         error = _api_error(401, {"detail": "Invalid token."})
-        with pytest.raises(ToolError) as excinfo:
+        with pytest.raises(UnauthorizedToolError):
             await _call_tool_raising(monkeypatch, error)
-        assert not isinstance(excinfo.value, SentryExemptToolError)
 
     @pytest.mark.asyncio
     async def test_upstream_500_still_reports(self, monkeypatch):
@@ -247,3 +247,28 @@ class TestToolArgumentFingerprint:
         before_send(event, {"exc_info": (type(exc), exc, None)})
         assert event["tags"]["tool"] == "search"
         assert event["tags"]["field"] == "fields,query,type"
+
+
+class TestUnauthorizedFingerprint:
+    """All fresh-token 401 rejections share one issue; the chained
+    CourtListenerAPIError's stack trace differs per tool and client
+    code path, which would otherwise split default grouping into a
+    bucket per call path. A `tool` tag carries the breakdown.
+    """
+
+    def test_before_send_sets_fingerprint_and_tags(self):
+        exc = UnauthorizedToolError("unauthorized", tool_name="search")
+        event = {}
+        result = before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert result is event
+        assert result["fingerprint"] == ["unauthorized-tool-call"]
+        assert result["tags"] == {"tool": "search"}
+
+    def test_different_tools_share_a_fingerprint(self):
+        def fingerprint(tool):
+            exc = UnauthorizedToolError("unauthorized", tool_name=tool)
+            event = {}
+            before_send(event, {"exc_info": (type(exc), exc, None)})
+            return event["fingerprint"]
+
+        assert fingerprint("search") == fingerprint("analyze_citations")

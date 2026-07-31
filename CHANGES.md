@@ -15,6 +15,7 @@ Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
 - Add terms and privacy policy to index.html.
 - Tag `ValidationError` and `ToolArgumentValidationError` errors by model or tool for Sentry.
+- Tag `UnauthorizedToolError` errors by tool for Sentry.
 - Exempt routine token rotation errors from Sentry.
 
 Fixes:

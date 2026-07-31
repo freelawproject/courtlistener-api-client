@@ -17,6 +17,14 @@ class ToolArgumentValidationError(ToolError):
         self.argument_names = argument_names
 
 
+class UnauthorizedToolError(ToolError):
+    """CL rejected a freshly-verified token as unauthorized."""
+
+    def __init__(self, message: str, tool_name: str) -> None:
+        super().__init__(message)
+        self.tool_name = tool_name
+
+
 def validation_error_fields(exc: ValidationError) -> list[str]:
     """Top-level field names that failed validation."""
     return sorted(
@@ -33,12 +41,16 @@ def before_send(event, hint):
     - Drops exempt-marked tool errors.
     - ToolArgumentValidationErrors tagged by tool and arguments.
     - ValidationErrors tagged by model and fields.
+    - UnauthorizedToolErrors tagged by tool.
     """
     exc_info = hint.get("exc_info")
     exc = exc_info[1] if exc_info is not None else None
     if isinstance(exc, SentryExemptToolError):
         return None
-    if isinstance(exc, ToolArgumentValidationError):
+    if isinstance(exc, UnauthorizedToolError):
+        event["fingerprint"] = ["unauthorized-tool-call"]
+        event.setdefault("tags", {}).update({"tool": exc.tool_name})
+    elif isinstance(exc, ToolArgumentValidationError):
         event["fingerprint"] = ["tool-argument-validation"]
         event.setdefault("tags", {}).update(
             {
