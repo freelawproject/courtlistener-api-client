@@ -137,7 +137,9 @@ class TestBeforeSend:
 
 
 class TestValidationErrorFingerprint:
-    """ValidationErrors get partitioned by model."""
+    """All ValidationErrors share one issue; `model` and `field` tags
+    carry the breakdown for the issue-page tag view and dashboards.
+    """
 
     def _validation_error(self, **kwargs):
         from pydantic import ValidationError
@@ -152,29 +154,37 @@ class TestValidationErrorFingerprint:
             return exc
         raise AssertionError("expected ValidationError")
 
-    def test_before_send_sets_fingerprint(self):
+    def test_before_send_sets_fingerprint_and_tags(self):
         from courtlistener.mcp.exceptions import before_send
 
         exc = self._validation_error(court="njsupct")
         event = {}
         result = before_send(event, {"exc_info": (type(exc), exc, None)})
         assert result is event
-        assert result["fingerprint"] == [
-            "{{ default }}",
-            "OpinionSearchEndpoint",
-        ]
+        assert result["fingerprint"] == ["endpoint-model-validation"]
+        assert result["tags"] == {
+            "model": "OpinionSearchEndpoint",
+            "field": "court",
+        }
 
-    def test_different_fields_share_a_fingerprint(self):
+    def test_multiple_fields_join_in_field_tag(self):
         from courtlistener.mcp.exceptions import before_send
 
-        def fingerprint(exc):
-            event = {}
-            before_send(event, {"exc_info": (type(exc), exc, None)})
-            return event["fingerprint"]
+        exc = self._validation_error(
+            court="njsupct", order_by="relevance desc"
+        )
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["field"] == "court,order_by"
 
-        assert fingerprint(
-            self._validation_error(court="njsupct")
-        ) == fingerprint(self._validation_error(order_by="relevance desc"))
+    def test_existing_tags_are_preserved(self):
+        from courtlistener.mcp.exceptions import before_send
+
+        exc = self._validation_error(court="njsupct")
+        event = {"tags": {"release": "1.0"}}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["release"] == "1.0"
+        assert event["tags"]["model"] == "OpinionSearchEndpoint"
 
     def test_before_send_leaves_other_errors_alone(self):
         from courtlistener.mcp.exceptions import before_send
@@ -187,7 +197,10 @@ class TestValidationErrorFingerprint:
 
 
 class TestToolArgumentFingerprint:
-    """Argument-schema failures get partitioned by tool."""
+    """All argument-schema failures share one issue; `tool` and `field`
+    tags carry the breakdown. The error stays a ToolError subclass, so
+    the model-facing message is unchanged.
+    """
 
     def _error_for(self, tool, arguments):
         from courtlistener.mcp.exceptions import ToolArgumentValidationError
@@ -197,29 +210,40 @@ class TestToolArgumentFingerprint:
             MCP_TOOLS[tool].validate_arguments(arguments)
         return exc_info.value
 
-    def test_error_carries_tool_name(self):
+    def test_unexpected_property_names_the_argument(self):
+        # The historical MCP-2H sample: models passing call_endpoint's
+        # `query` shape to search. error.path is empty for
+        # additionalProperties, so names are recovered from arguments.
         exc = self._error_for("search", {"type": "o", "query": {"q": "x"}})
         assert exc.tool_name == "search"
+        assert exc.argument_names == ["query"]
         assert isinstance(exc, ToolError)
 
-    def test_before_send_partitions_by_tool(self):
+    def test_missing_required_names_the_argument(self):
+        # `required` violations also have an empty error.path; the
+        # missing names come from the schema's required list.
+        exc = self._error_for("search", {"q": "test"})
+        assert exc.argument_names == ["type"]
+
+    def test_bad_value_names_the_argument(self):
+        exc = self._error_for("search", {"type": "o", "fields": 123})
+        assert exc.argument_names == ["fields"]
+
+    def test_before_send_sets_fingerprint_and_tags(self):
         from courtlistener.mcp.exceptions import before_send
 
         exc = self._error_for("search", {"type": "o", "query": {}})
         event = {}
         result = before_send(event, {"exc_info": (type(exc), exc, None)})
         assert result is event
-        assert result["fingerprint"] == ["{{ default }}", "search"]
+        assert result["fingerprint"] == ["tool-argument-validation"]
+        assert result["tags"] == {"tool": "search", "field": "query"}
 
-    def test_different_arguments_share_a_fingerprint(self):
+    def test_multiple_arguments_join_in_field_tag(self):
         from courtlistener.mcp.exceptions import before_send
 
-        def fingerprint(tool, arguments):
-            exc = self._error_for(tool, arguments)
-            event = {}
-            before_send(event, {"exc_info": (type(exc), exc, None)})
-            return event["fingerprint"]
-
-        assert fingerprint(
-            "search", {"type": "o", "query": {}}
-        ) == fingerprint("search", {"type": "o", "fields": 123})
+        exc = self._error_for("search", {"query": {}, "fields": 123})
+        event = {}
+        before_send(event, {"exc_info": (type(exc), exc, None)})
+        assert event["tags"]["tool"] == "search"
+        assert event["tags"]["field"] == "fields,query,type"
