@@ -10,6 +10,7 @@ Sentry-exempt error with suggestions.
 
 import pytest
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools import MCP_TOOLS
 
 
@@ -56,7 +57,7 @@ class TestGetChoices:
 
     @pytest.mark.asyncio
     async def test_unknown_field_errors_with_suggestion(self):
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ToolArgumentValidationError) as exc_info:
             await call(
                 endpoint_id="people", field_name="political_affiliation"
             )

@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.session import InMemorySession, get_session, set_session
 from courtlistener.mcp.tools import MCP_TOOLS
 from courtlistener.mcp.tools.analyze_citations_tool import AnalyzeCitationsTool
@@ -292,7 +293,7 @@ class TestReadDocumentClusterId:
         assert result["text"] == "securities text"
 
     def test_rejects_multiple_id_kinds(self):
-        with pytest.raises(ValueError, match="exactly one"):
+        with pytest.raises(ToolArgumentValidationError, match="exactly one"):
             run(ReadDocumentTool()({"opinion_id": 1, "cluster_id": 2}, None))
 
     def test_schema_accepts_cluster_id(self):
@@ -376,7 +377,7 @@ class TestSearchDocumentClusterId:
         assert [r["doc_id"] for r in result["results"]] == [10, 11]
 
     def test_rejects_multiple_id_kinds(self):
-        with pytest.raises(ValueError, match="exactly one"):
+        with pytest.raises(ToolArgumentValidationError, match="exactly one"):
             run(
                 SearchDocumentTool()(
                     {"opinion_id": 1, "cluster_id": 2, "query": "x"}, None
@@ -400,7 +401,7 @@ class TestAnalyzeCitationsClusterId:
         MCP_TOOLS["analyze_citations"].validate_arguments({"cluster_id": 123})
 
     def test_rejects_multiple_id_kinds(self):
-        with pytest.raises(ValueError, match="exactly one"):
+        with pytest.raises(ToolArgumentValidationError, match="exactly one"):
             run(
                 AnalyzeCitationsTool()(
                     {"opinion_id": 1, "cluster_id": 2}, None

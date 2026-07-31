@@ -3,6 +3,7 @@ from typing import Literal, get_args, get_origin
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import endpoint_id_property
 from courtlistener.models import ENDPOINTS
@@ -72,10 +73,12 @@ class GetChoicesTool(MCPTool):
 
             field_info = endpoint.model_fields.get(field_name)
             if field_info is None:
-                raise ValueError(
+                raise ToolArgumentValidationError(
                     f"Field '{field_name}' not found on endpoint "
                     f"'{endpoint_id}'."
-                    f"{did_you_mean(field_name, list(endpoint.model_fields))}"
+                    f"{did_you_mean(field_name, list(endpoint.model_fields))}",
+                    tool_name=self.name,
+                    argument_names=["field_name"],
                 )
 
             extra = getattr(field_info, "json_schema_extra", {}) or {}

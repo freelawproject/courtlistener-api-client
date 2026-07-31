@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import TypeAdapter, ValidationInfo
 
+from courtlistener.exceptions import InvalidFieldsError
+
 if TYPE_CHECKING:
     from courtlistener.models import Endpoint
 
@@ -91,7 +93,7 @@ def validate_model_fields(
                     suggestions = "".join(
                         did_you_mean(f, values) for f in invalid_fields
                     )
-                    raise ValueError(
+                    raise InvalidFieldsError(
                         f"Invalid fields: {invalid_fields}.{suggestions}\n"
                         f"Fields must be one of: {values}"
                     )

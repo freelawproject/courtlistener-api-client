@@ -7,9 +7,13 @@ from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools import ToolResult
 from mcp.types import TextContent
 
-from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.exceptions import (
+    CourtListenerAPIError,
+    InvalidFieldsError,
+)
 from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
+    ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
 )
@@ -37,6 +41,10 @@ class ToolHandlerMiddleware(Middleware):
 
         try:
             result = await mcp_tool(arguments, ctx)
+        except InvalidFieldsError as exc:
+            raise ToolArgumentValidationError(
+                str(exc), tool_name=name, argument_names=["fields"]
+            ) from exc
         except CourtListenerAPIError as exc:
             if exc.status_code == 401:
                 # Bust the cache if token rejected by CL

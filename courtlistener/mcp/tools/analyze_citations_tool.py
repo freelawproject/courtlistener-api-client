@@ -8,6 +8,7 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
@@ -50,6 +51,8 @@ class AnalyzeCitationsTool(MCPTool):
     its input case name differs significantly from the cluster's
     canonical name, a WARNING is emitted flagging a possible
     hallucinated citation.
+
+    Input should include exactly one of opinion_id or cluster_id.
     """
 
     name: str = "analyze_citations"
@@ -105,8 +108,10 @@ class AnalyzeCitationsTool(MCPTool):
             if value is not None
         ]
         if len(provided) != 1:
-            raise ValueError(
-                "Provide exactly one of text, opinion_id, or cluster_id."
+            raise ToolArgumentValidationError(
+                "Provide exactly one of text, opinion_id, or cluster_id.",
+                tool_name=self.name,
+                argument_names=["cluster_id", "opinion_id", "text"],
             )
 
         note = ""

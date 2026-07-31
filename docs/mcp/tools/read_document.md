@@ -5,7 +5,7 @@
 **Read Document**
 
 - **Source:** `courtlistener/mcp/tools/read_document_tool.py`
-- **Estimated definition size:** ~558 tokens (description ~227, input schema ~252; cl100k_base)
+- **Estimated definition size:** ~577 tokens (description ~244, input schema ~252; cl100k_base)
 - **Parameters:** 5 (0 required)
 - **Raw input schema:** [`read_document.inputs.json`](./read_document.inputs.json)
 
@@ -31,6 +31,8 @@ uses ``plain_text``.
   non-contiguous windows in a single call (up to
   10).  Useful when you already know the chunk
   size from a previous call and want the next N pages at once.
+
+Input should include exactly one of opinion_id, recap_document_id, or cluster_id.
 
 ## Annotations
 

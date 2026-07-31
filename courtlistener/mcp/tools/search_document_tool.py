@@ -3,6 +3,7 @@ import re
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     fetch_document_text,
@@ -30,6 +31,8 @@ class SearchDocumentTool(MCPTool):
     When ``match_count`` exceeds ``shown``, the first 20
     matches are returned.  Use ``read_document`` with ``chunk_index`` to
     read the area around a match's ``position`` if you need more context.
+
+    Input should include exactly one of opinion_id, recap_document_id, or cluster_id.
     """
 
     name: str = "search_document"
@@ -164,9 +167,15 @@ class SearchDocumentTool(MCPTool):
             if value is not None
         ]
         if len(provided) != 1:
-            raise ValueError(
+            raise ToolArgumentValidationError(
                 "Provide exactly one of opinion_id, recap_document_id, "
-                "or cluster_id."
+                "or cluster_id.",
+                tool_name=self.name,
+                argument_names=[
+                    "cluster_id",
+                    "opinion_id",
+                    "recap_document_id",
+                ],
             )
 
         query: str = arguments["query"]

@@ -17,6 +17,9 @@ Changes:
 - Tag `ValidationError` and `ToolArgumentValidationError` errors by model or tool for Sentry.
 - Tag `UnauthorizedToolError` errors by tool for Sentry.
 - Key upstream CourtListener failures (5xx and transport errors) by status for Sentry, tagged by tool and status.
+- Raise `ToolArgumentValidationError` for in-tool argument guards so they share the tool-argument Sentry issue.
+- Add `InvalidFieldsError` for invalid `fields` requests, mapped to `ToolArgumentValidationError` in the MCP middleware.
+- Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
 - Exempt routine token rotation errors from Sentry.
 
 Fixes:
