@@ -5,6 +5,10 @@ from typing import Any
 import httpx
 
 
+class InvalidFieldsError(ValueError):
+    """Requested `fields` include names the endpoint doesn't offer."""
+
+
 class CourtListenerAPIError(Exception):
     """Raised when the CourtListener API returns an error response.
 
