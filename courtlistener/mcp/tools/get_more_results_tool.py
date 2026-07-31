@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import (
     DEFAULT_NUM_RESULTS,
@@ -66,9 +67,11 @@ class GetMoreResultsTool(MCPTool):
         with self.get_client() as client:
             query = await get_session().get_query(query_id, client)
             if query is None:
-                raise ValueError(
+                raise SessionDataNotFoundError(
                     f"Query ID {query_id!r} not found. The session may have "
-                    "expired, please redo the query first."
+                    "expired, please redo the query first.",
+                    tool_name=self.name,
+                    argument_name="query_id",
                 )
 
             response = ResourceIterator.load(client, query["response"])

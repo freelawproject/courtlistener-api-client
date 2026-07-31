@@ -6,6 +6,7 @@ from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
 from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.citation_utils import (
     MAX_CITATIONS_PER_REQUEST,
@@ -67,8 +68,11 @@ class ResumeCitationAnalysisTool(MCPTool):
         with self.get_client() as client:
             job = await get_session().get_citation_analysis(job_id, client)
             if job is None:
-                raise ValueError(
-                    f"Job ID {job_id!r} not found. The session may have expired."
+                raise SessionDataNotFoundError(
+                    f"Job ID {job_id!r} not found. The session may have "
+                    "expired.",
+                    tool_name=self.name,
+                    argument_name="job_id",
                 )
 
             pending = job["pending"]

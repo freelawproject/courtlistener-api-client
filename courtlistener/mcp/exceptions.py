@@ -25,6 +25,17 @@ class UnauthorizedToolError(ToolError):
         self.tool_name = tool_name
 
 
+class SessionDataNotFoundError(ToolError):
+    """A session-scoped ID (query, job) has no stored data."""
+
+    def __init__(
+        self, message: str, tool_name: str, argument_name: str
+    ) -> None:
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.argument_name = argument_name
+
+
 class UpstreamCourtListenerError(ToolError):
     """The upstream CL request failed: 5xx or transport error."""
 
@@ -52,12 +63,21 @@ def before_send(event, hint):
     - ValidationErrors tagged by model and fields.
     - UnauthorizedToolErrors tagged by tool.
     - UpstreamCourtListenerErrors keyed by status, tagged by tool and status.
+    - SessionDataNotFoundErrors tagged by tool and field.
     """
     exc_info = hint.get("exc_info")
     exc = exc_info[1] if exc_info is not None else None
     if isinstance(exc, SentryExemptToolError):
         return None
-    if isinstance(exc, UnauthorizedToolError):
+    if isinstance(exc, SessionDataNotFoundError):
+        event["fingerprint"] = ["session-data-not-found"]
+        event.setdefault("tags", {}).update(
+            {
+                "tool": exc.tool_name,
+                "field": exc.argument_name,
+            }
+        )
+    elif isinstance(exc, UnauthorizedToolError):
         event["fingerprint"] = ["unauthorized-tool-call"]
         event.setdefault("tags", {}).update({"tool": exc.tool_name})
     elif isinstance(exc, UpstreamCourtListenerError):
