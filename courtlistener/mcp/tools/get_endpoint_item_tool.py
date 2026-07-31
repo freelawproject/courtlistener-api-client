@@ -59,9 +59,6 @@ class GetEndpointItemTool(MCPTool):
         item_id = arguments.get("item_id")
         fields = normalize_fields(arguments.get("fields"))
 
-        if not isinstance(item_id, int | str):
-            raise ValueError("Item ID must be a string or integer")
-
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
                 with self.get_client() as client:
