@@ -96,14 +96,31 @@ class MCPTool:
             return
 
         messages = []
+        argument_names: set[str] = set()
         for error in errors:
             location = ".".join(str(part) for part in error.path)
             prefix = f"{location}: " if location else ""
             messages.append(f"{prefix}{error.message}")
+            if error.path:
+                argument_names.add(str(error.path[0]))
+            elif error.validator == "additionalProperties":
+                known = self.input_schema.get("properties", {})
+                argument_names.update(
+                    key for key in arguments if key not in known
+                )
+            elif error.validator == "required":
+                argument_names.update(
+                    key
+                    for key in error.validator_value
+                    if key not in arguments
+                )
+            else:
+                argument_names.add("__root__")
         raise ToolArgumentValidationError(
             f"Invalid arguments for tool '{self.name}':\n- "
             + "\n- ".join(messages),
             tool_name=self.name,
+            argument_names=sorted(argument_names),
         )
 
     async def __call__(self, arguments: dict, ctx: Context) -> Any:
