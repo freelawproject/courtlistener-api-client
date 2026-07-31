@@ -155,9 +155,11 @@ class Resource:
         return filters
 
     def get(
-        self, id: int | str, fields: list[str] | str | None = None
+        self, id: int | float | str, fields: list[str] | str | None = None
     ) -> dict[str, Any]:
         """Get a resource by its ID."""
+        if isinstance(id, float) and id.is_integer():
+            id = int(id)
         params = {}
         if fields:
             fields = validate_model_fields(self._model, fields)
