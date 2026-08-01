@@ -41,6 +41,7 @@ class GetChoicesTool(MCPTool):
         title="Get Field Choices",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 

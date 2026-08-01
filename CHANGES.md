@@ -21,6 +21,7 @@ Changes:
 - Add `InvalidFieldsError` for invalid `fields` requests, mapped to `ToolArgumentValidationError` in the MCP middleware.
 - Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
 - Exempt routine token rotation errors from Sentry.
+- Add `idempotentHint` to all MCP tool annotations.
 
 Fixes:
 - Handle json_schema_extra when it exists but is None.

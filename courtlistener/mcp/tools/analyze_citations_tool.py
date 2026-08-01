@@ -60,6 +60,7 @@ class AnalyzeCitationsTool(MCPTool):
         title="Analyze Citations",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

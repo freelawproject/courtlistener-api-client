@@ -5,7 +5,7 @@
 **Get Endpoint Schema**
 
 - **Source:** `courtlistener/mcp/tools/get_endpoint_schema_tool.py`
-- **Estimated definition size:** ~352 tokens (description ~43, input schema ~236; cl100k_base)
+- **Estimated definition size:** ~360 tokens (description ~43, input schema ~236; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`get_endpoint_schema.inputs.json`](./get_endpoint_schema.inputs.json)
 
@@ -24,6 +24,7 @@ search endpoint and often include more detailed metadata.
 | `title` | `"Get Endpoint Schema"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `false` |
 
 ## Parameters

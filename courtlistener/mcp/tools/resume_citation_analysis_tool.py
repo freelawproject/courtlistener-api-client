@@ -31,6 +31,7 @@ class ResumeCitationAnalysisTool(MCPTool):
         title="Resume Citation Analysis",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=False,
         openWorldHint=True,
     )
 

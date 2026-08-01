@@ -40,6 +40,17 @@ LOCAL_ONLY_TOOLS = {
     "extract_citations",
 }
 
+# Tools where repeating a call with the same arguments has an
+# additional effect: the create tools add a duplicate record each
+# time, and the pagination/job tools advance stored cursor state on
+# every call.
+NON_IDEMPOTENT_TOOLS = {
+    "create_search_alert",
+    "subscribe_to_docket_alert",
+    "get_more_results",
+    "resume_citation_analysis",
+}
+
 EXPECTED_TITLES = {
     "search": "Search",
     "get_endpoint_schema": "Get Endpoint Schema",
@@ -94,6 +105,18 @@ class TestToolAnnotations:
         for name in WRITE_TOOLS - DESTRUCTIVE_TOOLS:
             t = MCP_TOOLS[name].get_tool()
             assert t.annotations.destructiveHint is False, name
+
+    def test_non_idempotent_tools(self):
+        """Create and cursor-advancing tools must have idempotentHint=False."""
+        for name in NON_IDEMPOTENT_TOOLS:
+            t = MCP_TOOLS[name].get_tool()
+            assert t.annotations.idempotentHint is False, name
+
+    def test_idempotent_tools(self):
+        """All other tools must have idempotentHint=True."""
+        for name in set(MCP_TOOLS.keys()) - NON_IDEMPOTENT_TOOLS:
+            t = MCP_TOOLS[name].get_tool()
+            assert t.annotations.idempotentHint is True, name
 
     def test_local_tools_closed_world(self):
         """Purely-local tools must have openWorldHint=False."""

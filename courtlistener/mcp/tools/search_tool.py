@@ -36,6 +36,7 @@ class SearchTool(MCPTool):
         title="Search",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

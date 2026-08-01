@@ -17,6 +17,7 @@ class GetEndpointItemTool(MCPTool):
         title="Get Item by ID",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

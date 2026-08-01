@@ -29,6 +29,7 @@ class ExtractCitationsTool(MCPTool):
         title="Extract Citations",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 
