@@ -5,7 +5,7 @@
 **Extract Citations**
 
 - **Source:** `courtlistener/mcp/tools/extract_citations_tool.py`
-- **Estimated definition size:** ~219 tokens (description ~63, input schema ~80; cl100k_base)
+- **Estimated definition size:** ~227 tokens (description ~63, input schema ~80; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`extract_citations.inputs.json`](./extract_citations.inputs.json)
 
@@ -27,6 +27,7 @@ before selectively verifying citations with analyze_citations.
 | `title` | `"Extract Citations"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `false` |
 
 ## Parameters

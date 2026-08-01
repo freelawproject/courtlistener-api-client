@@ -31,6 +31,7 @@ class GetMoreResultsTool(MCPTool):
         title="Get More Results",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=False,
         openWorldHint=True,
     )
 

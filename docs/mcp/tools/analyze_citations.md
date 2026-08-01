@@ -5,7 +5,7 @@
 **Analyze Citations**
 
 - **Source:** `courtlistener/mcp/tools/analyze_citations_tool.py`
-- **Estimated definition size:** ~459 tokens (description ~225, input schema ~142; cl100k_base)
+- **Estimated definition size:** ~467 tokens (description ~225, input schema ~142; cl100k_base)
 - **Parameters:** 3 (0 required)
 - **Raw input schema:** [`analyze_citations.inputs.json`](./analyze_citations.inputs.json)
 
@@ -44,6 +44,7 @@ Input should include exactly one of opinion_id or cluster_id.
 | `title` | `"Analyze Citations"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `true` |
 
 ## Parameters

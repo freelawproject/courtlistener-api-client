@@ -5,7 +5,7 @@
 **Read Document**
 
 - **Source:** `courtlistener/mcp/tools/read_document_tool.py`
-- **Estimated definition size:** ~577 tokens (description ~244, input schema ~252; cl100k_base)
+- **Estimated definition size:** ~585 tokens (description ~244, input schema ~252; cl100k_base)
 - **Parameters:** 5 (0 required)
 - **Raw input schema:** [`read_document.inputs.json`](./read_document.inputs.json)
 
@@ -41,6 +41,7 @@ Input should include exactly one of opinion_id, recap_document_id, or cluster_id
 | `title` | `"Read Document"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `true` |
 
 ## Parameters

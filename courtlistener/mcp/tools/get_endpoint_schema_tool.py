@@ -23,6 +23,7 @@ class GetEndpointSchemaTool(MCPTool):
         title="Get Endpoint Schema",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=False,
     )
 

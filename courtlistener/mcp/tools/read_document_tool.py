@@ -44,6 +44,7 @@ class ReadDocumentTool(MCPTool):
         title="Read Document",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

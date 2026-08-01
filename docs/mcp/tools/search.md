@@ -5,7 +5,7 @@
 **Search**
 
 - **Source:** `courtlistener/mcp/tools/search_tool.py`
-- **Estimated definition size:** ~3275 tokens (description ~78, input schema ~3130; cl100k_base)
+- **Estimated definition size:** ~3283 tokens (description ~78, input schema ~3130; cl100k_base)
 - **Parameters:** 46 (1 required)
 - **Raw input schema:** [`search.inputs.json`](./search.inputs.json)
 
@@ -26,6 +26,7 @@ be useful here.
 | `title` | `"Search"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `true` |
 
 ## Parameters

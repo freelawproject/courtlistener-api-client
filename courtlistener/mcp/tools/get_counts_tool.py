@@ -19,6 +19,7 @@ class GetCountsTool(MCPTool):
         title="Get Result Count",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

@@ -40,6 +40,7 @@ class SearchDocumentTool(MCPTool):
         title="Search Document",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 
