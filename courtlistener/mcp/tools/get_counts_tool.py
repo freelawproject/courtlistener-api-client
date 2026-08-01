@@ -46,5 +46,5 @@ class GetCountsTool(MCPTool):
                     "expired, please redo the query first."
                 )
             response = ResourceIterator.load(client, data["response"])
-            count = response.count
+            count = response.get_count()
             return {"count": count}
