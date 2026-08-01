@@ -31,6 +31,7 @@ class CallEndpointTool(MCPTool):
         title="Call API Endpoint",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 

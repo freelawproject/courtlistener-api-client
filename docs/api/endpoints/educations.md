@@ -98,11 +98,15 @@ Normalized degree level, e.g. BA, JD.
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as person__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `school`
 
 integer
+
+Related filter: pass a schools record's id, or a dict of schools sub-filters (sent as school__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`schools`](./schools.md)
 

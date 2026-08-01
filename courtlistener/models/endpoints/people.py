@@ -365,6 +365,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a educations record\u0027s id, or a dict of educations sub-filters (sent as educations__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "EducationsEndpoint",
             },
@@ -375,6 +376,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a political-affiliations record\u0027s id, or a dict of political-affiliations sub-filters (sent as political_affiliations__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PoliticalAffiliationsEndpoint",
             },
@@ -385,6 +387,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a sources record\u0027s id, or a dict of sources sub-filters (sent as sources__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "SourcesEndpoint",
             },
@@ -395,6 +398,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a aba-ratings record\u0027s id, or a dict of aba-ratings sub-filters (sent as aba_ratings__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "AbaRatingsEndpoint",
             },
@@ -405,6 +409,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a positions record\u0027s id, or a dict of positions sub-filters (sent as positions__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PositionsEndpoint",
             },
@@ -415,6 +420,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a clusters record\u0027s id, or a dict of clusters sub-filters (sent as opinion_clusters_participating_judges__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "ClustersEndpoint",
             },
@@ -425,6 +431,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a clusters record\u0027s id, or a dict of clusters sub-filters (sent as opinion_clusters_non_participating_judges__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "ClustersEndpoint",
             },
@@ -435,6 +442,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a opinions record\u0027s id, or a dict of opinions sub-filters (sent as opinions_written__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "OpinionsEndpoint",
             },
@@ -445,6 +453,7 @@ class PeopleEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a opinions record\u0027s id, or a dict of opinions sub-filters (sent as opinions_joined__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "OpinionsEndpoint",
             },

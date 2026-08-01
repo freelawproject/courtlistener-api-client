@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import (
     DEFAULT_NUM_RESULTS,
@@ -12,6 +13,7 @@ from courtlistener.mcp.tools.utils import (
     collect_results,
     filter_results_by_fields,
     has_more_results,
+    normalize_fields,
     prepare_has_more_str,
 )
 from courtlistener.sync_client.resource import ResourceIterator
@@ -29,6 +31,7 @@ class GetMoreResultsTool(MCPTool):
         title="Get More Results",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=False,
         openWorldHint=True,
     )
 
@@ -65,9 +68,11 @@ class GetMoreResultsTool(MCPTool):
         with self.get_client() as client:
             query = await get_session().get_query(query_id, client)
             if query is None:
-                raise ValueError(
+                raise SessionDataNotFoundError(
                     f"Query ID {query_id!r} not found. The session may have "
-                    "expired, please redo the query first."
+                    "expired, please redo the query first.",
+                    tool_name=self.name,
+                    argument_name="query_id",
                 )
 
             response = ResourceIterator.load(client, query["response"])
@@ -84,7 +89,9 @@ class GetMoreResultsTool(MCPTool):
                 updated_data["fields"] = fields
             await get_session().store_query(query_id, updated_data, client)
 
-            filtered_results, _ = filter_results_by_fields(results, fields)
+            filtered_results, _ = filter_results_by_fields(
+                results, normalize_fields(fields)
+            )
 
             outputs = {
                 "query_id": query_id,

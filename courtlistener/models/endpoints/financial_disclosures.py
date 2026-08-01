@@ -98,6 +98,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a people record\u0027s id, or a dict of people sub-filters (sent as person__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PeopleEndpoint",
             },
@@ -136,6 +137,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a agreements record\u0027s id, or a dict of agreements sub-filters (sent as agreements__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "AgreementsEndpoint",
             },
@@ -146,6 +148,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a debts record\u0027s id, or a dict of debts sub-filters (sent as debts__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "DebtsEndpoint",
             },
@@ -156,6 +159,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a gifts record\u0027s id, or a dict of gifts sub-filters (sent as gifts__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "GiftsEndpoint",
             },
@@ -166,6 +170,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a investments record\u0027s id, or a dict of investments sub-filters (sent as investments__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "InvestmentsEndpoint",
             },
@@ -176,6 +181,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a non-investment-incomes record\u0027s id, or a dict of non-investment-incomes sub-filters (sent as non_investment_incomes__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "NonInvestmentIncomesEndpoint",
             },
@@ -186,6 +192,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a positions record\u0027s id, or a dict of positions sub-filters (sent as positions__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "PositionsEndpoint",
             },
@@ -196,6 +203,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a reimbursements record\u0027s id, or a dict of reimbursements sub-filters (sent as reimbursements__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "ReimbursementsEndpoint",
             },
@@ -206,6 +214,7 @@ class FinancialDisclosuresEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a spouse-incomes record\u0027s id, or a dict of spouse-incomes sub-filters (sent as spouse_incomes__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "SpouseIncomesEndpoint",
             },

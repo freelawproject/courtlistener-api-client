@@ -5,7 +5,7 @@
 **Get Field Choices**
 
 - **Source:** `courtlistener/mcp/tools/get_choices_tool.py`
-- **Estimated definition size:** ~399 tokens (description ~30, input schema ~298; cl100k_base)
+- **Estimated definition size:** ~407 tokens (description ~30, input schema ~298; cl100k_base)
 - **Parameters:** 2 (2 required)
 - **Raw input schema:** [`get_choices.inputs.json`](./get_choices.inputs.json)
 
@@ -22,6 +22,7 @@ Use this when a field's schema says to look up choices with this tool.
 | `title` | `"Get Field Choices"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `false` |
 
 ## Parameters

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import uuid
 from itertools import islice
 
@@ -12,6 +13,13 @@ from courtlistener.models import ENDPOINTS
 from courtlistener.sync_client.resource import ResourceIterator
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_fields(fields):
+    """Accept comma- or space-separated `fields` strings."""
+    if isinstance(fields, str):
+        return [f for f in re.split(r"[,\s]+", fields.strip(" ,")) if f]
+    return fields
 
 
 def endpoint_id_choices(include_search: bool = False) -> list[str]:

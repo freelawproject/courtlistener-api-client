@@ -88,6 +88,7 @@ class SchoolsEndpoint(Endpoint):
         None | dict[str, Any] | int,
         Field(
             None,
+            description="Related filter: pass a educations record\u0027s id, or a dict of educations sub-filters (sent as educations__\u003csubfilter\u003e lookups). Not an enumerated choice field.",
             json_schema_extra={
                 "related_class_name": "EducationsEndpoint",
             },

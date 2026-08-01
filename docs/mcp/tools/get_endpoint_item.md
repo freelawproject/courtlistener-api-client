@@ -5,7 +5,7 @@
 **Get Item by ID**
 
 - **Source:** `courtlistener/mcp/tools/get_endpoint_item_tool.py`
-- **Estimated definition size:** ~429 tokens (description ~12, input schema ~347; cl100k_base)
+- **Estimated definition size:** ~443 tokens (description ~12, input schema ~353; cl100k_base)
 - **Parameters:** 3 (2 required)
 - **Raw input schema:** [`get_endpoint_item.inputs.json`](./get_endpoint_item.inputs.json)
 
@@ -20,6 +20,7 @@ Get an item by ID from a CourtListener API endpoint.
 | `title` | `"Get Item by ID"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `true` |
 
 ## Parameters
@@ -38,6 +39,6 @@ The ID of the item to get.
 
 ### `fields`
 
-array of string | null · optional
+array of string | string | null · optional
 
 Filter which fields are returned. Use the field names from the endpoint's own schema (see the `get_endpoint_schema` tool), not the field names returned by the `search` tool.

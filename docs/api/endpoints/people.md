@@ -338,11 +338,15 @@ Choices (3):
 
 integer
 
+Related filter: pass a educations record's id, or a dict of educations sub-filters (sent as educations__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`educations`](./educations.md)
 
 ### `political_affiliations`
 
 integer
+
+Related filter: pass a political-affiliations record's id, or a dict of political-affiliations sub-filters (sent as political_affiliations__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`political_affiliations`](./political_affiliations.md)
 
@@ -350,11 +354,15 @@ Related endpoint: [`political_affiliations`](./political_affiliations.md)
 
 integer
 
+Related filter: pass a sources record's id, or a dict of sources sub-filters (sent as sources__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`sources`](./sources.md)
 
 ### `aba_ratings`
 
 integer
+
+Related filter: pass a aba-ratings record's id, or a dict of aba-ratings sub-filters (sent as aba_ratings__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`aba_ratings`](./aba_ratings.md)
 
@@ -362,11 +370,15 @@ Related endpoint: [`aba_ratings`](./aba_ratings.md)
 
 integer
 
+Related filter: pass a positions record's id, or a dict of positions sub-filters (sent as positions__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`positions`](./positions.md)
 
 ### `opinion_clusters_participating_judges`
 
 integer
+
+Related filter: pass a clusters record's id, or a dict of clusters sub-filters (sent as opinion_clusters_participating_judges__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`clusters`](./clusters.md)
 
@@ -374,17 +386,23 @@ Related endpoint: [`clusters`](./clusters.md)
 
 integer
 
+Related filter: pass a clusters record's id, or a dict of clusters sub-filters (sent as opinion_clusters_non_participating_judges__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`clusters`](./clusters.md)
 
 ### `opinions_written`
 
 integer
 
+Related filter: pass a opinions record's id, or a dict of opinions sub-filters (sent as opinions_written__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`opinions`](./opinions.md)
 
 ### `opinions_joined`
 
 integer
+
+Related filter: pass a opinions record's id, or a dict of opinions sub-filters (sent as opinions_joined__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`opinions`](./opinions.md)
 

@@ -225,3 +225,38 @@ class TestFieldErrors:
         message = str(excinfo.value)
         assert "Did you mean" not in message
         assert "Fields must be one of:" in message
+
+
+class TestFieldsNormalization:
+    """Models pass `fields` as comma/space-separated strings (the
+    CourtListener API's own syntax); tool schemas accept the string
+    form and `normalize_fields` splits it.
+    """
+
+    def test_normalize_comma_separated(self):
+        from courtlistener.mcp.tools.utils import normalize_fields
+
+        assert normalize_fields("id,case_name") == ["id", "case_name"]
+
+    def test_normalize_space_and_mixed(self):
+        from courtlistener.mcp.tools.utils import normalize_fields
+
+        assert normalize_fields("id case_name") == ["id", "case_name"]
+        assert normalize_fields("id, case_name,") == ["id", "case_name"]
+
+    def test_lists_and_none_pass_through(self):
+        from courtlistener.mcp.tools.utils import normalize_fields
+
+        assert normalize_fields(["id"]) == ["id"]
+        assert normalize_fields(None) is None
+
+    @pytest.mark.parametrize("tool", ["search", "get_endpoint_item"])
+    def test_schema_accepts_string_fields(self, tool):
+        schema = MCP_TOOLS[tool].get_input_schema()
+        anyof = schema["properties"]["fields"]["anyOf"]
+        assert {"type": "string"} in anyof
+
+    def test_search_validate_arguments_accepts_comma_string(self):
+        MCP_TOOLS["search"].validate_arguments(
+            {"type": "o", "q": "test", "fields": "caseName,dateFiled"}
+        )

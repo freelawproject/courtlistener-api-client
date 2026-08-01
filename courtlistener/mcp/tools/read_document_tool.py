@@ -3,6 +3,7 @@ import math
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     fetch_document_text,
@@ -34,6 +35,8 @@ class ReadDocumentTool(MCPTool):
       non-contiguous windows in a single call (up to
       10).  Useful when you already know the chunk
       size from a previous call and want the next N pages at once.
+
+    Input should include exactly one of opinion_id, recap_document_id, or cluster_id.
     """
 
     name: str = "read_document"
@@ -41,6 +44,7 @@ class ReadDocumentTool(MCPTool):
         title="Read Document",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 
@@ -104,9 +108,15 @@ class ReadDocumentTool(MCPTool):
             if value is not None
         ]
         if len(provided) != 1:
-            raise ValueError(
+            raise ToolArgumentValidationError(
                 "Provide exactly one of opinion_id, recap_document_id, "
-                "or cluster_id."
+                "or cluster_id.",
+                tool_name=self.name,
+                argument_names=[
+                    "cluster_id",
+                    "opinion_id",
+                    "recap_document_id",
+                ],
             )
 
         chunk_index = arguments.get("chunk_index")
@@ -159,10 +169,12 @@ class ReadDocumentTool(MCPTool):
         elif isinstance(chunk_index, list):
             out_of_range = [i for i in chunk_index if i >= total_chunks]
             if out_of_range:
-                raise ValueError(
+                raise ToolArgumentValidationError(
                     f"chunk_index value(s) {out_of_range} are out of range; "
                     f"document has {total_chunks} chunk(s) of "
-                    f"{chunk_size} characters each."
+                    f"{chunk_size} characters each.",
+                    tool_name=self.name,
+                    argument_names=["chunk_index"],
                 )
             result["chunk_size"] = chunk_size
             result["total_chunks"] = total_chunks
@@ -175,10 +187,12 @@ class ReadDocumentTool(MCPTool):
             ]
         else:
             if chunk_index >= total_chunks:
-                raise ValueError(
+                raise ToolArgumentValidationError(
                     f"chunk_index {chunk_index} is out of range; "
                     f"document has {total_chunks} chunk(s) of "
-                    f"{chunk_size} characters each."
+                    f"{chunk_size} characters each.",
+                    tool_name=self.name,
+                    argument_names=["chunk_index"],
                 )
             start = chunk_index * chunk_size
             result["chunk_index"] = chunk_index

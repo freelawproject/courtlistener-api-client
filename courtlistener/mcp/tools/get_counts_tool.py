@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.sync_client.resource import ResourceIterator
@@ -18,6 +19,7 @@ class GetCountsTool(MCPTool):
         title="Get Result Count",
         readOnlyHint=True,
         destructiveHint=False,
+        idempotentHint=True,
         openWorldHint=True,
     )
 
@@ -41,9 +43,11 @@ class GetCountsTool(MCPTool):
         with self.get_client() as client:
             data = await get_session().get_query(query_id, client)
             if data is None:
-                raise ValueError(
+                raise SessionDataNotFoundError(
                     f"Query ID {query_id!r} not found. The session may have "
-                    "expired, please redo the query first."
+                    "expired, please redo the query first.",
+                    tool_name=self.name,
+                    argument_name="query_id",
                 )
             response = ResourceIterator.load(client, data["response"])
             count = response.get_count()

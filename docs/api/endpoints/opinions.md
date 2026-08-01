@@ -100,17 +100,23 @@ Is this opinion per curiam, without a single author?
 
 integer
 
+Related filter: pass a clusters record's id, or a dict of clusters sub-filters (sent as cluster__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`clusters`](./clusters.md)
 
 ### `author`
 
 integer
 
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as author__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`people`](./people.md)
 
 ### `joined_by`
 
 integer
+
+Related filter: pass a people record's id, or a dict of people sub-filters (sent as joined_by__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`people`](./people.md)
 

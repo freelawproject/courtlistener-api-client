@@ -39,10 +39,14 @@ integer
 
 integer
 
+Related filter: pass a opinions record's id, or a dict of opinions sub-filters (sent as citing_opinion__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`opinions`](./opinions.md)
 
 ### `cited_opinion`
 
 integer
+
+Related filter: pass a opinions record's id, or a dict of opinions sub-filters (sent as cited_opinion__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`opinions`](./opinions.md)

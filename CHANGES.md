@@ -6,14 +6,22 @@ The following changes are not yet released, but are code complete:
 
 Features:
 - Add support for cluster_id in search_document, read_document, and analyze_citations tools.
-- Add support for space or comma-separated values for multiple-choice fields.
+- Add support for space or comma-separated values for multiple-choice fields and `fields` field.
 - Add support for related fields that don't have a schema.
 - Add near-miss suggestions to invalid-choice errors.
+- Better response when a model uses `get_choices` tool on a non-choice field.
 
 Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
 - Add terms and privacy policy to index.html.
-- Fingerprint validation errors by model and field for Sentry.
+- Tag `ValidationError` and `ToolArgumentValidationError` errors by model or tool for Sentry.
+- Tag `UnauthorizedToolError` errors by tool for Sentry.
+- Key upstream CourtListener failures (5xx and transport errors) by status for Sentry, tagged by tool and status.
+- Raise `ToolArgumentValidationError` for in-tool argument guards so they share the tool-argument Sentry issue.
+- Add `InvalidFieldsError` for invalid `fields` requests, mapped to `ToolArgumentValidationError` in the MCP middleware.
+- Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
+- Exempt routine token rotation errors from Sentry.
+- Add `idempotentHint` to all MCP tool annotations.
 
 Fixes:
 - Handle json_schema_extra when it exists but is None.

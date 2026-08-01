@@ -146,11 +146,15 @@ Is this item freely available as an opinion on PACER?
 
 integer
 
+Related filter: pass a docket-entries record's id, or a dict of docket-entries sub-filters (sent as docket_entry__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`docket_entries`](./docket_entries.md)
 
 ### `tags`
 
 integer
+
+Related filter: pass a tags record's id, or a dict of tags sub-filters (sent as tags__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`tags`](./tags.md)
 

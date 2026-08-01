@@ -447,11 +447,15 @@ Lookups: `iexact`, `istartswith`, `startswith`
 
 string
 
+Related filter: pass a courts record's id, or a dict of courts sub-filters (sent as court__<subfilter> lookups). Not an enumerated choice field.
+
 Related endpoint: [`courts`](./courts.md)
 
 ### `retention_events`
 
 integer
+
+Related filter: pass a retention-events record's id, or a dict of retention-events sub-filters (sent as retention_events__<subfilter> lookups). Not an enumerated choice field.
 
 Related endpoint: [`retention_events`](./retention_events.md)
 

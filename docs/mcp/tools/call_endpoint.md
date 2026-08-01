@@ -5,7 +5,7 @@
 **Call API Endpoint**
 
 - **Source:** `courtlistener/mcp/tools/call_endpoint_tool.py`
-- **Estimated definition size:** ~455 tokens (description ~39, input schema ~344; cl100k_base)
+- **Estimated definition size:** ~463 tokens (description ~39, input schema ~344; cl100k_base)
 - **Parameters:** 3 (1 required)
 - **Raw input schema:** [`call_endpoint.inputs.json`](./call_endpoint.inputs.json)
 
@@ -24,6 +24,7 @@ search endpoint and often include more detailed metadata.
 | `title` | `"Call API Endpoint"` |
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
+| `idempotentHint` | `true` |
 | `openWorldHint` | `true` |
 
 ## Parameters

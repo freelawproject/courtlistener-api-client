@@ -3,7 +3,6 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Any
 
-from fastmcp.exceptions import ToolError
 from fastmcp.server.context import Context
 from fastmcp.server.dependencies import get_access_token, get_http_request
 from fastmcp.tools import Tool
@@ -11,6 +10,7 @@ from jsonschema import Draft202012Validator
 from mcp.types import ToolAnnotations
 
 from courtlistener import CourtListener
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 
 
 class MCPTool:
@@ -72,12 +72,19 @@ class MCPTool:
         )
 
     @cached_property
+    def input_schema(self) -> dict:
+        """Cached input schema for the tool."""
+        return self.get_input_schema()
+
+    @cached_property
     def input_validator(self) -> Draft202012Validator:
         """Cached validator for the tool's input schema."""
-        return Draft202012Validator(self.get_input_schema())
+        return Draft202012Validator(self.input_schema)
 
     def validate_arguments(self, arguments: dict) -> None:
         """Check arguments against the tool's input schema."""
+        if self.name is None:
+            raise ValueError("name must be set")
         arguments = {
             key: value for key, value in arguments.items() if value is not None
         }
@@ -89,13 +96,31 @@ class MCPTool:
             return
 
         messages = []
+        argument_names: set[str] = set()
         for error in errors:
             location = ".".join(str(part) for part in error.path)
             prefix = f"{location}: " if location else ""
             messages.append(f"{prefix}{error.message}")
-        raise ToolError(
+            if error.path:
+                argument_names.add(str(error.path[0]))
+            elif error.validator == "additionalProperties":
+                known = self.input_schema.get("properties", {})
+                argument_names.update(
+                    key for key in arguments if key not in known
+                )
+            elif error.validator == "required":
+                argument_names.update(
+                    key
+                    for key in error.validator_value
+                    if key not in arguments
+                )
+            else:
+                argument_names.add("__root__")
+        raise ToolArgumentValidationError(
             f"Invalid arguments for tool '{self.name}':\n- "
-            + "\n- ".join(messages)
+            + "\n- ".join(messages),
+            tool_name=self.name,
+            argument_names=sorted(argument_names),
         )
 
     async def __call__(self, arguments: dict, ctx: Context) -> Any:
