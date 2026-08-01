@@ -11,8 +11,8 @@ class TestOpinions:
     def test_list(self, client):
         """Opinions list returns results with expected fields."""
         results = client.opinions.list()
-        assert len(results.results) > 0
-        for opinion in results.results:
+        assert len(results.get_results()) > 0
+        for opinion in results.get_results():
             assert "id" in opinion
             assert "type" in opinion
             assert "cluster" in opinion
@@ -20,7 +20,7 @@ class TestOpinions:
     def test_get_by_id(self, client):
         """Get a single opinion and verify it matches the list."""
         results = client.opinions.list()
-        first = results.results[0]
+        first = results.get_results()[0]
 
         opinion = client.opinions.get(first["id"])
 
@@ -36,8 +36,8 @@ class TestClusters:
     def test_list(self, client):
         """Clusters list returns results with expected fields."""
         results = client.clusters.list()
-        assert len(results.results) > 0
-        for cluster in results.results:
+        assert len(results.get_results()) > 0
+        for cluster in results.get_results():
             assert "id" in cluster
             assert "case_name" in cluster
             assert "docket" in cluster
@@ -46,7 +46,7 @@ class TestClusters:
     def test_get_by_id(self, client):
         """Get a single cluster and verify it matches the list."""
         results = client.clusters.list()
-        first = results.results[0]
+        first = results.get_results()[0]
 
         cluster = client.clusters.get(first["id"])
 

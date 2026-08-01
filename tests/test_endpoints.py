@@ -52,7 +52,7 @@ class TestEndpointList:
         results = resource.list()
 
         assert isinstance(results, ResourceIterator)
-        assert isinstance(results.results, list)
+        assert isinstance(results.get_results(), list)
 
 
 @pytest.mark.integration
@@ -68,10 +68,10 @@ class TestEndpointGet:
         resource = getattr(client, endpoint_name)
         results = resource.list()
 
-        if not results.results:
+        if not results.get_results():
             pytest.skip(f"No results for {endpoint_name}, can't test .get()")
 
-        first = results.results[0]
+        first = results.get_results()[0]
         item_id = first.get("id")
         if item_id is None:
             pytest.skip(f"First result for {endpoint_name} has no 'id' field")
