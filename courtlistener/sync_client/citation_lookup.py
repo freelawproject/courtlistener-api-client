@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from courtlistener.exceptions import CourtListenerAPIError
 
 if TYPE_CHECKING:
-    from courtlistener.client import CourtListener
+    from courtlistener.sync_client.client import CourtListener
 
 MAX_TEXT_LENGTH = 64_000
 THROTTLE_STATUS = 429

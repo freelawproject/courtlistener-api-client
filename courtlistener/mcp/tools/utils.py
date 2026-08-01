@@ -9,7 +9,7 @@ from courtlistener import CourtListener
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import DEFAULT_NUM_RESULTS
 from courtlistener.models import ENDPOINTS
-from courtlistener.resource import ResourceIterator
+from courtlistener.sync_client.resource import ResourceIterator
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ from mcp.types import ToolAnnotations
 
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.resource import ResourceIterator
+from courtlistener.sync_client.resource import ResourceIterator
 
 
 class GetCountsTool(MCPTool):

@@ -8,7 +8,7 @@ from courtlistener.models import Endpoint, Page
 from courtlistener.utils import flatten_filters, validate_model_fields
 
 if TYPE_CHECKING:
-    from courtlistener.client import CourtListener
+    from courtlistener.sync_client.client import CourtListener
 
 
 class ResourceIterator:

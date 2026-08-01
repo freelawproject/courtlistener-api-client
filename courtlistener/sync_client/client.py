@@ -7,11 +7,11 @@ import httpx
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
-from courtlistener.resource import Resource
+from courtlistener.sync_client.resource import Resource
 
 if TYPE_CHECKING:
-    from courtlistener.alerts import DocketAlerts, SearchAlerts
-    from courtlistener.citation_lookup import CitationLookup
+    from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
+    from courtlistener.sync_client.citation_lookup import CitationLookup
 
 DEFAULT_API_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
 
@@ -65,7 +65,7 @@ class CourtListener:
     def alerts(self) -> SearchAlerts:
         """Access the search alerts API."""
         if not hasattr(self, "_alerts"):
-            from courtlistener.alerts import SearchAlerts
+            from courtlistener.sync_client.alerts import SearchAlerts
 
             self._alerts = SearchAlerts(self)
         return self._alerts
@@ -74,7 +74,7 @@ class CourtListener:
     def docket_alerts(self) -> DocketAlerts:
         """Access the docket alerts API."""
         if not hasattr(self, "_docket_alerts"):
-            from courtlistener.alerts import DocketAlerts
+            from courtlistener.sync_client.alerts import DocketAlerts
 
             self._docket_alerts = DocketAlerts(self)
         return self._docket_alerts
@@ -83,7 +83,9 @@ class CourtListener:
     def citation_lookup(self) -> CitationLookup:
         """Access the citation lookup and verification API."""
         if not hasattr(self, "_citation_lookup"):
-            from courtlistener.citation_lookup import CitationLookup
+            from courtlistener.sync_client.citation_lookup import (
+                CitationLookup,
+            )
 
             self._citation_lookup = CitationLookup(self)
         return self._citation_lookup
