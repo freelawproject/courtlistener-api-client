@@ -10,7 +10,7 @@ from courtlistener import CourtListener
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import DEFAULT_NUM_RESULTS
 from courtlistener.models import ENDPOINTS
-from courtlistener.resource import ResourceIterator
+from courtlistener.sync_client.resource import ResourceIterator
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def prepare_count(count: int | str | None, query_id: str) -> int | str | None:
 
 def has_more_results(response: ResourceIterator) -> bool:
     """Check whether a ResourceIterator has unconsumed results."""
-    page = response.current_page
+    page = response.get_current_page()
     if response._page_result_index < len(page.results):
         return True
     return response.has_next()

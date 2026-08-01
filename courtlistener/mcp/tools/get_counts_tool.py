@@ -4,7 +4,7 @@ from mcp.types import ToolAnnotations
 from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.resource import ResourceIterator
+from courtlistener.sync_client.resource import ResourceIterator
 
 
 class GetCountsTool(MCPTool):
@@ -50,5 +50,5 @@ class GetCountsTool(MCPTool):
                     argument_name="query_id",
                 )
             response = ResourceIterator.load(client, data["response"])
-            count = response.count
+            count = response.get_count()
             return {"count": count}

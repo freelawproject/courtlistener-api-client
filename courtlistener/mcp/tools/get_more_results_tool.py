@@ -16,7 +16,7 @@ from courtlistener.mcp.tools.utils import (
     normalize_fields,
     prepare_has_more_str,
 )
-from courtlistener.resource import ResourceIterator
+from courtlistener.sync_client.resource import ResourceIterator
 
 
 class GetMoreResultsTool(MCPTool):

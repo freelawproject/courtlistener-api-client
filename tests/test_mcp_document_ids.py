@@ -39,6 +39,9 @@ class FakeIterator:
         )
         self._page_result_index = len(self._results)
 
+    def get_current_page(self):
+        return self.current_page
+
     def __iter__(self):
         return iter(self._results)
 

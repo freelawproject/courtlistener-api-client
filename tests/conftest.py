@@ -59,7 +59,7 @@ def client():
 
 def first_result_id(results):
     """Extract the ID from the first result in a ResourceIterator."""
-    if results.results:
-        result = results.results[0]
+    if results.get_results():
+        result = results.get_results()[0]
         return result.get("id") or result.get("resource_uri")
     return None

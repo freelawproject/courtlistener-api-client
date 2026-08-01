@@ -22,7 +22,7 @@ from eyecite.models import (
 )
 from eyecite.utils import DISALLOWED_NAMES
 
-from courtlistener.citation_lookup import parse_wait_until
+from courtlistener.sync_client.citation_lookup import parse_wait_until
 
 # Delimiter used between citations in the compact string sent to the
 # citation-lookup API.  Semicolon-space is a natural Bluebook list

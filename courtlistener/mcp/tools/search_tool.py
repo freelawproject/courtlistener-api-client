@@ -114,7 +114,7 @@ class SearchTool(MCPTool):
             add_opinion_ids(results)
 
             query_id = await prepare_query_id(response, client, fields=fields)
-            count = prepare_count(response.current_page.count, query_id)
+            count = prepare_count(response.get_current_page().count, query_id)
             filtered_results, missing_fields = filter_results_by_fields(
                 results, fields
             )

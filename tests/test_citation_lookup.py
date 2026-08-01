@@ -4,7 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from courtlistener.citation_lookup import CitationLookup, _split_text
+from courtlistener.sync_client.citation_lookup import (
+    CitationLookup,
+    _split_text,
+)
 
 
 @pytest.mark.integration

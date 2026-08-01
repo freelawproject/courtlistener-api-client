@@ -22,6 +22,7 @@ Changes:
 - Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
 - Exempt routine token rotation errors from Sentry.
 - Add `idempotentHint` to all MCP tool annotations.
+- Move API client to `sync_client` module.
 
 Fixes:
 - Handle json_schema_extra when it exists but is None.

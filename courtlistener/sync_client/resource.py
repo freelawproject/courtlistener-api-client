@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
@@ -8,7 +9,7 @@ from courtlistener.models import Endpoint, Page
 from courtlistener.utils import flatten_filters, validate_model_fields
 
 if TYPE_CHECKING:
-    from courtlistener.client import CourtListener
+    from courtlistener.sync_client.client import CourtListener
 
 
 class ResourceIterator:
@@ -43,8 +44,7 @@ class ResourceIterator:
             )
         return Page(**data)
 
-    @property
-    def current_page(self) -> Page:
+    def get_current_page(self) -> Page:
         """Get the current page."""
         if self._current_page is None:
             self._current_page = self._fetch_page()
@@ -52,46 +52,49 @@ class ResourceIterator:
 
     def has_next(self) -> bool:
         """Whether there is a next page."""
-        return self.current_page.next is not None
+        return self.get_current_page().next is not None
 
     def has_previous(self) -> bool:
         """Whether there is a previous page."""
-        return self.current_page.previous is not None
+        return self.get_current_page().previous is not None
 
     def next(self) -> None:
         """Get the next page."""
         if not self.has_next():
             raise ValueError("No next page")
-        self._current_page = self._fetch_page(self.current_page.next)
+        current_page = self.get_current_page()
+        self._current_page = self._fetch_page(current_page.next)
         self._page_result_index = 0
 
     def previous(self) -> None:
         """Get the previous page."""
         if not self.has_previous():
             raise ValueError("No previous page")
-        self._current_page = self._fetch_page(self.current_page.previous)
+        current_page = self.get_current_page()
+        self._current_page = self._fetch_page(current_page.previous)
         self._page_result_index = 0
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
         """Iterate over all results across pages, respecting the page result index."""
         while True:
-            for item in self.current_page.results[self._page_result_index :]:
+            current_page = self.get_current_page()
+            for item in current_page.results[self._page_result_index :]:
                 self._page_result_index += 1
                 yield item
             if not self.has_next():
                 break
             self.next()
 
-    @property
-    def count(self) -> int:
+    def get_count(self) -> int:
         """Total count of results across all pages."""
         if self._count is None:
-            if self.current_page.count is None:
+            current_page = self.get_current_page()
+            if current_page.count is None:
                 raise ValueError("No count URL")
-            elif isinstance(self.current_page.count, int):
-                self._count = self.current_page.count
+            elif isinstance(current_page.count, int):
+                self._count = current_page.count
             else:
-                parsed = urlparse(self.current_page.count)
+                parsed = urlparse(current_page.count)
                 path = parsed.path
                 if parsed.query:
                     path = f"{path}?{parsed.query}"
@@ -99,22 +102,22 @@ class ResourceIterator:
                 self._count = int(data.get("count", 0))
         return self._count
 
-    @property
-    def document_count(self) -> int | None:
+    def get_document_count(self) -> int | None:
         """Total count of nested documents for recap search endpoint."""
-        if self.current_page is not None:
-            return self.current_page.document_count
+        current_page = self.get_current_page()
+        if current_page is not None:
+            return current_page.document_count
         return None
 
-    @property
-    def results(self) -> list[dict[str, Any]]:
+    def get_results(self) -> list[dict[str, Any]]:
         """Results from the current page."""
-        return self.current_page.results
+        return self.get_current_page().results
 
     def dump(self) -> dict[str, Any]:
         """Serialize the iterator state to a dict for later restoration."""
+        current_page = self.get_current_page()
         return {
-            "current_page": self.current_page.model_dump(),
+            "current_page": current_page.model_dump(),
             "filters": self._filters,
             "endpoint": self._endpoint,
             "page_result_index": self._page_result_index,
@@ -134,6 +137,46 @@ class ResourceIterator:
         iterator._page_result_index = data["page_result_index"]
         iterator._count = data["count"]
         return iterator
+
+    # ------------------------------------------------------------------
+    # Deprecated property aliases.
+    #
+    # Kept only for backwards compatibility with pre-async-split code;
+    # they do not exist on AsyncResourceIterator and will not survive
+    # the planned unasync code generation. Use the get_* methods.
+    # ------------------------------------------------------------------
+
+    def _warn_deprecated(self, name: str) -> None:
+        warnings.warn(
+            f"ResourceIterator.{name} is deprecated and will be removed "
+            f"in a future release; use get_{name}() instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    @property
+    def current_page(self) -> Page:
+        """Deprecated alias for :meth:`get_current_page`."""
+        self._warn_deprecated("current_page")
+        return self.get_current_page()
+
+    @property
+    def count(self) -> int:
+        """Deprecated alias for :meth:`get_count`."""
+        self._warn_deprecated("count")
+        return self.get_count()
+
+    @property
+    def document_count(self) -> int | None:
+        """Deprecated alias for :meth:`get_document_count`."""
+        self._warn_deprecated("document_count")
+        return self.get_document_count()
+
+    @property
+    def results(self) -> list[dict[str, Any]]:
+        """Deprecated alias for :meth:`get_results`."""
+        self._warn_deprecated("results")
+        return self.get_results()
 
 
 class Resource:

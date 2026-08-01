@@ -8,7 +8,7 @@ filter path already coerces these via the pydantic endpoint models, so
 from unittest.mock import MagicMock
 
 from courtlistener.models import ENDPOINTS
-from courtlistener.resource import Resource
+from courtlistener.sync_client.resource import Resource
 
 
 class TestGetIdNormalization:
