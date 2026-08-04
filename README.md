@@ -42,11 +42,11 @@ opinion = client.opinions.get(1)
 response = client.opinions.list(cluster__case_name="Miranda")
 
 # Access results from the current page
-for opinion in response.results:
+for opinion in response.get_results():
     print(opinion)
 
 # Check the total count of matching results
-print(response.count)
+print(response.get_count())
 
 # Iterate through all results across pages
 response = client.dockets.list(court="scotus")
@@ -67,11 +67,11 @@ for docket in results:
 
 # Or navigate pages manually
 results = client.dockets.list(court="scotus")
-print(results.results)   # current page results
+print(results.get_results())   # current page results
 
 if results.has_next():
     results.next()
-    print(results.results)  # next page results
+    print(results.get_results())  # next page results
 ```
 
 ## Available Endpoints
@@ -105,3 +105,20 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 | `fjc_integrated_database` | FJC integrated database |
 
 See the [CourtListener API docs](https://www.courtlistener.com/api/rest-info/) for the full list and available filters.
+
+## Async
+
+`AsyncCourtListener` mirrors `CourtListener` method for method. Anything that
+makes a request is awaited, iteration uses `async for`, and the client is an
+async context manager.
+
+```python
+from courtlistener import AsyncCourtListener
+
+async with AsyncCourtListener() as client:
+    opinion = await client.opinions.get(1)
+
+    results = client.dockets.list(court="scotus")
+    async for docket in results:
+        print(docket)
+```

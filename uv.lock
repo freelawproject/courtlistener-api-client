@@ -354,10 +354,9 @@ wheels = [
 
 [[package]]
 name = "courtlistener-api-client"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "." }
 dependencies = [
-    { name = "anyio" },
     { name = "httpx" },
     { name = "pydantic" },
 ]
@@ -388,7 +387,6 @@ mcp = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anyio", specifier = ">=4.0.0" },
     { name = "click", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "eyecite", marker = "extra == 'mcp'", specifier = ">=2.6.0" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = "==3.4.0" },

@@ -1,13 +1,73 @@
 """Tests for the CitationLookup helper."""
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
+from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.sync_client.citation_lookup import (
+    MAX_TEXT_LENGTH,
     CitationLookup,
     _split_text,
 )
+
+
+def _mock_client(*responses):
+    client = MagicMock()
+    client._request = MagicMock(side_effect=list(responses) or None)
+    return client
+
+
+def _throttle_error(wait_seconds=1):
+    wait_until = datetime.now(timezone.utc) + timedelta(seconds=wait_seconds)
+    return CourtListenerAPIError(
+        429,
+        {"wait_until": wait_until.isoformat()},
+        MagicMock(spec=httpx.Response, status_code=429),
+    )
+
+
+class TestRateLimitRetry:
+    """Mirrors TestLookupText in tests/test_async_citation_lookup.py."""
+
+    def test_raises_on_oversized_text(self):
+        lookup = CitationLookup(_mock_client())
+        with pytest.raises(ValueError, match="exceeds the maximum"):
+            lookup.lookup_text("x" * (MAX_TEXT_LENGTH + 1))
+
+    def test_429_raises_without_retry_flag(self):
+        client = _mock_client(_throttle_error())
+        lookup = CitationLookup(client)
+        with pytest.raises(CourtListenerAPIError):
+            lookup.lookup_text("576 U.S. 644")
+        assert client._request.call_count == 1
+
+    def test_retry_on_rate_limit_sleeps_and_retries(self):
+        results = [{"citation": "576 U.S. 644", "status": 200}]
+        client = _mock_client(_throttle_error(), results)
+        lookup = CitationLookup(client)
+
+        with patch(
+            "courtlistener.sync_client.citation_lookup.time.sleep"
+        ) as mock_sleep:
+            output = lookup.lookup_text(
+                "576 U.S. 644", retry_on_rate_limit=True
+            )
+
+        assert output == results
+        assert client._request.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_second_429_raises(self):
+        client = _mock_client(_throttle_error(), _throttle_error())
+        lookup = CitationLookup(client)
+        with (
+            patch("courtlistener.sync_client.citation_lookup.time.sleep"),
+            pytest.raises(CourtListenerAPIError),
+        ):
+            lookup.lookup_text("576 U.S. 644", retry_on_rate_limit=True)
 
 
 @pytest.mark.integration

@@ -162,6 +162,28 @@ class TestDocketAlertsSubscribeIdempotent:
         assert exc_info.value.status_code == 400
 
 
+class TestDocketAlertsUnsubscribe:
+    def test_deletes_existing_alert(self):
+        mock_client = MagicMock()
+        existing = {"id": 9, "docket": 5, "alert_type": 1}
+        mock_client._request.side_effect = [_page([existing]), {}]
+
+        da = DocketAlerts(mock_client)
+        da.unsubscribe(docket=5)
+
+        method, path = mock_client._request.call_args_list[1].args
+        assert method == "DELETE"
+        assert path.endswith("/9/")
+
+    def test_raises_when_no_alert(self):
+        mock_client = MagicMock()
+        mock_client._request.side_effect = [_page([])]
+
+        da = DocketAlerts(mock_client)
+        with pytest.raises(ValueError, match="No docket alert found"):
+            da.unsubscribe(docket=5)
+
+
 class TestDocketAlertsValidation:
     def test_docket_alert_invalid_alert_type_raises(self):
         mock_client = MagicMock()

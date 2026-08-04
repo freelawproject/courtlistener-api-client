@@ -1,0 +1,174 @@
+from __future__ import annotations
+
+import os
+from typing import TYPE_CHECKING, Any
+
+import httpx
+
+from courtlistener.async_client.resource import AsyncResource
+from courtlistener.exceptions import CourtListenerAPIError
+from courtlistener.models import ENDPOINTS
+
+if TYPE_CHECKING:
+    from courtlistener.async_client.alerts import (
+        AsyncDocketAlerts,
+        AsyncSearchAlerts,
+    )
+    from courtlistener.async_client.citation_lookup import AsyncCitationLookup
+
+DEFAULT_API_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
+
+
+class AsyncCourtListener:
+    """Client for interacting with the CourtListener API."""
+
+    def __init__(
+        self,
+        api_token: str | None = None,
+        access_token: str | None = None,
+        base_url: str | None = None,
+        timeout: float = 300.0,
+    ) -> None:
+        """Initialize the CourtListener client.
+
+        Args:
+            api_token: CourtListener API token, sent as
+                ``Authorization: Token <api_token>``. If not provided and
+                ``access_token`` is also not provided, will look for the
+                ``COURTLISTENER_API_TOKEN`` environment variable.
+            access_token: OAuth2 access token, sent as
+                ``Authorization: Bearer <access_token>``. When set, it
+                takes precedence over ``api_token`` and the env var.
+            base_url: Base URL for the CourtListener API.
+            timeout: Request timeout in seconds.
+        """
+        self.api_token = api_token or (
+            None if access_token else os.environ.get("COURTLISTENER_API_TOKEN")
+        )
+        self.access_token = access_token
+        if not self.api_token and not self.access_token:
+            raise ValueError(
+                "Authentication is required. Provide api_token, "
+                "access_token, or set COURTLISTENER_API_TOKEN "
+                "environment variable."
+            )
+
+        if base_url is None:
+            base_url = (
+                os.environ.get("COURTLISTENER_API_BASE_URL")
+                or DEFAULT_API_BASE_URL
+            )
+
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self._http_client: httpx.AsyncClient | None = None
+        self._resources: dict[str, AsyncResource] = {}
+
+    @property
+    def alerts(self) -> AsyncSearchAlerts:
+        """Access the search alerts API."""
+        if not hasattr(self, "_alerts"):
+            from courtlistener.async_client.alerts import AsyncSearchAlerts
+
+            self._alerts = AsyncSearchAlerts(self)
+        return self._alerts
+
+    @property
+    def docket_alerts(self) -> AsyncDocketAlerts:
+        """Access the docket alerts API."""
+        if not hasattr(self, "_docket_alerts"):
+            from courtlistener.async_client.alerts import AsyncDocketAlerts
+
+            self._docket_alerts = AsyncDocketAlerts(self)
+        return self._docket_alerts
+
+    @property
+    def citation_lookup(self) -> AsyncCitationLookup:
+        """Access the citation lookup and verification API."""
+        if not hasattr(self, "_citation_lookup"):
+            from courtlistener.async_client.citation_lookup import (
+                AsyncCitationLookup,
+            )
+
+            self._citation_lookup = AsyncCitationLookup(self)
+        return self._citation_lookup
+
+    def __getattr__(self, name: str) -> AsyncResource:
+        """Dynamically create resource accessors based on registered endpoints."""
+        if not name.startswith("_"):
+            if name in self._resources:
+                return self._resources[name]
+
+            if name in ENDPOINTS:
+                resource: AsyncResource = AsyncResource(self, ENDPOINTS[name])
+                self._resources[name] = resource
+                return resource
+
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    @property
+    def client(self) -> httpx.AsyncClient:
+        """Get or create the HTTP client."""
+        if self._http_client is None:
+            if self.access_token:
+                auth_header = f"Bearer {self.access_token}"
+            else:
+                auth_header = f"Token {self.api_token}"
+            self._http_client = httpx.AsyncClient(
+                base_url=self.base_url,
+                headers={
+                    "Authorization": auth_header,
+                },
+                timeout=self.timeout,
+            )
+        return self._http_client
+
+    async def aclose(self) -> None:
+        """Close the HTTP client."""
+        if self._http_client is not None:
+            await self._http_client.aclose()
+            self._http_client = None
+
+    async def __aenter__(self) -> AsyncCourtListener:
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.aclose()
+
+    async def _request(
+        self, method: str, path: str, **kwargs: Any
+    ) -> dict[str, Any] | list[Any]:
+        """Make an HTTP request to the API.
+
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            path: API endpoint path
+            **kwargs: Additional arguments to pass to httpx
+
+        Returns:
+            Parsed JSON response (dict or list)
+        """
+
+        overlap = max(
+            i for i in range(len(path)) if self.base_url.endswith(path[:i])
+        )
+        if overlap:
+            path = path[overlap:]
+        response = await self.client.request(method, path, **kwargs)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError:
+            try:
+                detail = response.json()
+            except Exception:
+                detail = response.text
+            raise CourtListenerAPIError(
+                status_code=response.status_code,
+                detail=detail,
+                response=response,
+            ) from None
+        if response.status_code == 204:
+            return {}
+        return response.json()

@@ -34,13 +34,13 @@ class FakeIterator:
 
     def __init__(self, results):
         self._results = list(results)
-        self.current_page = SimpleNamespace(
+        self._current_page = SimpleNamespace(
             results=self._results, count=len(self._results)
         )
         self._page_result_index = len(self._results)
 
     def get_current_page(self):
-        return self.current_page
+        return self._current_page
 
     def __iter__(self):
         return iter(self._results)

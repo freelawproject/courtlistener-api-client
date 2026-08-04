@@ -4,12 +4,15 @@
 
 The following changes are not yet released, but are code complete:
 
+### 1.2.0 - 2026-08-04
+
 Features:
 - Add support for cluster_id in search_document, read_document, and analyze_citations tools.
 - Add support for space or comma-separated values for multiple-choice fields and `fields` field.
 - Add support for related fields that don't have a schema.
 - Add near-miss suggestions to invalid-choice errors.
 - Better response when a model uses `get_choices` tool on a non-choice field.
+- Add `AsyncCourtListener` client for asynchronous API operations.
 
 Changes:
 - Improve global prompt to clarify that cluster_id is a separate id-space from opinion_id.
@@ -22,7 +25,9 @@ Changes:
 - Add `SessionDataNotFoundError` for stale query/job ids, keyed as its own Sentry issue so spikes surface session-store problems.
 - Exempt routine token rotation errors from Sentry.
 - Add `idempotentHint` to all MCP tool annotations.
-- Move API client to `sync_client` module.
+- Move API client to `sync_client` module. All previously top-level names remain importable from `courtlistener`, alongside their async counterparts.
+- Deprecate the `ResourceIterator` properties `current_page`, `count`, `document_count`, and `results` in favor of `get_current_page()`, `get_count()`, `get_document_count()`, and `get_results()`. The properties still work but emit a `DeprecationWarning`; the methods have awaitable analogues on `AsyncResourceIterator`.
+- Test against Python 3.10 through 3.13 in CI.
 
 Fixes:
 - Handle json_schema_extra when it exists but is None.
