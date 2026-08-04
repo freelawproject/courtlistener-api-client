@@ -49,7 +49,7 @@ class TestLookupText:
         lookup = AsyncCitationLookup(client)
 
         with patch(
-            "courtlistener.async_client.citation_lookup.anyio.sleep",
+            "courtlistener.async_client.citation_lookup.asyncio.sleep",
             new_callable=AsyncMock,
         ) as mock_sleep:
             output = await lookup.lookup_text(
@@ -65,7 +65,7 @@ class TestLookupText:
         lookup = AsyncCitationLookup(client)
         with (
             patch(
-                "courtlistener.async_client.citation_lookup.anyio.sleep",
+                "courtlistener.async_client.citation_lookup.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
             pytest.raises(CourtListenerAPIError),

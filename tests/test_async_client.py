@@ -42,6 +42,27 @@ PAIRS = [
     (CitationLookup, AsyncCitationLookup),
 ]
 
+# Sync-only backwards-compat shims. They document the alias rather than
+# the operation, so they sit out the docstring comparison; their
+# behavior is covered by tests/test_pagination.py.
+DEPRECATED_ALIASES = frozenset(RENAMES[ResourceIterator])
+
+# (class name, member) pairs whose docstrings deliberately differ.
+DOCSTRING_EXEMPT = {
+    # The async flavor intentionally keeps the one-line summary.
+    ("DocketAlerts", "unsubscribe"),
+}
+
+
+def _doc(cls, name):
+    """Docstring of a class member, or None if it isn't documentable."""
+    attr = inspect.getattr_static(cls, name)
+    if isinstance(attr, classmethod):
+        attr = attr.__func__
+    if not (inspect.isfunction(attr) or isinstance(attr, property)):
+        return None
+    return inspect.getdoc(attr)
+
 
 def _public_members(cls):
     return {name for name in vars(cls) if not name.startswith("_")}
@@ -139,6 +160,28 @@ class TestSyncAsyncParity:
             if not inspect.isfunction(sync_attr):
                 continue
             assert _param_facts(sync_attr) == _param_facts(async_attr), name
+
+    @pytest.mark.parametrize(
+        "sync_cls,async_cls", PAIRS, ids=lambda c: c.__name__
+    )
+    def test_docstrings_match(self, sync_cls, async_cls):
+        """Shared members carry the same docs in both flavors.
+
+        Guards the unasync plan: once the sync client is generated from
+        the async source, any prose that only exists on the sync side is
+        silently lost. Deliberate divergences go in DOCSTRING_EXEMPT.
+        """
+        assert inspect.getdoc(sync_cls) == inspect.getdoc(async_cls)
+        renames = RENAMES.get(sync_cls, {})
+        for name in _public_members(sync_cls):
+            if name in DEPRECATED_ALIASES:
+                continue
+            if (sync_cls.__name__, name) in DOCSTRING_EXEMPT:
+                continue
+            sync_doc = _doc(sync_cls, name)
+            if sync_doc is None:
+                continue
+            assert sync_doc == _doc(async_cls, renames.get(name, name)), name
 
     def test_duplicated_citation_helpers_are_identical(self):
         """The pure helpers are deliberately duplicated per flavor.
