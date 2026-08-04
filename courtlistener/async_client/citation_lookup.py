@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-
-import anyio
 
 from courtlistener.exceptions import CourtListenerAPIError
 
@@ -79,7 +78,7 @@ class AsyncCitationLookup:
             wait = _wait_until_seconds(e.detail)
             if wait is None:
                 raise
-            await anyio.sleep(wait)
+            await asyncio.sleep(wait)
             result = await self._client._request(
                 "POST", self.ENDPOINT, data={"text": text}
             )
