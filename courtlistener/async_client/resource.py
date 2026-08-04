@@ -107,10 +107,7 @@ class AsyncResourceIterator:
 
     async def get_document_count(self) -> int | None:
         """Total count of nested documents for recap search endpoint."""
-        current_page = await self.get_current_page()
-        if current_page is not None:
-            return current_page.document_count
-        return None
+        return (await self.get_current_page()).document_count
 
     async def get_results(self) -> list[dict[str, Any]]:
         """Results from the current page."""
@@ -131,7 +128,7 @@ class AsyncResourceIterator:
     def load(
         cls, client: AsyncCourtListener, data: dict[str, Any]
     ) -> AsyncResourceIterator:
-        """Restore an AsyncResourceIterator from a previously dumped state."""
+        """Restore the iterator from a previously dumped state."""
         iterator = cls.__new__(cls)
         iterator._client = client
         iterator._endpoint = data["endpoint"]

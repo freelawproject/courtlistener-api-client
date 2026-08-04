@@ -104,10 +104,7 @@ class ResourceIterator:
 
     def get_document_count(self) -> int | None:
         """Total count of nested documents for recap search endpoint."""
-        current_page = self.get_current_page()
-        if current_page is not None:
-            return current_page.document_count
-        return None
+        return self.get_current_page().document_count
 
     def get_results(self) -> list[dict[str, Any]]:
         """Results from the current page."""
@@ -128,7 +125,7 @@ class ResourceIterator:
     def load(
         cls, client: CourtListener, data: dict[str, Any]
     ) -> ResourceIterator:
-        """Restore a ResourceIterator from a previously dumped state."""
+        """Restore the iterator from a previously dumped state."""
         iterator = cls.__new__(cls)
         iterator._client = client
         iterator._endpoint = data["endpoint"]
@@ -139,11 +136,8 @@ class ResourceIterator:
         return iterator
 
     # ------------------------------------------------------------------
-    # Deprecated property aliases.
-    #
-    # Kept only for backwards compatibility with pre-async-split code;
-    # they do not exist on AsyncResourceIterator and will not survive
-    # the planned unasync code generation. Use the get_* methods.
+    # Deprecated property aliases, kept for backwards compatibility.
+    # Use the get_* methods instead.
     # ------------------------------------------------------------------
 
     def _warn_deprecated(self, name: str) -> None:
