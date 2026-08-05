@@ -10,7 +10,6 @@ from pydantic import AfterValidator, BeforeValidator, Field
 from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     comma_separated_post_validator,
-    comma_separated_pre_validator,
     multiple_choice_validator,
 )
 
@@ -91,5 +90,4 @@ class OriginatingCourtInformationEndpoint(Endpoint):
         ),
         AfterValidator(comma_separated_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(comma_separated_pre_validator),
     ]

@@ -35,35 +35,31 @@ class TestCourtChoiceValidation:
         assert court_of(court="scotus") == "scotus"
 
     def test_list_of_values(self):
-        assert court_of(court=["scotus", "ca1"]) == ["scotus", "ca1"]
+        assert court_of(court=["scotus", "ca1"]) == "scotus,ca1"
 
     def test_space_separated_values(self):
-        assert court_of(court="scotus ca1") == ["scotus", "ca1"]
+        assert court_of(court="scotus ca1") == "scotus,ca1"
 
     def test_comma_separated_values(self):
-        assert court_of(court="scotus,ca1") == ["scotus", "ca1"]
+        assert court_of(court="scotus,ca1") == "scotus,ca1"
 
     def test_comma_space_separated_values(self):
-        assert court_of(court="scotus, ca1") == ["scotus", "ca1"]
+        assert court_of(court="scotus, ca1") == "scotus,ca1"
 
     def test_comma_containing_label_matches_whole(self):
         assert court_of(court="District Court, D. Alaska") == "akd"
 
     def test_space_separated_many(self):
-        assert court_of(court="scotus ca1 ca2 cand") == [
-            "scotus",
-            "ca1",
-            "ca2",
-            "cand",
-        ]
+        assert court_of(court="scotus ca1 ca2 cand") == "scotus,ca1,ca2,cand"
 
     def test_display_name_matches_whole(self):
         assert court_of(court="Supreme Court of the United States") == "scotus"
 
     def test_display_name_inside_list(self):
-        assert court_of(
-            court=["Supreme Court of the United States", "ca1"]
-        ) == ["scotus", "ca1"]
+        assert (
+            court_of(court=["Supreme Court of the United States", "ca1"])
+            == "scotus,ca1"
+        )
 
     def test_trailing_comma_single_value(self):
         assert court_of(court="scotus,") == "scotus"

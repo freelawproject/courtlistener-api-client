@@ -11,7 +11,6 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
-    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -45,7 +44,6 @@ class PrayersEndpoint(Endpoint):
         ),
         AfterValidator(comma_separated_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(comma_separated_pre_validator),
     ]
     user: Annotated[
         None | int,
