@@ -35,6 +35,11 @@ def hmac_hex(value: str) -> str:
     ).hexdigest()
 
 
+def token_info_key(token: str, kind: str) -> str:
+    """Cache key for a verified credential."""
+    return f"mcp:token_info:{kind}:{hmac_hex(token)}"
+
+
 def user_hash(client: CourtListener) -> str:
     """Return the stable per-user key prefix for the current request."""
     try:
@@ -113,24 +118,26 @@ class Session:
             f"mcp:doc:{doc_type}:{doc_id}", text, DOCUMENT_TTL_SECONDS
         )
 
-    async def get_token_info(self, token: str) -> dict | None:
-        """Return cached ``{"kind": ..., "user_hash": ...}`` for *token*."""
-        raw = await self._get(f"mcp:token_info:{hmac_hex(token)}")
+    async def get_token_info(self, token: str, kind: str) -> dict | None:
+        """Return the cached verification of *token* as a *kind* credential."""
+        raw = await self._get(token_info_key(token, kind))
         if raw is None:
             return None
         return json.loads(raw)
 
-    async def store_token_info(self, token: str, info: dict) -> None:
+    async def store_token_info(
+        self, token: str, kind: str, info: dict
+    ) -> None:
         await self._set(
-            f"mcp:token_info:{hmac_hex(token)}",
+            token_info_key(token, kind),
             json.dumps(info),
             TOKEN_CACHE_TTL_SECONDS,
         )
 
-    async def invalidate_token(self, token: str) -> None:
+    async def invalidate_token(self, token: str, kind: str) -> None:
         """Drop a cached token verification."""
         try:
-            await self._delete(f"mcp:token_info:{hmac_hex(token)}")
+            await self._delete(token_info_key(token, kind))
         except Exception as exc:
             logger.warning("failed to invalidate token cache: %s", exc)
 
