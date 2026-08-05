@@ -21,7 +21,7 @@ Get an item by ID from a CourtListener API endpoint.
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
 | `idempotentHint` | `true` |
-| `openWorldHint` | `true` |
+| `openWorldHint` | `false` |
 
 ## Parameters
 

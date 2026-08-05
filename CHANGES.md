@@ -8,6 +8,7 @@ Changes:
 - Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
 - Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
 - Token verification degrades to direct verification when the session store is unavailable, instead of turning a Redis blip into a 500 on every request.
+- Tools that only make CL API calls have been changed to have `openWorldHint=True`.
 
 ### 1.2.0 - 2026-08-04
 

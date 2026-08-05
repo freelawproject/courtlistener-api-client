@@ -42,7 +42,7 @@ Input should include exactly one of opinion_id, recap_document_id, or cluster_id
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
 | `idempotentHint` | `true` |
-| `openWorldHint` | `true` |
+| `openWorldHint` | `false` |
 
 ## Parameters
 
