@@ -113,20 +113,24 @@ class Session:
             f"mcp:doc:{doc_type}:{doc_id}", text, DOCUMENT_TTL_SECONDS
         )
 
-    async def get_user_hash(self, token: str) -> str | None:
-        return await self._get(f"mcp:token_to_user:{hmac_hex(token)}")
+    async def get_token_info(self, token: str) -> dict | None:
+        """Return cached ``{"kind": ..., "user_hash": ...}`` for *token*."""
+        raw = await self._get(f"mcp:token_info:{hmac_hex(token)}")
+        if raw is None:
+            return None
+        return json.loads(raw)
 
-    async def store_user_hash(self, token: str, uh: str) -> None:
+    async def store_token_info(self, token: str, info: dict) -> None:
         await self._set(
-            f"mcp:token_to_user:{hmac_hex(token)}",
-            uh,
+            f"mcp:token_info:{hmac_hex(token)}",
+            json.dumps(info),
             TOKEN_CACHE_TTL_SECONDS,
         )
 
     async def invalidate_token(self, token: str) -> None:
-        """Drop a token to user_hash mapping."""
+        """Drop a cached token verification."""
         try:
-            await self._delete(f"mcp:token_to_user:{hmac_hex(token)}")
+            await self._delete(f"mcp:token_info:{hmac_hex(token)}")
         except Exception as exc:
             logger.warning("failed to invalidate token cache: %s", exc)
 
