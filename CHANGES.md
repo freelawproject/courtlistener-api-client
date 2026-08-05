@@ -4,6 +4,9 @@
 
 The following changes are not yet released, but are code complete:
 
+Changes:
+- Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
+
 ### 1.2.0 - 2026-08-04
 
 Features:

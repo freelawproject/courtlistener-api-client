@@ -7,13 +7,12 @@ import httpx
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
+from courtlistener.settings import get_api_base_url
 from courtlistener.sync_client.resource import Resource
 
 if TYPE_CHECKING:
     from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
     from courtlistener.sync_client.citation_lookup import CitationLookup
-
-DEFAULT_API_BASE_URL = "https://www.courtlistener.com/api/rest/v4"
 
 
 class CourtListener:
@@ -51,10 +50,7 @@ class CourtListener:
             )
 
         if base_url is None:
-            base_url = (
-                os.environ.get("COURTLISTENER_API_BASE_URL")
-                or DEFAULT_API_BASE_URL
-            )
+            base_url = get_api_base_url()
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
