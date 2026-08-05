@@ -67,7 +67,11 @@ class TestMiddlewareErrorClassification:
     def _fake_access_token(self, monkeypatch, cached):
         token = MagicMock()
         token.token = "tok"
-        token.claims = {"user_hash": "uh", "cached": cached}
+        token.claims = {
+            "user_hash": "uh",
+            "token_kind": "oauth",
+            "cached": cached,
+        }
         monkeypatch.setattr(
             "courtlistener.mcp.middleware.get_access_token", lambda: token
         )
@@ -87,7 +91,7 @@ class TestMiddlewareErrorClassification:
         with pytest.raises(SentryExemptToolError) as excinfo:
             await _call_tool_raising(monkeypatch, error)
         assert "retry to re-authenticate" in str(excinfo.value)
-        session.invalidate_token.assert_awaited_once_with("tok")
+        session.invalidate_token.assert_awaited_once_with("tok", "oauth")
 
     @pytest.mark.asyncio
     async def test_401_on_freshly_verified_token_reports(self, monkeypatch):

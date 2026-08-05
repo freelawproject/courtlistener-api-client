@@ -6,17 +6,20 @@ shared by both backends.
 from __future__ import annotations
 
 import asyncio
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from courtlistener import CourtListener
+from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.session import (
     InMemorySession,
     RedisSession,
     Session,
     get_session,
     set_session,
+    token_info_key,
 )
 
 
@@ -119,14 +122,63 @@ class TestSessionDomainMethods:
 
     def test_token_cache_roundtrip_and_invalidate(self):
         session = InMemorySession()
-        run(session.store_user_hash("tok", "hash123"))
-        assert run(session.get_user_hash("tok")) == "hash123"
-        run(session.invalidate_token("tok"))
-        assert run(session.get_user_hash("tok")) is None
+        info = {"user_hash": "hash123"}
+        run(session.store_token_info("tok", "oauth", info))
+        assert run(session.get_token_info("tok", "oauth")) == info
+        run(session.invalidate_token("tok", "oauth"))
+        assert run(session.get_token_info("tok", "oauth")) is None
+
+    def test_token_info_survives_a_json_roundtrip(self):
+        """The cache holds a structured record rather than a bare hash,
+        so it has room for more than ``user_hash`` later."""
+        session = InMemorySession()
+        info = {"user_hash": "hash123", "extra": ["a", 1, None]}
+        run(session.store_token_info("tok", "oauth", info))
+        raw = run(session._get(token_info_key("tok", "oauth")))
+        assert json.loads(raw) == info
+        assert run(session.get_token_info("tok", "oauth")) == info
+
+    def test_token_kind_interpolates_as_its_bare_value(self):
+        """``TokenKind`` members reach the cache key through an f-string,
+        so a member and its bare value must build the same key. Python
+        3.11 changed mixed-in ``Enum.__format__`` to follow ``__str__``;
+        without pinning both to ``str``'s, keys would silently become
+        ``mcp:token_info:TokenKind.OAUTH:…`` there and orphan every entry
+        written under a different interpreter.
+        """
+        assert f"{TokenKind.OAUTH}" == "oauth"
+        assert str(TokenKind.API) == "api_token"
+        assert token_info_key("tok", TokenKind.OAUTH) == token_info_key(
+            "tok", "oauth"
+        )
+        assert ":oauth:" in token_info_key("tok", TokenKind.OAUTH)
+
+    def test_token_cache_does_not_cross_credential_kinds(self):
+        """An entry verified as one kind must never satisfy a lookup for
+        another — otherwise one valid request would warm a cache entry
+        that a different credential type could then ride in on."""
+        session = InMemorySession()
+        run(session.store_token_info("tok", "oauth", {"user_hash": "h"}))
+        assert run(session.get_token_info("tok", "api_token")) is None
+        assert run(session.get_token_info("tok", "oauth")) is not None
+
+    def test_invalidating_one_kind_leaves_the_other(self):
+        session = InMemorySession()
+        run(session.store_token_info("tok", "oauth", {"user_hash": "h1"}))
+        run(session.store_token_info("tok", "api_token", {"user_hash": "h2"}))
+        run(session.invalidate_token("tok", "oauth"))
+        assert run(session.get_token_info("tok", "oauth")) is None
+        assert run(session.get_token_info("tok", "api_token")) == {
+            "user_hash": "h2"
+        }
 
     def test_token_never_stored_in_plaintext(self):
         session = InMemorySession()
-        run(session.store_user_hash("secret-token", "hash123"))
+        run(
+            session.store_token_info(
+                "secret-token", "oauth", {"user_hash": "hash123"}
+            )
+        )
         assert not any("secret-token" in key for key in session._data)
 
     def test_invalidate_token_swallows_backend_errors(self):
@@ -134,7 +186,7 @@ class TestSessionDomainMethods:
             async def _delete(self, key):
                 raise RuntimeError("backend down")
 
-        run(ExplodingSession().invalidate_token("tok"))
+        run(ExplodingSession().invalidate_token("tok", "oauth"))
 
     def test_values_must_be_json_serializable(self, client):
         """Both backends JSON-round-trip, so non-serializable session

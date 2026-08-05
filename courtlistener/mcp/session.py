@@ -13,6 +13,7 @@ from fastmcp.server.dependencies import get_access_token
 
 from courtlistener import CourtListener
 from courtlistener.mcp import settings
+from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.settings import (
     DOCUMENT_TTL_SECONDS,
     MCP_SECRET_BYTES,
@@ -33,6 +34,11 @@ def hmac_hex(value: str) -> str:
     return hmac.new(
         MCP_SECRET_BYTES, value.encode("utf-8"), hashlib.sha256
     ).hexdigest()
+
+
+def token_info_key(token: str, kind: TokenKind) -> str:
+    """Cache key for a verified credential."""
+    return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
 
 def user_hash(client: CourtListener) -> str:
@@ -113,20 +119,28 @@ class Session:
             f"mcp:doc:{doc_type}:{doc_id}", text, DOCUMENT_TTL_SECONDS
         )
 
-    async def get_user_hash(self, token: str) -> str | None:
-        return await self._get(f"mcp:token_to_user:{hmac_hex(token)}")
+    async def get_token_info(
+        self, token: str, kind: TokenKind
+    ) -> TokenInfo | None:
+        """Return the cached verification of *token* as a *kind* credential."""
+        raw = await self._get(token_info_key(token, kind))
+        if raw is None:
+            return None
+        return json.loads(raw)
 
-    async def store_user_hash(self, token: str, uh: str) -> None:
+    async def store_token_info(
+        self, token: str, kind: TokenKind, info: TokenInfo
+    ) -> None:
         await self._set(
-            f"mcp:token_to_user:{hmac_hex(token)}",
-            uh,
+            token_info_key(token, kind),
+            json.dumps(info),
             TOKEN_CACHE_TTL_SECONDS,
         )
 
-    async def invalidate_token(self, token: str) -> None:
-        """Drop a token to user_hash mapping."""
+    async def invalidate_token(self, token: str, kind: TokenKind) -> None:
+        """Drop a cached token verification."""
         try:
-            await self._delete(f"mcp:token_to_user:{hmac_hex(token)}")
+            await self._delete(token_info_key(token, kind))
         except Exception as exc:
             logger.warning("failed to invalidate token cache: %s", exc)
 

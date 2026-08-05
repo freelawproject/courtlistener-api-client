@@ -1,15 +1,27 @@
 """Tests for authentication plumbing: Bearer vs Token headers in
-``CourtListener.client`` and the three-way resolution in
-``MCPTool.get_client``.
+``CourtListener.client``, the three-way resolution in
+``MCPTool.get_client``, token resolution and caching in
+``resolve_token``, and the server's auth wiring.
 """
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from courtlistener import CourtListener
+from courtlistener.mcp.auth import (
+    CourtListenerTokenVerifier,
+    resolve_token,
+)
+from courtlistener.mcp.auth_types import TokenKind
+from courtlistener.mcp.session import InMemorySession, get_session, set_session
+
+
+def run(coro):
+    return asyncio.run(coro)
 
 
 class TestClientAuthHeader:
@@ -153,6 +165,118 @@ class TestMCPToolGetClient:
         assert cl.client.headers["Authorization"] == "Token env-api-token"
 
 
+class TestResolveToken:
+    """``resolve_token`` sits between the verifier and the session
+    store: it serves a cached verification when one exists for that
+    credential kind, and otherwise verifies and caches."""
+
+    @pytest.fixture(autouse=True)
+    def fresh_session(self):
+        set_session(InMemorySession())
+        yield
+        set_session(None)
+
+    def test_verifies_and_caches_on_a_miss(self):
+        verify = AsyncMock(return_value={"user_hash": "uh"})
+        with patch("courtlistener.mcp.auth.verify_oauth_token", new=verify):
+            info = run(resolve_token("tok", kind=TokenKind.OAUTH))
+        assert info == {
+            "user_hash": "uh",
+            "kind": TokenKind.OAUTH,
+            "cached": False,
+        }
+        assert run(get_session().get_token_info("tok", TokenKind.OAUTH)) == {
+            "user_hash": "uh"
+        }
+
+    def test_kind_and_cached_are_not_persisted(self):
+        """``kind`` already lives in the cache key, and ``cached`` is
+        per-request state for the middleware — neither belongs in the
+        stored record."""
+        verify = AsyncMock(return_value={"user_hash": "uh"})
+        with patch("courtlistener.mcp.auth.verify_oauth_token", new=verify):
+            run(resolve_token("tok", kind=TokenKind.OAUTH))
+        stored = run(get_session().get_token_info("tok", TokenKind.OAUTH))
+        assert stored == {"user_hash": "uh"}
+
+    def test_cache_hit_skips_verification(self):
+        verify = AsyncMock(return_value={"user_hash": "uh"})
+        with patch("courtlistener.mcp.auth.verify_oauth_token", new=verify):
+            run(resolve_token("tok", kind=TokenKind.OAUTH))
+            info = run(resolve_token("tok", kind=TokenKind.OAUTH))
+        assert verify.await_count == 1
+        assert info["cached"] is True
+        assert info["user_hash"] == "uh"
+
+    def test_a_cached_entry_does_not_cross_credential_kinds(self):
+        """The kind is part of the cache key, so an entry verified as
+        one kind can't satisfy a lookup for another. Without that, a
+        warm entry would let a credential in under the wrong scheme."""
+        verify = AsyncMock(return_value={"user_hash": "uh"})
+        with patch("courtlistener.mcp.auth.verify_oauth_token", new=verify):
+            run(resolve_token("tok", kind=TokenKind.OAUTH))
+            # No verifier exists for this kind yet, so a cache hit is
+            # the only way it could resolve — and it must not.
+            assert run(resolve_token("tok", kind=TokenKind.API)) is None
+
+    def test_unimplemented_kind_returns_none(self):
+        assert run(resolve_token("tok", kind=TokenKind.API)) is None
+
+    @pytest.mark.parametrize("kind", list(TokenKind))
+    def test_every_declared_kind_is_dispatched(self, kind):
+        """Adding a ``TokenKind`` without a verifier branch is a mypy
+        error at ``_assert_never``, but that only helps where mypy runs.
+        At runtime every declared kind must still either resolve or fail
+        closed — never raise its way out of the auth path as a 500.
+        """
+        with patch(
+            "courtlistener.mcp.auth.verify_oauth_token",
+            new=AsyncMock(return_value={"user_hash": "uh"}),
+        ):
+            info = run(resolve_token("tok", kind=kind))
+        assert info is None or info["user_hash"] == "uh"
+
+    def test_failed_verification_is_not_cached(self):
+        with patch(
+            "courtlistener.mcp.auth.verify_oauth_token",
+            new=AsyncMock(return_value=None),
+        ):
+            assert run(resolve_token("tok", kind=TokenKind.OAUTH)) is None
+        assert (
+            run(get_session().get_token_info("tok", TokenKind.OAUTH)) is None
+        )
+
+    def test_cache_read_failure_degrades_to_direct_verification(self):
+        """A session-store outage must not turn every request into a
+        500 — verification carries on without the cache."""
+
+        class ExplodingSession(InMemorySession):
+            async def _get(self, key):
+                raise ConnectionError("redis down")
+
+        set_session(ExplodingSession())
+        with patch(
+            "courtlistener.mcp.auth.verify_oauth_token",
+            new=AsyncMock(return_value={"user_hash": "uh"}),
+        ):
+            info = run(resolve_token("tok", kind=TokenKind.OAUTH))
+        assert info is not None
+        assert info["user_hash"] == "uh"
+
+    def test_cache_write_failure_does_not_escape(self):
+        class ExplodingSession(InMemorySession):
+            async def _set(self, key, value, ttl_seconds):
+                raise ConnectionError("redis down")
+
+        set_session(ExplodingSession())
+        with patch(
+            "courtlistener.mcp.auth.verify_oauth_token",
+            new=AsyncMock(return_value={"user_hash": "uh"}),
+        ):
+            info = run(resolve_token("tok", kind=TokenKind.OAUTH))
+        assert info is not None
+
+
 class TestServerAuthWiring:
     """``build_auth`` activates when ``MCP_REQUIRE_OAUTH`` is set to "true",
     and ``create_mcp_server`` itself never pulls auth from the
@@ -160,10 +284,10 @@ class TestServerAuthWiring:
 
     def test_build_auth_returns_verifier_when_set(self):
         """OAuth on → returns a RemoteAuthProvider that publishes the
-        RFC 9728 protected-resource metadata, wrapping the userinfo
-        verifier. Tokens are now validated via CL's OIDC userinfo
-        endpoint, and the resolved user_hash is cached in Redis so
-        session state survives access-token rotation.
+        RFC 9728 protected-resource metadata, wrapping the CourtListener
+        verifier. Tokens are validated via CL's OIDC userinfo endpoint,
+        and the resolved user_hash is cached in Redis so session state
+        survives access-token rotation.
         """
         from fastmcp.server.auth.auth import RemoteAuthProvider
 
@@ -186,7 +310,7 @@ class TestServerAuthWiring:
             importlib.reload(settings_mod)
             importlib.reload(server_mod)
             auth = server_mod.build_auth()
-            verifier_cls = server_mod.UserInfoTokenVerifier
+            verifier_cls = server_mod.CourtListenerTokenVerifier
         assert isinstance(auth, RemoteAuthProvider)
         assert isinstance(auth.token_verifier, verifier_cls)
         # Discovery route is advertised so clients can find the auth
@@ -196,85 +320,110 @@ class TestServerAuthWiring:
         paths = {getattr(r, "path", None) for r in routes}
         assert "/.well-known/oauth-protected-resource" in paths
 
-    def test_userinfo_verifier_declares_openid_and_api_scopes(self):
+    def test_verifier_declares_openid_and_api_scopes(self):
         """Required scopes must appear on the verifier so they're
         advertised in protected-resource metadata and MCP clients
         include them in the authorize request. ``openid`` is what
         makes userinfo accept the token at all; ``api`` is what CL's
         REST API expects downstream.
         """
-        from courtlistener.mcp.auth import UserInfoTokenVerifier
-
-        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
         assert set(verifier.required_scopes) == {"openid", "api"}
 
-    def test_userinfo_verifier_accepts_when_userinfo_succeeds(self):
-        """Successful userinfo lookup → AccessToken carrying the
-        resolved ``user_hash`` in its claims, plus the required scopes
+    def test_verifier_accepts_a_resolved_token(self):
+        """Successful resolution → AccessToken carrying the user_hash
+        and the credential kind in its claims, plus the required scopes
         echoed back so the middleware's scope check passes.
         """
-        import asyncio
-
-        from courtlistener.mcp.auth import UserInfoTokenVerifier
-
-        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
         with patch(
-            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
-            new=AsyncMock(return_value=("fake-user-hash", False)),
+            "courtlistener.mcp.auth.resolve_token",
+            new=AsyncMock(
+                return_value={
+                    "user_hash": "fake-user-hash",
+                    "kind": TokenKind.OAUTH,
+                    "cached": False,
+                }
+            ),
         ):
-            token = asyncio.run(verifier.verify_token("anything-goes"))
+            token = run(verifier.verify_token("anything-goes"))
         assert token is not None
         assert token.token == "anything-goes"
         assert token.claims.get("user_hash") == "fake-user-hash"
+        assert token.claims.get("token_kind") == TokenKind.OAUTH
         assert token.claims.get("cached") is False
         assert set(token.scopes) == {"openid", "api"}
 
-    def test_userinfo_verifier_marks_cache_hits(self):
+    def test_verifier_asks_for_an_oauth_credential(self):
+        """Bearer is the only scheme the SDK lets through today, so the
+        verifier resolves against OAuth until API tokens are added."""
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
+        resolve = AsyncMock(
+            return_value={
+                "user_hash": "h",
+                "kind": TokenKind.OAUTH,
+                "cached": False,
+            }
+        )
+        with patch("courtlistener.mcp.auth.resolve_token", new=resolve):
+            run(verifier.verify_token("jwt"))
+        resolve.assert_awaited_once_with("jwt", kind=TokenKind.OAUTH)
+
+    def test_verifier_marks_cache_hits(self):
         """A cache-served verification is flagged in the claims so the
         middleware can triage downstream 401s (routine rotation vs.
         AS/API disagreement)."""
-        import asyncio
-
-        from courtlistener.mcp.auth import UserInfoTokenVerifier
-
-        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
         with patch(
-            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
-            new=AsyncMock(return_value=("fake-user-hash", True)),
+            "courtlistener.mcp.auth.resolve_token",
+            new=AsyncMock(
+                return_value={
+                    "user_hash": "fake-user-hash",
+                    "kind": TokenKind.OAUTH,
+                    "cached": True,
+                }
+            ),
         ):
-            token = asyncio.run(verifier.verify_token("cached-token"))
+            token = run(verifier.verify_token("cached-token"))
         assert token is not None
         assert token.claims.get("cached") is True
 
-    def test_userinfo_verifier_rejects_when_userinfo_fails(self):
-        """Userinfo returning ``None`` (401/non-200/network error) →
+    def test_verifier_rejects_an_unresolvable_token(self):
+        """Resolution returning ``None`` (401/non-200/network error) →
         ``verify_token`` returns ``None``, which the auth middleware
         converts into a proper HTTP 401 with ``WWW-Authenticate`` so
         the MCP client re-runs OAuth.
         """
-        import asyncio
-
-        from courtlistener.mcp.auth import UserInfoTokenVerifier
-
-        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
         with patch(
-            "courtlistener.mcp.auth.resolve_user_hash_via_userinfo",
-            new=AsyncMock(return_value=(None, False)),
+            "courtlistener.mcp.auth.resolve_token",
+            new=AsyncMock(return_value=None),
         ):
-            token = asyncio.run(verifier.verify_token("revoked-or-bad"))
+            token = run(verifier.verify_token("revoked-or-bad"))
         assert token is None
 
-    def test_userinfo_verifier_rejects_empty_token(self):
-        """Empty bearer → short-circuit without calling userinfo.
-        Prevents trivially-empty ``Authorization: Bearer`` headers from
-        consuming a round-trip to CL.
+    def test_verifier_rejects_empty_token(self):
+        """Empty bearer → short-circuit without touching the cache or
+        userinfo. Prevents trivially-empty ``Authorization: Bearer``
+        headers from consuming a round-trip to CL.
         """
-        import asyncio
-
-        from courtlistener.mcp.auth import UserInfoTokenVerifier
-
-        verifier = UserInfoTokenVerifier(base_url="https://mcp.example.test")
-        assert asyncio.run(verifier.verify_token("")) is None
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
+        resolve = AsyncMock()
+        with patch("courtlistener.mcp.auth.resolve_token", new=resolve):
+            assert run(verifier.verify_token("")) is None
+        resolve.assert_not_awaited()
 
     def test_build_auth_respects_require_oauth_setting(self):
         """``build_auth`` reads ``settings.MCP_REQUIRE_OAUTH`` at call
@@ -339,7 +488,7 @@ class TestUserHash:
 
     def test_reads_claim_from_oauth_context(self):
         """With a FastMCP access token in scope carrying a ``user_hash``
-        claim (populated by ``UserInfoTokenVerifier``), ``user_hash``
+        claim (populated by ``CourtListenerTokenVerifier``), ``user_hash``
         returns the claim verbatim. Rotating the access token doesn't
         change the hash because the claim is derived from the stable
         OIDC ``sub``.

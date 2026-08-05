@@ -11,6 +11,7 @@ from courtlistener.exceptions import (
     CourtListenerAPIError,
     InvalidFieldsError,
 )
+from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
     ToolArgumentValidationError,
@@ -53,7 +54,10 @@ class ToolHandlerMiddleware(Middleware):
                 except RuntimeError:
                     access_token = None
                 if access_token is not None:
-                    await get_session().invalidate_token(access_token.token)
+                    await get_session().invalidate_token(
+                        access_token.token,
+                        access_token.claims.get("token_kind", TokenKind.OAUTH),
+                    )
                 message = (
                     "CourtListener rejected the request as unauthorized. "
                     "Your session may have expired; retry to re-authenticate."

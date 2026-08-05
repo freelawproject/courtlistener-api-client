@@ -41,7 +41,7 @@ SENTRY_TRACES_SAMPLE_RATE = float(
     os.getenv("SENTRY_TRACES_SAMPLE_RATE") or 0.02
 )
 
-# How long a token to user_hash mapping is cached.
+# How long a verified token's info is cached.
 TOKEN_CACHE_TTL_SECONDS = int(os.getenv("MCP_TOKEN_CACHE_TTL", "600"))
 
 # Whether the HTTP app requires OAuth.
@@ -53,8 +53,8 @@ SESSION_TTL_SECONDS = 3600  # 1 hour
 # How long a cached document lives in the session store (shared across users).
 DOCUMENT_TTL_SECONDS = 86400  # 24 hours
 
-# Timeout for the userinfo call made during token verification.
-USERINFO_TIMEOUT_SECONDS = 10
+# Timeout for the upstream calls made during token verification.
+VERIFICATION_TIMEOUT_SECONDS = 20
 
 # Result-count bounds for search/list tools.
 DEFAULT_NUM_RESULTS = 20
