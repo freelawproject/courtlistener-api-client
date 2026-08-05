@@ -9,15 +9,23 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import (
     CourtListenerTokenVerifier,
     resolve_token,
+    verify_api_token,
 )
 from courtlistener.mcp.auth_types import TokenKind
-from courtlistener.mcp.session import InMemorySession, get_session, set_session
+from courtlistener.mcp.session import (
+    InMemorySession,
+    get_session,
+    hmac_hex,
+    set_session,
+)
+from courtlistener.settings import get_api_base_url
 
 
 def run(coro):
@@ -165,6 +173,115 @@ class TestMCPToolGetClient:
         assert cl.client.headers["Authorization"] == "Token env-api-token"
 
 
+def http_response(status_code: int):
+    resp = MagicMock()
+    resp.status_code = status_code
+    return resp
+
+
+def patch_http(response=None, side_effect=None):
+    """Patch the httpx client the verification calls use."""
+    http = MagicMock()
+    http.get = AsyncMock(return_value=response, side_effect=side_effect)
+    ctx = MagicMock()
+    ctx.__aenter__ = AsyncMock(return_value=http)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    return patch(
+        "courtlistener.mcp.auth.httpx.AsyncClient", return_value=ctx
+    ), http
+
+
+class TestVerifyApiToken:
+    """``verify_api_token`` checks a CourtListener API token against the
+    API root, which lists the available endpoints and 401s for any bad
+    credential (confirmed against production)."""
+
+    def test_valid_token_resolves_to_the_token_hmac(self):
+        client_patch, _ = patch_http(http_response(200))
+        with client_patch:
+            info = run(verify_api_token("cl-api-token"))
+        assert info == {"user_hash": hmac_hex("cl-api-token")}
+
+    def test_namespace_matches_the_stdio_fallback(self):
+        """An API token never rotates, so hashing it directly is stable
+        — and it lands a user in the same namespace whether their token
+        arrives over HTTP or via COURTLISTENER_API_TOKEN."""
+        from courtlistener.mcp.session import user_hash
+
+        client_patch, _ = patch_http(http_response(200))
+        with client_patch:
+            info = run(verify_api_token("cl-api-token"))
+        client = CourtListener(api_token="cl-api-token")
+        with patch(
+            "courtlistener.mcp.session.get_access_token",
+            side_effect=RuntimeError("no HTTP request"),
+        ):
+            assert info["user_hash"] == user_hash(client)
+
+    def test_targets_the_api_root_with_the_token_scheme(self):
+        client_patch, http = patch_http(http_response(200))
+        with client_patch:
+            run(verify_api_token("cl-api-token"))
+        url = http.get.await_args.args[0]
+        headers = http.get.await_args.kwargs["headers"]
+        # Trailing slash included: the root 301s without it.
+        assert url == f"{get_api_base_url()}/"
+        assert headers["Authorization"] == "Token cl-api-token"
+
+    def test_follows_a_configured_api_base_url(self):
+        """A deployment pointed at staging must verify against staging,
+        or a staging token would 401 at the door while working fine for
+        every tool call."""
+        staging = "https://staging.courtlistener.com/api/rest/v4"
+        client_patch, http = patch_http(http_response(200))
+        with (
+            patch.dict("os.environ", {"COURTLISTENER_API_BASE_URL": staging}),
+            client_patch,
+        ):
+            run(verify_api_token("cl-api-token"))
+        assert http.get.await_args.args[0] == f"{staging}/"
+
+    def test_a_throttle_is_not_a_successful_authentication(self):
+        """Tempting to accept: DRF authenticates before it throttles, so
+        a 429 *from Django* would prove the token is good. But CloudFront
+        rate-limits in front of Django and those 429s never reach it —
+        see #216, where the origin logged zero 429s while clients were
+        getting them. Accepting 429 would let an edge blip verify any
+        string at all, and `resolve_token` would cache that for the
+        token TTL, long outliving the blip.
+        """
+        client_patch, _ = patch_http(http_response(429))
+        with client_patch:
+            assert run(verify_api_token("cl-api-token")) is None
+
+    @pytest.mark.parametrize("status", [401, 403])
+    def test_rejected_token_returns_none(self, status):
+        client_patch, _ = patch_http(http_response(status))
+        with client_patch:
+            assert run(verify_api_token("bad-token")) is None
+
+    @pytest.mark.parametrize("status", [301, 302, 307])
+    def test_a_redirect_is_not_a_successful_authentication(self, status):
+        """The API root 301s without a trailing slash. If the success
+        check were "anything below 400", a misconfigured URL would
+        validate every token including garbage."""
+        client_patch, _ = patch_http(http_response(status))
+        with client_patch:
+            assert run(verify_api_token("bad-token")) is None
+
+    @pytest.mark.parametrize("status", [500, 502, 503])
+    def test_server_error_fails_closed(self, status):
+        """A CL blip must not mint a session for an unverified token."""
+        client_patch, _ = patch_http(http_response(status))
+        with client_patch:
+            assert run(verify_api_token("cl-api-token")) is None
+
+    def test_network_error_returns_none(self):
+        client_patch, _ = patch_http(side_effect=httpx.ConnectError("boom"))
+        with client_patch:
+            assert run(verify_api_token("cl-api-token")) is None
+
+
 class TestResolveToken:
     """``resolve_token`` sits between the verifier and the session
     store: it serves a cached verification when one exists for that
@@ -212,29 +329,60 @@ class TestResolveToken:
         """The kind is part of the cache key, so an entry verified as
         one kind can't satisfy a lookup for another. Without that, a
         warm entry would let a credential in under the wrong scheme."""
-        verify = AsyncMock(return_value={"user_hash": "uh"})
-        with patch("courtlistener.mcp.auth.verify_oauth_token", new=verify):
+        verify_oauth = AsyncMock(return_value={"user_hash": "uh"})
+        verify_api = AsyncMock(return_value=None)
+        with (
+            patch(
+                "courtlistener.mcp.auth.verify_oauth_token", new=verify_oauth
+            ),
+            patch("courtlistener.mcp.auth.verify_api_token", new=verify_api),
+        ):
             run(resolve_token("tok", kind=TokenKind.OAUTH))
-            # No verifier exists for this kind yet, so a cache hit is
-            # the only way it could resolve — and it must not.
             assert run(resolve_token("tok", kind=TokenKind.API)) is None
+        # The OAuth entry was not served; the API kind had to go verify
+        # for itself, and got nothing.
+        verify_api.assert_awaited_once_with("tok")
 
-    def test_unimplemented_kind_returns_none(self):
-        assert run(resolve_token("tok", kind=TokenKind.API)) is None
+    def test_api_kind_dispatches_to_the_api_verifier(self):
+        verify_oauth = AsyncMock(return_value={"user_hash": "oauth-uh"})
+        verify_api = AsyncMock(return_value={"user_hash": "api-uh"})
+        with (
+            patch(
+                "courtlistener.mcp.auth.verify_oauth_token", new=verify_oauth
+            ),
+            patch("courtlistener.mcp.auth.verify_api_token", new=verify_api),
+        ):
+            info = run(resolve_token("tok", kind=TokenKind.API))
+        assert info == {
+            "user_hash": "api-uh",
+            "kind": TokenKind.API,
+            "cached": False,
+        }
+        verify_oauth.assert_not_awaited()
+        assert run(get_session().get_token_info("tok", TokenKind.API)) == {
+            "user_hash": "api-uh"
+        }
 
     @pytest.mark.parametrize("kind", list(TokenKind))
     def test_every_declared_kind_is_dispatched(self, kind):
         """Adding a ``TokenKind`` without a verifier branch is a mypy
-        error at ``_assert_never``, but that only helps where mypy runs.
-        At runtime every declared kind must still either resolve or fail
-        closed — never raise its way out of the auth path as a 500.
+        error at ``_assert_unhandled_token_kind``, but that only helps
+        where mypy runs. At runtime every declared kind must still
+        resolve through its own verifier — never fall through to
+        another's, and never raise its way out as a 500.
         """
+        verifiers = {
+            TokenKind.OAUTH: "courtlistener.mcp.auth.verify_oauth_token",
+            TokenKind.API: "courtlistener.mcp.auth.verify_api_token",
+        }
+        assert kind in verifiers, f"no verifier wired for {kind}"
         with patch(
-            "courtlistener.mcp.auth.verify_oauth_token",
-            new=AsyncMock(return_value={"user_hash": "uh"}),
+            verifiers[kind], new=AsyncMock(return_value={"user_hash": "uh"})
         ):
             info = run(resolve_token("tok", kind=kind))
-        assert info is None or info["user_hash"] == "uh"
+        assert info is not None
+        assert info["user_hash"] == "uh"
+        assert info["kind"] == kind
 
     def test_failed_verification_is_not_cached(self):
         with patch(
