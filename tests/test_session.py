@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from courtlistener import CourtListener
+from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.session import (
     InMemorySession,
     RedisSession,
@@ -136,6 +137,21 @@ class TestSessionDomainMethods:
         raw = run(session._get(token_info_key("tok", "oauth")))
         assert json.loads(raw) == info
         assert run(session.get_token_info("tok", "oauth")) == info
+
+    def test_token_kind_interpolates_as_its_bare_value(self):
+        """``TokenKind`` members reach the cache key through an f-string,
+        so a member and its bare value must build the same key. Python
+        3.11 changed mixed-in ``Enum.__format__`` to follow ``__str__``;
+        without pinning both to ``str``'s, keys would silently become
+        ``mcp:token_info:TokenKind.OAUTH:…`` there and orphan every entry
+        written under a different interpreter.
+        """
+        assert f"{TokenKind.OAUTH}" == "oauth"
+        assert str(TokenKind.API) == "api_token"
+        assert token_info_key("tok", TokenKind.OAUTH) == token_info_key(
+            "tok", "oauth"
+        )
+        assert ":oauth:" in token_info_key("tok", TokenKind.OAUTH)
 
     def test_token_cache_does_not_cross_credential_kinds(self):
         """An entry verified as one kind must never satisfy a lookup for

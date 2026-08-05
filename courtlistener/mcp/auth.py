@@ -6,6 +6,7 @@ from fastmcp.server.auth.auth import (
     TokenVerifier,
 )
 
+from courtlistener.mcp.auth_types import ResolvedToken, TokenInfo, TokenKind
 from courtlistener.mcp.session import get_session, hmac_hex
 from courtlistener.mcp.settings import (
     OAUTH_USERINFO_URL,
@@ -14,11 +15,8 @@ from courtlistener.mcp.settings import (
 
 logger = logging.getLogger(__name__)
 
-TOKEN_KIND_OAUTH = "oauth"
-TOKEN_KIND_API = "api_token"
 
-
-async def verify_oauth_token(token: str) -> dict | None:
+async def verify_oauth_token(token: str) -> TokenInfo | None:
     """Return token info if *token* is a valid OAuth access token."""
     try:
         async with httpx.AsyncClient(
@@ -38,10 +36,12 @@ async def verify_oauth_token(token: str) -> dict | None:
     if not sub:
         logger.warning("userinfo response missing `sub` claim")
         return None
-    return {"user_hash": hmac_hex(str(sub))}
+    return TokenInfo(user_hash=hmac_hex(str(sub)))
 
 
-async def resolve_token(token: str, *, kind: str) -> dict | None:
+async def resolve_token(
+    token: str, *, kind: TokenKind
+) -> ResolvedToken | None:
     """Verify *token* as a credential of *kind*, or return ``None``."""
     session = get_session()
     try:
@@ -51,13 +51,13 @@ async def resolve_token(token: str, *, kind: str) -> dict | None:
         cached = None
 
     if cached:
-        return {**cached, "kind": kind, "cached": True}
+        return ResolvedToken(**cached, kind=kind, cached=True)
 
-    if kind == TOKEN_KIND_OAUTH:
+    if kind == TokenKind.OAUTH:
         info = await verify_oauth_token(token)
-    else:
+    elif kind == TokenKind.API:
+        logger.warning("token verification not implemented for %s", kind)
         info = None
-        logger.warning("Token verification not implemented for %s", kind)
     if info is None:
         return None
 
@@ -66,7 +66,7 @@ async def resolve_token(token: str, *, kind: str) -> dict | None:
         await session.store_token_info(token, kind, info)
     except Exception as exc:
         logger.warning("token cache write failed: %s", exc)
-    return {**info, "kind": kind, "cached": False}
+    return ResolvedToken(**info, kind=kind, cached=False)
 
 
 class CourtListenerTokenVerifier(TokenVerifier):
@@ -82,7 +82,7 @@ class CourtListenerTokenVerifier(TokenVerifier):
         if not token:
             return None
         # Hardcoded to OAuth until we add API token support.
-        info = await resolve_token(token, kind=TOKEN_KIND_OAUTH)
+        info = await resolve_token(token, kind=TokenKind.OAUTH)
         if info is None:
             return None
         return AccessToken(

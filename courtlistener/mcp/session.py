@@ -13,6 +13,7 @@ from fastmcp.server.dependencies import get_access_token
 
 from courtlistener import CourtListener
 from courtlistener.mcp import settings
+from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.settings import (
     DOCUMENT_TTL_SECONDS,
     MCP_SECRET_BYTES,
@@ -35,7 +36,7 @@ def hmac_hex(value: str) -> str:
     ).hexdigest()
 
 
-def token_info_key(token: str, kind: str) -> str:
+def token_info_key(token: str, kind: TokenKind) -> str:
     """Cache key for a verified credential."""
     return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
@@ -118,7 +119,9 @@ class Session:
             f"mcp:doc:{doc_type}:{doc_id}", text, DOCUMENT_TTL_SECONDS
         )
 
-    async def get_token_info(self, token: str, kind: str) -> dict | None:
+    async def get_token_info(
+        self, token: str, kind: TokenKind
+    ) -> TokenInfo | None:
         """Return the cached verification of *token* as a *kind* credential."""
         raw = await self._get(token_info_key(token, kind))
         if raw is None:
@@ -126,7 +129,7 @@ class Session:
         return json.loads(raw)
 
     async def store_token_info(
-        self, token: str, kind: str, info: dict
+        self, token: str, kind: TokenKind, info: TokenInfo
     ) -> None:
         await self._set(
             token_info_key(token, kind),
@@ -134,7 +137,7 @@ class Session:
             TOKEN_CACHE_TTL_SECONDS,
         )
 
-    async def invalidate_token(self, token: str, kind: str) -> None:
+    async def invalidate_token(self, token: str, kind: TokenKind) -> None:
         """Drop a cached token verification."""
         try:
             await self._delete(token_info_key(token, kind))
