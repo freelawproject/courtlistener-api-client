@@ -19,7 +19,7 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from courtlistener.mcp import settings
-from courtlistener.mcp.auth import UserInfoTokenVerifier
+from courtlistener.mcp.auth import CourtListenerTokenVerifier
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.settings import (
@@ -135,7 +135,7 @@ def build_auth() -> AuthProvider | None:
     if not settings.MCP_REQUIRE_OAUTH:
         return None
     return RemoteAuthProvider(
-        token_verifier=UserInfoTokenVerifier(base_url=MCP_BASE_URL),
+        token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
         authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
         base_url=MCP_BASE_URL,
     )
