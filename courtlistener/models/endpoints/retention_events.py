@@ -9,7 +9,7 @@ from typing import Annotated, ClassVar
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter6, Filter7
+from courtlistener.models.filters import Filter4, Filter6, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
@@ -66,7 +66,7 @@ class RetentionEventsEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
     ]
     id: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
         ),
@@ -128,14 +128,14 @@ class RetentionEventsEndpoint(Endpoint):
         BeforeValidator(choice_validator),
     ]
     votes_yes: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="If votes are an integer, this is the number of votes in favor of a position.",
         ),
     ]
     votes_no: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="If votes are an integer, this is the number of votes opposed to a position.",
