@@ -169,7 +169,7 @@ POLITICAL_AFFILIATION_CHOICES = [
 
 SEARCH_FILTERS: dict[str, Any] = {
     "court": {
-        "type": "MultipleChoiceFilter",
+        "type": "MultipleChoiceStringFilter",
         "choices": COURT_CHOICES,
         "search_types": ["o", "r", "rd", "d", "p", "oa"],
     },
