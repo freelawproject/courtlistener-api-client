@@ -31,13 +31,11 @@ DESTRUCTIVE_TOOLS = {
     "unsubscribe_from_docket_alert",
 }
 
-# Tools that operate on local data only (Pydantic schemas / eyecite);
-# no network calls are made, so openWorldHint=False.
-# Note: get_counts may make a lazy API call, so it is open-world.
-LOCAL_ONLY_TOOLS = {
-    "get_endpoint_schema",
-    "get_choices",
-    "extract_citations",
+OPEN_WORLD_TOOLS = {
+    "create_search_alert",
+    "delete_search_alert",
+    "subscribe_to_docket_alert",
+    "unsubscribe_from_docket_alert",
 }
 
 # Tools where repeating a call with the same arguments has an
@@ -118,18 +116,18 @@ class TestToolAnnotations:
             t = MCP_TOOLS[name].get_tool()
             assert t.annotations.idempotentHint is True, name
 
-    def test_local_tools_closed_world(self):
-        """Purely-local tools must have openWorldHint=False."""
-        for name in LOCAL_ONLY_TOOLS:
-            t = MCP_TOOLS[name].get_tool()
-            assert t.annotations.openWorldHint is False, name
-
-    def test_api_tools_open_world(self):
-        """All non-local tools must have openWorldHint=True."""
-        api_tools = set(MCP_TOOLS.keys()) - LOCAL_ONLY_TOOLS
-        for name in api_tools:
+    def test_open_world_tools(self):
+        """Alert tools must have openWorldHint=True."""
+        for name in OPEN_WORLD_TOOLS:
             t = MCP_TOOLS[name].get_tool()
             assert t.annotations.openWorldHint is True, name
+
+    def test_closed_world_tools(self):
+        """All other tools must have openWorldHint=False."""
+        closed_world_tools = set(MCP_TOOLS.keys()) - OPEN_WORLD_TOOLS
+        for name in closed_world_tools:
+            t = MCP_TOOLS[name].get_tool()
+            assert t.annotations.openWorldHint is False, name
 
 
 class TestToolTitles:

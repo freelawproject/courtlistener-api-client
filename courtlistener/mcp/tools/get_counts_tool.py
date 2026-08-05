@@ -20,7 +20,7 @@ class GetCountsTool(MCPTool):
         readOnlyHint=True,
         destructiveHint=False,
         idempotentHint=True,
-        openWorldHint=True,
+        openWorldHint=False,
     )
 
     def get_input_schema(self) -> dict:
