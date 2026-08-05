@@ -13,7 +13,6 @@ from courtlistener.models.filters import Filter2, Filter6, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
-    comma_separated_pre_validator,
     in_post_validator,
     in_pre_validator,
     multiple_choice_validator,
@@ -139,7 +138,6 @@ class FjcIntegratedDatabaseEndpoint(Endpoint):
         ),
         AfterValidator(comma_separated_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(comma_separated_pre_validator),
     ]
     dataset_source: Annotated[
         None | int | list[int],

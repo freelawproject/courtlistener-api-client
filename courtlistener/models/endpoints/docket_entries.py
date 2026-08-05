@@ -13,7 +13,6 @@ from courtlistener.models.filters import Filter5, Filter6, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
-    comma_separated_pre_validator,
     multiple_choice_validator,
     related_validator,
 )
@@ -63,7 +62,6 @@ class DocketEntriesEndpoint(Endpoint):
         ),
         AfterValidator(comma_separated_post_validator),
         BeforeValidator(multiple_choice_validator),
-        BeforeValidator(comma_separated_pre_validator),
     ]
     id: Annotated[
         None | int,
