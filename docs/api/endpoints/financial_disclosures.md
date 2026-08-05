@@ -56,6 +56,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `person`
 
 integer

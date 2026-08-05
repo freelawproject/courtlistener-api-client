@@ -78,6 +78,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_created`
 
 string (date-time)
@@ -128,17 +130,23 @@ integer
 
 the number of justices voting in the majority in a Supreme Court decision. More details at: http://scdb.wustl.edu/documentation.php?var=majVotes
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `scdb_votes_minority`
 
 integer
 
 the number of justices voting in the minority in a Supreme Court decision. More details at: http://scdb.wustl.edu/documentation.php?var=minVotes
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `citation_count`
 
 integer
 
 The number of times this document is cited by other opinion
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 ### `precedential_status`
 

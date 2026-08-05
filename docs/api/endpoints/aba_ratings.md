@@ -37,6 +37,8 @@ Choices (7):
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_created`
 
 string (date-time)
@@ -58,6 +60,8 @@ Lookups: `day`, `gt`, `gte`, `hour`, `lt`, `lte`, `minute`, `month`, `range`, `s
 integer
 
 The year of the rating.
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 ### `rating`
 

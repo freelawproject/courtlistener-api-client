@@ -58,6 +58,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_created`
 
 string (date-time)
@@ -126,6 +128,8 @@ The ID used for a document in RECAP
 integer
 
 The status of OCR processing on this item.
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 Choices (4):
 

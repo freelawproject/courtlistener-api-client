@@ -85,6 +85,8 @@ integer
 
 A dewey-decimal-style numeral indicating a hierarchical ordering of jurisdictions
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `start_date`
 
 string (date)

@@ -34,6 +34,8 @@ Choices (4):
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_created`
 
 string (date-time)
@@ -86,6 +88,8 @@ string
 ### `ocr_status`
 
 integer
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 Choices (4):
 

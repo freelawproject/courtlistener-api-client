@@ -92,6 +92,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_modified`
 
 string (date-time)
