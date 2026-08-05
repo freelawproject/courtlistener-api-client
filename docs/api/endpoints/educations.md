@@ -39,6 +39,8 @@ Choices (9):
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_created`
 
 string (date-time)

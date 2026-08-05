@@ -72,6 +72,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `position_type`
 
 string
@@ -316,11 +318,15 @@ integer
 
 If votes are an integer, this is the number of votes in favor of a position.
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `votes_no`
 
 integer
 
 If votes are an integer, this is the number of votes opposed to a position.
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 ### `how_selected`
 

@@ -57,6 +57,8 @@ Filter which fields are returned.
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `date_modified`
 
 string (date-time)
@@ -104,6 +106,8 @@ Is audio for this item done processing?
 integer
 
 The status of the Speech to Text for this item?
+
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
 
 Choices (6):
 

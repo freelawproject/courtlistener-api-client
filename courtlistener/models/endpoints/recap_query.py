@@ -9,7 +9,7 @@ from typing import Annotated, Any, ClassVar
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter3, Filter7
+from courtlistener.models.filters import Filter3, Filter4, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
@@ -51,7 +51,7 @@ class RecapQueryEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
     ]
     id: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
         ),
@@ -115,7 +115,7 @@ class RecapQueryEndpoint(Endpoint):
         ),
     ]
     ocr_status: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             json_schema_extra={

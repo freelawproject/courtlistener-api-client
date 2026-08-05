@@ -9,7 +9,7 @@ from typing import Annotated, ClassVar
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter7
+from courtlistener.models.filters import Filter4, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
@@ -48,7 +48,7 @@ class AbaRatingsEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
     ]
     id: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
         ),
@@ -68,7 +68,7 @@ class AbaRatingsEndpoint(Endpoint):
         ),
     ]
     year_rated: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="The year of the rating.",

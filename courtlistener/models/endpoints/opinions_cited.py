@@ -8,6 +8,7 @@ from typing import Annotated, Any, ClassVar
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
+from courtlistener.models.filters import Filter4
 from courtlistener.utils import (
     comma_separated_post_validator,
     multiple_choice_validator,
@@ -47,7 +48,7 @@ class OpinionsCitedEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
     ]
     id: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
         ),

@@ -811,7 +811,7 @@ def get_endpoint_data(use_cache: bool = True) -> dict[str, Any]:
         filter_class["types_str"] = " | ".join(filter_class["types"])
     for endpoint in endpoints.values():
         for endpoint_field in endpoint["fields"].values():
-            if endpoint_field.get("filter_class"):
+            if endpoint_field.get("filter_class") is not None:
                 endpoint_field["filter_class"] = filter_classes[
                     endpoint_field["filter_class"]
                 ]["class_name"]

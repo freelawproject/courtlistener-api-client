@@ -35,6 +35,8 @@ Choices (5):
 
 integer
 
+Lookups: `gt`, `gte`, `lt`, `lte`, `range`
+
 ### `citing_opinion`
 
 integer

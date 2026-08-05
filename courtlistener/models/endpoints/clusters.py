@@ -9,7 +9,7 @@ from typing import Annotated, Any, ClassVar
 from pydantic import AfterValidator, BeforeValidator, Field
 
 from courtlistener.models.endpoint import Endpoint
-from courtlistener.models.filters import Filter6, Filter7
+from courtlistener.models.filters import Filter4, Filter6, Filter7
 from courtlistener.utils import (
     choice_validator,
     comma_separated_post_validator,
@@ -139,7 +139,7 @@ class ClustersEndpoint(Endpoint):
         BeforeValidator(multiple_choice_validator),
     ]
     id: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
         ),
@@ -188,21 +188,21 @@ class ClustersEndpoint(Endpoint):
         BeforeValidator(choice_validator),
     ]
     scdb_votes_majority: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="the number of justices voting in the majority in a Supreme Court decision. More details at: http://scdb.wustl.edu/documentation.php?var=majVotes",
         ),
     ]
     scdb_votes_minority: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="the number of justices voting in the minority in a Supreme Court decision. More details at: http://scdb.wustl.edu/documentation.php?var=minVotes",
         ),
     ]
     citation_count: Annotated[
-        None | int,
+        None | int | Filter4,
         Field(
             None,
             description="The number of times this document is cited by other opinion",
