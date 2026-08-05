@@ -1,0 +1,24 @@
+from enum import Enum
+from typing import TypedDict
+
+
+class TokenKind(str, Enum):
+    """A kind of credential the server knows how to verify."""
+
+    OAUTH = "oauth"
+    API = "api_token"
+
+    __str__ = str.__str__
+
+
+class TokenInfo(TypedDict):
+    """A verified credential, as persisted in the session store."""
+
+    user_hash: str
+
+
+class ResolvedToken(TokenInfo):
+    """A stored ``TokenInfo`` plus per-request resolution metadata."""
+
+    kind: TokenKind
+    cached: bool
