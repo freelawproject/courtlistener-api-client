@@ -1,4 +1,5 @@
 import logging
+from typing import NoReturn
 
 import httpx
 from fastmcp.server.auth.auth import (
@@ -14,6 +15,11 @@ from courtlistener.mcp.settings import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _assert_unhandled_token_kind(value: NoReturn) -> NoReturn:
+    """Exhaustiveness guard for mypy."""
+    raise AssertionError(f"unhandled token kind: {value!r}")
 
 
 async def verify_oauth_token(token: str) -> TokenInfo | None:
@@ -58,6 +64,8 @@ async def resolve_token(
     elif kind == TokenKind.API:
         logger.warning("token verification not implemented for %s", kind)
         info = None
+    else:
+        _assert_unhandled_token_kind(kind)
     if info is None:
         return None
 
