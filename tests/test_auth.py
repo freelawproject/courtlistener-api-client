@@ -475,7 +475,7 @@ class TestUserHash:
 
     def test_reads_claim_from_oauth_context(self):
         """With a FastMCP access token in scope carrying a ``user_hash``
-        claim (populated by ``UserInfoTokenVerifier``), ``user_hash``
+        claim (populated by ``CourtListenerTokenVerifier``), ``user_hash``
         returns the claim verbatim. Rotating the access token doesn't
         change the hash because the claim is derived from the stable
         OIDC ``sub``.
