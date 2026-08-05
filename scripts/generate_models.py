@@ -634,7 +634,6 @@ def get_types_and_validators(
         python_types = ["list[str]", "str"]
         validators.append("AfterValidator(comma_separated_post_validator)")
         validators.append("BeforeValidator(multiple_choice_validator)")
-        validators.append("BeforeValidator(comma_separated_pre_validator)")
     elif filter_type == "IsoDateTimeFilter":
         python_types = ["datetime"]
     elif filter_type == "DateFilter":
