@@ -47,7 +47,15 @@ async def verify_oauth_token(token: str) -> TokenInfo | None:
 
 
 async def verify_api_token(token: str) -> TokenInfo | None:
-    """Return token info if *token* is a valid CL API token."""
+    """Return token info if *token* is a valid CL API token.
+
+    Only 2xx counts as verified. Not 3xx: the API root 301s without the
+    trailing slash, and a redirect isn't an authentication. Not 429
+    either — DRF authenticates before it throttles, so *its* 429 would
+    prove the token is good, but CloudFront rate-limits in front of
+    Django and those 429s never reach it (#216), so an edge blip would
+    otherwise verify any string and cache it for the token TTL.
+    """
     try:
         async with httpx.AsyncClient(
             timeout=VERIFICATION_TIMEOUT_SECONDS
@@ -59,7 +67,7 @@ async def verify_api_token(token: str) -> TokenInfo | None:
     except httpx.HTTPError as exc:
         logger.warning("api-token validation call failed: %s", exc)
         return None
-    if 200 <= resp.status_code < 300 or resp.status_code == 429:
+    if 200 <= resp.status_code < 300:
         return TokenInfo(user_hash=hmac_hex(token))
     return None
 

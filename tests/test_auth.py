@@ -241,13 +241,18 @@ class TestVerifyApiToken:
             run(verify_api_token("cl-api-token"))
         assert http.get.await_args.args[0] == f"{staging}/"
 
-    def test_throttled_token_is_still_valid(self):
-        """DRF authenticates before it throttles, so a 429 can only come
-        from a credential that already authenticated. Rejecting it would
-        lock out exactly the heaviest users."""
+    def test_a_throttle_is_not_a_successful_authentication(self):
+        """Tempting to accept: DRF authenticates before it throttles, so
+        a 429 *from Django* would prove the token is good. But CloudFront
+        rate-limits in front of Django and those 429s never reach it —
+        see #216, where the origin logged zero 429s while clients were
+        getting them. Accepting 429 would let an edge blip verify any
+        string at all, and `resolve_token` would cache that for the
+        token TTL, long outliving the blip.
+        """
         client_patch, _ = patch_http(http_response(429))
         with client_patch:
-            assert run(verify_api_token("cl-api-token")) is not None
+            assert run(verify_api_token("cl-api-token")) is None
 
     @pytest.mark.parametrize("status", [401, 403])
     def test_rejected_token_returns_none(self, status):
