@@ -13,6 +13,7 @@ from courtlistener.mcp.settings import (
     OAUTH_USERINFO_URL,
     VERIFICATION_TIMEOUT_SECONDS,
 )
+from courtlistener.settings import get_api_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,24 @@ async def verify_oauth_token(token: str) -> TokenInfo | None:
     return TokenInfo(user_hash=hmac_hex(str(sub)))
 
 
+async def verify_api_token(token: str) -> TokenInfo | None:
+    """Return token info if *token* is a valid CL API token."""
+    try:
+        async with httpx.AsyncClient(
+            timeout=VERIFICATION_TIMEOUT_SECONDS
+        ) as http:
+            resp = await http.get(
+                f"{get_api_base_url()}/",
+                headers={"Authorization": f"Token {token}"},
+            )
+    except httpx.HTTPError as exc:
+        logger.warning("api-token validation call failed: %s", exc)
+        return None
+    if 200 <= resp.status_code < 300 or resp.status_code == 429:
+        return TokenInfo(user_hash=hmac_hex(token))
+    return None
+
+
 async def resolve_token(
     token: str, *, kind: TokenKind
 ) -> ResolvedToken | None:
@@ -62,8 +81,7 @@ async def resolve_token(
     if kind == TokenKind.OAUTH:
         info = await verify_oauth_token(token)
     elif kind == TokenKind.API:
-        logger.warning("token verification not implemented for %s", kind)
-        info = None
+        info = await verify_api_token(token)
     else:
         _assert_unhandled_token_kind(kind)
     if info is None:

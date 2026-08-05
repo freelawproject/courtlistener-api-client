@@ -8,6 +8,7 @@ class TokenKind(str, Enum):
     OAUTH = "oauth"
     API = "api_token"
 
+    # Not cosmetic: used as token info cache key suffix.
     __str__ = str.__str__
 
 
