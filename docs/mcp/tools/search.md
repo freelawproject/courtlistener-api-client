@@ -27,7 +27,7 @@ be useful here.
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
 | `idempotentHint` | `true` |
-| `openWorldHint` | `true` |
+| `openWorldHint` | `false` |
 
 ## Parameters
 

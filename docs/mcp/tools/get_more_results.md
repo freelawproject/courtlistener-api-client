@@ -24,7 +24,7 @@ Use this tool to continue paginating through results returned by the
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
 | `idempotentHint` | `false` |
-| `openWorldHint` | `true` |
+| `openWorldHint` | `false` |
 
 ## Parameters
 

@@ -24,7 +24,7 @@ from a previous query if it is not available.
 | `readOnlyHint` | `true` |
 | `destructiveHint` | `false` |
 | `idempotentHint` | `true` |
-| `openWorldHint` | `true` |
+| `openWorldHint` | `false` |
 
 ## Parameters
 

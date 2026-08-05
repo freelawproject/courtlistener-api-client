@@ -32,7 +32,7 @@ class ResumeCitationAnalysisTool(MCPTool):
         readOnlyHint=True,
         destructiveHint=False,
         idempotentHint=False,
-        openWorldHint=True,
+        openWorldHint=False,
     )
 
     def get_input_schema(self) -> dict:
