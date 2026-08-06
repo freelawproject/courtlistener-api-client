@@ -1,11 +1,22 @@
 import logging
+import time
 from typing import NoReturn
 
 import httpx
 from fastmcp.server.auth.auth import (
     AccessToken,
+    RemoteAuthProvider,
     TokenVerifier,
 )
+from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
+from mcp.server.auth.middleware.bearer_auth import (
+    AuthenticatedUser,
+    BearerAuthBackend,
+)
+from starlette.authentication import AuthCredentials
+from starlette.middleware import Middleware
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.requests import HTTPConnection
 
 from courtlistener.mcp.auth_types import ResolvedToken, TokenInfo, TokenKind
 from courtlistener.mcp.session import get_session, hmac_hex
@@ -47,15 +58,7 @@ async def verify_oauth_token(token: str) -> TokenInfo | None:
 
 
 async def verify_api_token(token: str) -> TokenInfo | None:
-    """Return token info if *token* is a valid CL API token.
-
-    Only 2xx counts as verified. Not 3xx: the API root 301s without the
-    trailing slash, and a redirect isn't an authentication. Not 429
-    either — DRF authenticates before it throttles, so *its* 429 would
-    prove the token is good, but CloudFront rate-limits in front of
-    Django and those 429s never reach it (#216), so an edge blip would
-    otherwise verify any string and cache it for the token TTL.
-    """
+    """Return token info if *token* is a valid CL API token."""
     try:
         async with httpx.AsyncClient(
             timeout=VERIFICATION_TIMEOUT_SECONDS
@@ -112,11 +115,13 @@ class CourtListenerTokenVerifier(TokenVerifier):
             required_scopes=["openid", "api"],
         )
 
-    async def verify_token(self, token: str) -> AccessToken | None:
+    async def verify_token(
+        self, token: str, kind: TokenKind = TokenKind.OAUTH
+    ) -> AccessToken | None:
+        """Verify *token* as a credential of *kind*."""
         if not token:
             return None
-        # Hardcoded to OAuth until we add API token support.
-        info = await resolve_token(token, kind=TokenKind.OAUTH)
+        info = await resolve_token(token, kind=kind)
         if info is None:
             return None
         return AccessToken(
@@ -129,3 +134,54 @@ class CourtListenerTokenVerifier(TokenVerifier):
                 "cached": info["cached"],
             },
         )
+
+
+class CourtListenerAuthBackend(BearerAuthBackend):
+    """Authenticate CL ``Token`` credentials as well as ``Bearer`` ones."""
+
+    token_verifier: CourtListenerTokenVerifier
+
+    def __init__(self, token_verifier: CourtListenerTokenVerifier) -> None:
+        super().__init__(token_verifier)
+
+    async def authenticate(self, conn: HTTPConnection):
+        auth_header = next(
+            (
+                conn.headers.get(key)
+                for key in conn.headers
+                if key.lower() == "authorization"
+            ),
+            None,
+        )
+        if not auth_header:
+            return None
+
+        scheme, _, credential = auth_header.partition(" ")
+        kind = TokenKind.from_scheme(scheme)
+        credential = credential.strip()
+        if kind is None or not credential:
+            return None
+        if kind is TokenKind.OAUTH:
+            return await super().authenticate(conn)
+
+        auth_info = await self.token_verifier.verify_token(credential, kind)
+        if not auth_info:
+            return None
+        if auth_info.expires_at and auth_info.expires_at < int(time.time()):
+            return None
+        return AuthCredentials(auth_info.scopes), AuthenticatedUser(auth_info)
+
+
+class CourtListenerAuthProvider(RemoteAuthProvider):
+    """``RemoteAuthProvider`` whose HTTP layer accepts both schemes."""
+
+    token_verifier: CourtListenerTokenVerifier
+
+    def get_middleware(self) -> list:
+        return [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=CourtListenerAuthBackend(self.token_verifier),
+            ),
+            Middleware(AuthContextMiddleware),
+        ]
