@@ -64,12 +64,12 @@ class TestMiddlewareErrorClassification:
         assert "Rate limit exceeded" in str(excinfo.value)
         assert "donate.free.law" in str(excinfo.value)
 
-    def _fake_access_token(self, monkeypatch, cached):
+    def _fake_access_token(self, monkeypatch, cached, token_kind="oauth"):
         token = MagicMock()
         token.token = "tok"
         token.claims = {
             "user_hash": "uh",
-            "token_kind": "oauth",
+            "token_kind": token_kind,
             "cached": cached,
         }
         monkeypatch.setattr(
@@ -92,6 +92,23 @@ class TestMiddlewareErrorClassification:
             await _call_tool_raising(monkeypatch, error)
         assert "retry to re-authenticate" in str(excinfo.value)
         session.invalidate_token.assert_awaited_once_with("tok", "oauth")
+
+    @pytest.mark.asyncio
+    async def test_401_on_cached_api_token_invalidates_its_own_kind(
+        self, monkeypatch
+    ):
+        """The kind is part of the cache key, so a revoked API token
+        must be evicted under ``api_token`` — invalidating the OAuth
+        key would leave the stale entry serving requests for the full
+        TTL with no error anywhere (the self-heal would silently never
+        fire)."""
+        session = self._fake_access_token(
+            monkeypatch, cached=True, token_kind="api_token"
+        )
+        error = _api_error(401, {"detail": "Invalid token."})
+        with pytest.raises(SentryExemptToolError):
+            await _call_tool_raising(monkeypatch, error)
+        session.invalidate_token.assert_awaited_once_with("tok", "api_token")
 
     @pytest.mark.asyncio
     async def test_401_on_freshly_verified_token_reports(self, monkeypatch):
