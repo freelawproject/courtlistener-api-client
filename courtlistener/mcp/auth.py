@@ -127,6 +127,7 @@ class CourtListenerTokenVerifier(TokenVerifier):
         return AccessToken(
             token=token,
             client_id="courtlistener-mcp",
+            # API tokens lack OAuth scopes; echo the required set.
             scopes=list(self.required_scopes),
             claims={
                 "user_hash": info["user_hash"],
@@ -140,9 +141,6 @@ class CourtListenerAuthBackend(BearerAuthBackend):
     """Authenticate CL ``Token`` credentials as well as ``Bearer`` ones."""
 
     token_verifier: CourtListenerTokenVerifier
-
-    def __init__(self, token_verifier: CourtListenerTokenVerifier) -> None:
-        super().__init__(token_verifier)
 
     async def authenticate(self, conn: HTTPConnection):
         auth_header = next(
@@ -158,6 +156,7 @@ class CourtListenerAuthBackend(BearerAuthBackend):
 
         scheme, _, credential = auth_header.partition(" ")
         kind = TokenKind.from_scheme(scheme)
+        # Bearer stays byte-exact via the parent; only Token strips.
         credential = credential.strip()
         if kind is None or not credential:
             return None
@@ -178,6 +177,7 @@ class CourtListenerAuthProvider(RemoteAuthProvider):
     token_verifier: CourtListenerTokenVerifier
 
     def get_middleware(self) -> list:
+        # AuthProvider.get_middleware (fastmcp==3.4.0), backend swapped.
         return [
             Middleware(
                 AuthenticationMiddleware,
