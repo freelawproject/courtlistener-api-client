@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 from mcp.types import ToolAnnotations
 
 from courtlistener import CourtListener
+from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.exceptions import ToolArgumentValidationError
 
 
@@ -21,22 +22,28 @@ class MCPTool:
         """Build a CourtListener client for the current request.
 
         Resolution order:
-        1. HTTP + OAuth mode: use the OAuth access token FastMCP
-           accepted via the pass-through verifier. Forwarded to the CL
-           API as ``Authorization: Bearer <jwt>``, which CL accepts
-           because ``OAuth2Authentication`` is registered in its
-           ``DEFAULT_AUTHENTICATION_CLASSES``.
-        2. HTTP + legacy mode: ``Authorization: Token <api_token>``
-           header (existing stdio-over-HTTP / testing path).
+        1. HTTP + auth mode: the credential FastMCP verified. Its
+           ``token_kind`` claim says which scheme CL expects it back
+           under — an OAuth access token as ``Authorization: Bearer
+           <jwt>`` (accepted because ``OAuth2Authentication`` is
+           registered in CL's ``DEFAULT_AUTHENTICATION_CLASSES``), or a
+           CL API token as ``Authorization: Token <api_token>``. Sending
+           either under the other scheme is rejected by CL.
+        2. HTTP + auth disabled: ``Authorization: Token <api_token>``
+           header (existing stdio-over-HTTP / testing path). Reachable
+           only while ``MCP_REQUIRE_OAUTH`` can turn the auth provider
+           off; with it on, the auth layer consumes the header first.
         3. stdio mode: ``COURTLISTENER_API_TOKEN`` env var, resolved
            by the ``CourtListener`` constructor.
         """
-        # 1. OAuth bearer token (HTTP + auth provider active)
+        # 1. Verified credential (HTTP + auth provider active)
         access_token = get_access_token()
         if access_token is not None:
+            if access_token.claims.get("token_kind") == TokenKind.API:
+                return CourtListener(api_token=access_token.token)
             return CourtListener(access_token=access_token.token)
 
-        # 2. Legacy "Token ..." header pass-through (no OAuth).
+        # 2. "Token ..." header pass-through (auth provider off).
         #    get_http_request() raises when called outside an HTTP
         #    request (e.g. stdio mode), so guard against that.
         try:
