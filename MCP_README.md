@@ -23,6 +23,7 @@ It is the same data that powers [courtlistener.com](https://www.courtlistener.co
 - [Authentication](#authentication)
   - [OAuth 2.0](#oauth-20)
   - [CourtListener API token](#courtlistener-api-token)
+  - [What the server stores](#what-the-server-stores)
 - [Available tools](#available-tools)
 - [Usage notes and limits](#usage-notes-and-limits)
 - [Troubleshooting](#troubleshooting)
