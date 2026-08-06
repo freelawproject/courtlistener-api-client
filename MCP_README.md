@@ -21,6 +21,9 @@ It is the same data that powers [courtlistener.com](https://www.courtlistener.co
   - [Claude Code](#claude-code)
   - [Other MCP clients](#other-mcp-clients)
 - [Authentication](#authentication)
+  - [OAuth 2.0](#oauth-20)
+  - [CourtListener API token](#courtlistener-api-token)
+  - [What the server stores](#what-the-server-stores)
 - [Available tools](#available-tools)
 - [Usage notes and limits](#usage-notes-and-limits)
 - [Troubleshooting](#troubleshooting)
@@ -49,7 +52,7 @@ Under the hood the server exposes a small set of focused tools (search, citation
 1. **A free CourtListener account.** Sign up at [courtlistener.com/register](https://www.courtlistener.com/register/). Accounts are free for individuals; the [terms of service](https://www.courtlistener.com/terms/) apply.
 2. **An MCP-capable client.** Anything that speaks MCP over Streamable HTTP with OAuth 2.0 will work. We test against Claude.ai, Claude Desktop, Claude Code, and Cursor.
 
-You do **not** need a separate API token to use the hosted server. Authentication is handled by signing in with your CourtListener account through your MCP client's OAuth flow.
+You do **not** need a separate API token to use the hosted server. Authentication is handled by signing in with your CourtListener account through your MCP client's OAuth flow. If your client can't run that flow — a server-to-server integration, say — you can present a CourtListener API token instead; see [Authentication](#authentication).
 
 ---
 
@@ -85,11 +88,17 @@ The first time you call a CourtListener tool, Claude Code will open a browser wi
 
 Any client that supports **Streamable HTTP transport** with **OAuth 2.0** can connect. The server publishes [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata that points clients at CourtListener as the authorization server, so most well-behaved clients can discover everything they need from the URL alone.
 
+Clients that can't run an interactive OAuth flow can send a CourtListener API token instead — see [Authentication](#authentication).
+
 For Cursor, Windsurf, and similar editors, look for an "Add MCP server" or "Custom MCP server" option in settings and use the URL above with HTTP transport.
 
 ---
 
 ## Authentication
+
+The server accepts two kinds of credential. Interactive clients should use OAuth; API tokens exist for clients that can't run a browser-based flow.
+
+### OAuth 2.0
 
 The server uses OAuth 2.0 with [Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591), so individual users do not need to pre-register their MCP client with CourtListener. The flow is standard:
 
@@ -100,7 +109,25 @@ The server uses OAuth 2.0 with [Dynamic Client Registration](https://datatracker
 
 Tokens are short-lived; clients refresh them automatically. If a token is revoked or expires, the next request returns HTTP 401 with a `WWW-Authenticate` header and the client transparently re-runs the OAuth flow.
 
-The server is a thin proxy: it never stores your CourtListener credentials, and your access token is forwarded directly to the CourtListener REST API on each tool call. If you revoke the connection from your [CourtListener profile](https://www.courtlistener.com/profile/), all access stops immediately.
+### CourtListener API token
+
+If your client can't complete an interactive OAuth flow — a server-to-server backend, a script, a platform with no browser — send your CourtListener API token instead, using the same scheme the REST API uses:
+
+```
+Authorization: Token <your-CL-API-token>
+```
+
+Get one from your [profile settings](https://www.courtlistener.com/profile/api/). It doesn't expire and never rotates, which is what makes it workable for multi-instance deployments where sharing a rotating OAuth refresh token isn't practical.
+
+Three things to know:
+
+- **The scheme is binding.** `Token` is for API tokens, `Bearer` is for OAuth access tokens, and each credential is only ever checked against the issuer that could have minted it. Sending an API token as `Bearer` returns 401 rather than falling back.
+- **An API token grants full access to your CourtListener account's API surface**, including the alert and subscription tools. Treat it like a password: keep it out of source control, and regenerate it if it leaks.
+- **Session state is keyed to the credential.** Pagination cursors and citation jobs started under an API token aren't visible to the same person connected over OAuth, and vice versa. Regenerating your token likewise orphans that state — it expires within the hour regardless.
+
+### What the server stores
+
+The server is a thin proxy: it never stores your CourtListener credentials, and your credential is forwarded directly to the CourtListener REST API on each tool call. If you revoke the connection from your [CourtListener profile](https://www.courtlistener.com/profile/), all access stops immediately.
 
 ---
 
@@ -162,6 +189,9 @@ These tools modify your CourtListener account state. Your client should prompt y
 
 **The OAuth window won't open / sign-in loops.**
 Confirm that your client supports OAuth 2.0 with Dynamic Client Registration. Older versions of some clients only support API-key auth and won't work here. Update to the latest version.
+
+**Every request returns 401 with an API token.**
+Check the scheme: an API token goes out as `Authorization: Token <api_token>`, never `Bearer`, which is reserved for OAuth access tokens. If the scheme is right, confirm the token is current in your [profile settings](https://www.courtlistener.com/profile/api/) — regenerating a token invalidates the old one immediately.
 
 **Tools return "CourtListener rejected the request as unauthorized."**
 Your access token was revoked or expired mid-session. The next tool call will surface a clean 401 and your client should refresh automatically. If it doesn't, disconnect and reconnect the server in your client's settings.

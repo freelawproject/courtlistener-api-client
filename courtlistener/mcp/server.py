@@ -1,10 +1,7 @@
 import base64
 
 from fastmcp import FastMCP
-from fastmcp.server.auth.auth import (
-    AuthProvider,
-    RemoteAuthProvider,
-)
+from fastmcp.server.auth.auth import AuthProvider
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
 from mcp.types import Icon
@@ -19,7 +16,10 @@ from starlette.responses import (
 from starlette.routing import Route
 
 from courtlistener.mcp import settings
-from courtlistener.mcp.auth import CourtListenerTokenVerifier
+from courtlistener.mcp.auth import (
+    CourtListenerAuthProvider,
+    CourtListenerTokenVerifier,
+)
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.settings import (
@@ -134,7 +134,7 @@ def build_auth() -> AuthProvider | None:
     """Return an ``AuthProvider`` when OAuth is configured, else ``None``."""
     if not settings.MCP_REQUIRE_OAUTH:
         return None
-    return RemoteAuthProvider(
+    return CourtListenerAuthProvider(
         token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
         authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
         base_url=MCP_BASE_URL,

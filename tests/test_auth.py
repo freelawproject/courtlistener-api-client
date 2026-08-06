@@ -11,9 +11,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from pydantic import AnyHttpUrl
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import (
+    CourtListenerAuthBackend,
     CourtListenerTokenVerifier,
     resolve_token,
     verify_api_token,
@@ -87,15 +89,21 @@ class TestMCPToolGetClient:
 
         return MCPTool()
 
+    def _verified(self, token, **claims):
+        access_token = MagicMock()
+        access_token.token = token
+        access_token.claims = {"user_hash": "uh", **claims}
+        return access_token
+
     def test_oauth_bearer_when_access_token_present(self):
         """With a FastMCP AccessToken available, use Bearer auth."""
         tool = self._get_tool()
-        fake_token = MagicMock()
-        fake_token.token = "oauth-jwt"
         with (
             patch(
                 "courtlistener.mcp.tools.mcp_tool.get_access_token",
-                return_value=fake_token,
+                return_value=self._verified(
+                    "oauth-jwt", token_kind=TokenKind.OAUTH
+                ),
             ),
             patch(
                 "courtlistener.mcp.tools.mcp_tool.get_http_request"
@@ -105,6 +113,33 @@ class TestMCPToolGetClient:
         # The access-token path short-circuits before we touch the
         # HTTP request, so get_http_request should not be consulted.
         mock_req.assert_not_called()
+        assert cl.access_token == "oauth-jwt"
+        assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
+
+    def test_api_token_credential_uses_the_token_scheme(self):
+        """A verified API token must go back out under DRF's ``Token``
+        scheme — CL rejects an API token presented as Bearer."""
+        tool = self._get_tool()
+        with patch(
+            "courtlistener.mcp.tools.mcp_tool.get_access_token",
+            return_value=self._verified(
+                "cl-api-token", token_kind=TokenKind.API
+            ),
+        ):
+            cl = tool.get_client()
+        assert cl.api_token == "cl-api-token"
+        assert cl.access_token is None
+        assert cl.client.headers["Authorization"] == "Token cl-api-token"
+
+    def test_missing_kind_claim_defaults_to_bearer(self):
+        """Defensive: an AccessToken with no ``token_kind`` claim is
+        treated as OAuth rather than silently mis-schemed."""
+        tool = self._get_tool()
+        with patch(
+            "courtlistener.mcp.tools.mcp_tool.get_access_token",
+            return_value=self._verified("oauth-jwt"),
+        ):
+            cl = tool.get_client()
         assert cl.access_token == "oauth-jwt"
         assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
 
@@ -681,6 +716,256 @@ class TestUserHash:
             pytest.raises(ValueError, match="no credential"),
         ):
             user_hash(client)
+
+
+class TestTokenKindScheme:
+    """Each ``TokenKind`` carries the ``Authorization`` scheme it
+    arrives under; ``from_scheme`` is the lookup the auth backend uses
+    to route a request."""
+
+    def test_bearer_maps_to_oauth(self):
+        assert TokenKind.from_scheme("Bearer") is TokenKind.OAUTH
+
+    def test_token_maps_to_api(self):
+        assert TokenKind.from_scheme("Token") is TokenKind.API
+
+    def test_lookup_is_case_insensitive(self):
+        """RFC 7235 schemes are case-insensitive; clients vary."""
+        assert TokenKind.from_scheme("bearer") is TokenKind.OAUTH
+        assert TokenKind.from_scheme("TOKEN") is TokenKind.API
+
+    def test_unknown_scheme_returns_none(self):
+        assert TokenKind.from_scheme("Basic") is None
+        assert TokenKind.from_scheme("") is None
+
+    def test_scheme_attribute_does_not_disturb_the_value(self):
+        """The member's *value* feeds the cache key; the scheme rides
+        alongside without changing it."""
+        assert TokenKind.OAUTH.scheme == "bearer"
+        assert TokenKind.API.scheme == "token"
+        assert TokenKind.OAUTH.value == "oauth"
+        assert TokenKind.API.value == "api_token"
+        assert TokenKind("oauth") is TokenKind.OAUTH
+
+    @pytest.mark.parametrize("kind", list(TokenKind))
+    def test_every_kind_declares_a_scheme(self, kind):
+        """Adding a ``TokenKind`` without a scheme mapping would make
+        ``.scheme`` raise ``KeyError`` mid-request."""
+        assert kind.scheme
+
+
+class TestCourtListenerAuthBackend:
+    """The SDK's ``BearerAuthBackend`` drops anything that isn't
+    ``Bearer `` before the verifier sees it, so ``Token`` auth reads as
+    "no credentials" without this backend. The scheme selects the
+    credential kind and is binding — the inverted combinations are
+    rejected, not retried the other way."""
+
+    def _conn(self, auth_header):
+        conn = MagicMock()
+        conn.headers = (
+            {} if auth_header is None else {"authorization": auth_header}
+        )
+        return conn
+
+    def _backend(self, *, oauth=None, api=None):
+        """A backend over a verifier that records how it was asked."""
+        verifier = MagicMock()
+
+        # Mirrors the real verifier's signature: the kind defaults to
+        # OAUTH, which is what the parent's bearer path relies on when
+        # it calls ``verify_token(token)`` with no kind.
+        async def verify_token(token, kind=TokenKind.OAUTH):
+            return oauth if kind is TokenKind.OAUTH else api
+
+        verifier.verify_token = AsyncMock(side_effect=verify_token)
+        return CourtListenerAuthBackend(verifier), verifier
+
+    def _accepted(self):
+        token = MagicMock()
+        token.scopes = ["openid", "api"]
+        token.expires_at = None
+        token.client_id = "courtlistener-mcp"
+        return token
+
+    def test_token_scheme_verifies_as_an_api_credential(self):
+        backend, verifier = self._backend(api=self._accepted())
+        result = run(backend.authenticate(self._conn("Token cl-api-token")))
+        assert result is not None
+        verifier.verify_token.assert_awaited_once_with(
+            "cl-api-token", TokenKind.API
+        )
+
+    def test_bearer_scheme_stays_on_the_sdk_path(self):
+        """Bearer is handed to the parent so the SDK keeps owning the
+        OAuth path, and the SDK asks via the bare ``verify_token``
+        contract — no kind argument, so the OAUTH default applies."""
+        backend, verifier = self._backend(oauth=self._accepted())
+        result = run(backend.authenticate(self._conn("Bearer oauth-jwt")))
+        assert result is not None
+        verifier.verify_token.assert_awaited_once_with("oauth-jwt")
+
+    def test_scheme_match_is_case_insensitive(self):
+        """RFC 7235 credential schemes are case-insensitive, and clients
+        do vary (``token`` vs ``Token``)."""
+        backend, verifier = self._backend(api=self._accepted())
+        run(backend.authenticate(self._conn("token cl-api-token")))
+        verifier.verify_token.assert_awaited_once_with(
+            "cl-api-token", TokenKind.API
+        )
+
+    def test_rejected_api_token_yields_no_user(self):
+        backend, _ = self._backend(api=None)
+        assert run(backend.authenticate(self._conn("Token nope"))) is None
+
+    def test_expired_api_token_is_rejected(self):
+        expired = self._accepted()
+        expired.expires_at = 1
+        backend, _ = self._backend(api=expired)
+        assert run(backend.authenticate(self._conn("Token old"))) is None
+
+    def test_unsupported_scheme_is_rejected(self):
+        backend, verifier = self._backend(api=self._accepted())
+        assert run(backend.authenticate(self._conn("Basic abc123"))) is None
+        verifier.verify_token.assert_not_awaited()
+
+    def test_missing_header_is_rejected(self):
+        backend, verifier = self._backend(api=self._accepted())
+        assert run(backend.authenticate(self._conn(None))) is None
+        verifier.verify_token.assert_not_awaited()
+
+    def test_empty_credential_costs_no_round_trip(self):
+        backend, verifier = self._backend(api=self._accepted())
+        assert run(backend.authenticate(self._conn("Token "))) is None
+        verifier.verify_token.assert_not_awaited()
+
+
+class TestCourtListenerAuthProvider:
+    """The provider exists only to swap the auth backend. Everything
+    else — discovery routes, protected-resource metadata, the 401
+    challenge — must be inherited untouched."""
+
+    def _provider(self):
+        from courtlistener.mcp.auth import CourtListenerAuthProvider
+
+        return CourtListenerAuthProvider(
+            token_verifier=CourtListenerTokenVerifier(
+                base_url="https://mcp.example.test"
+            ),
+            authorization_servers=[AnyHttpUrl("https://example.test")],
+            base_url="https://mcp.example.test",
+        )
+
+    def test_installs_the_dual_scheme_backend(self):
+        from starlette.middleware.authentication import (
+            AuthenticationMiddleware,
+        )
+
+        middleware = self._provider().get_middleware()
+        auth_mw = middleware[0]
+        assert auth_mw.cls is AuthenticationMiddleware
+        assert isinstance(auth_mw.kwargs["backend"], CourtListenerAuthBackend)
+
+    def test_still_publishes_protected_resource_metadata(self):
+        routes = self._provider().get_routes(mcp_path="/")
+        paths = {getattr(r, "path", None) for r in routes}
+        assert "/.well-known/oauth-protected-resource" in paths
+
+
+class TestAuthOverHttp:
+    """End to end through FastMCP's middleware stack: the scheme has to
+    survive the whole chain, not just our backend in isolation."""
+
+    @pytest.fixture(autouse=True)
+    def fresh_session(self):
+        set_session(InMemorySession())
+        yield
+        set_session(None)
+
+    def _app(self):
+        from starlette.testclient import TestClient
+
+        import courtlistener.mcp.server as server_mod
+
+        mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
+        return TestClient(mcp.http_app(path="/"))
+
+    def _initialize(self, headers):
+        with self._app() as http_client:
+            return http_client.post(
+                "/",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={
+                    "Accept": "application/json, text/event-stream",
+                    **headers,
+                },
+            )
+
+    def _patch_verifiers(self, *, oauth_ok, api_ok):
+        info = {"user_hash": "uh"}
+        return (
+            patch(
+                "courtlistener.mcp.auth.verify_oauth_token",
+                new=AsyncMock(return_value=info if oauth_ok else None),
+            ),
+            patch(
+                "courtlistener.mcp.auth.verify_api_token",
+                new=AsyncMock(return_value=info if api_ok else None),
+            ),
+        )
+
+    def test_api_token_is_accepted(self):
+        oauth_patch, api_patch = self._patch_verifiers(
+            oauth_ok=False, api_ok=True
+        )
+        with oauth_patch, api_patch:
+            resp = self._initialize({"Authorization": "Token cl-api-token"})
+        assert resp.status_code == 200
+
+    def test_oauth_bearer_is_accepted(self):
+        oauth_patch, api_patch = self._patch_verifiers(
+            oauth_ok=True, api_ok=False
+        )
+        with oauth_patch, api_patch:
+            resp = self._initialize({"Authorization": "Bearer oauth-jwt"})
+        assert resp.status_code == 200
+
+    def test_api_token_sent_as_bearer_is_rejected(self):
+        """The inverted combination gets a 401, not a second chance:
+        a Bearer credential is only ever checked against userinfo."""
+        oauth_patch, api_patch = self._patch_verifiers(
+            oauth_ok=False, api_ok=True
+        )
+        with oauth_patch, api_patch:
+            resp = self._initialize({"Authorization": "Bearer cl-api-token"})
+        assert resp.status_code == 401
+
+    def test_oauth_token_sent_as_token_scheme_is_rejected(self):
+        """The other inversion: a ``Token`` credential is only ever
+        checked against CL's API."""
+        oauth_patch, api_patch = self._patch_verifiers(
+            oauth_ok=True, api_ok=False
+        )
+        with oauth_patch, api_patch:
+            resp = self._initialize({"Authorization": "Token oauth-jwt"})
+        assert resp.status_code == 401
+
+    def test_missing_credentials_still_get_the_oauth_challenge(self):
+        """Unauthenticated requests must keep advertising Bearer so
+        OAuth discovery is untouched — ``Token`` support is deliberately
+        not advertised in the RFC 6750 methods."""
+        resp = self._initialize({})
+        assert resp.status_code == 401
+        assert resp.headers["www-authenticate"].startswith("Bearer")
 
 
 class TestHealthEndpoint:

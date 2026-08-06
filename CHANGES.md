@@ -4,6 +4,9 @@
 
 The following changes are not yet released, but are code complete:
 
+Features:
+- Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
+
 Changes:
 - Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
 - Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
