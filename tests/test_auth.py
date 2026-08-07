@@ -98,21 +98,13 @@ class TestMCPToolGetClient:
     def test_oauth_bearer_when_access_token_present(self):
         """With a FastMCP AccessToken available, use Bearer auth."""
         tool = self._get_tool()
-        with (
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_access_token",
-                return_value=self._verified(
-                    "oauth-jwt", token_kind=TokenKind.OAUTH
-                ),
+        with patch(
+            "courtlistener.mcp.tools.mcp_tool.get_access_token",
+            return_value=self._verified(
+                "oauth-jwt", token_kind=TokenKind.OAUTH
             ),
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_http_request"
-            ) as mock_req,
         ):
             cl = tool.get_client()
-        # The access-token path short-circuits before we touch the
-        # HTTP request, so get_http_request should not be consulted.
-        mock_req.assert_not_called()
         assert cl.access_token == "oauth-jwt"
         assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
 
@@ -143,37 +135,14 @@ class TestMCPToolGetClient:
         assert cl.access_token == "oauth-jwt"
         assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
 
-    def test_legacy_token_header_pass_through(self):
-        """No OAuth token, but an ``Authorization: Token …`` header → Token."""
-        tool = self._get_tool()
-        request = MagicMock()
-        request.headers = {"Authorization": "Token legacy-api-token"}
-        with (
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_access_token",
-                return_value=None,
-            ),
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_http_request",
-                return_value=request,
-            ),
-        ):
-            cl = tool.get_client()
-        assert cl.api_token == "legacy-api-token"
-        assert cl.access_token is None
-        assert cl.client.headers["Authorization"] == "Token legacy-api-token"
-
     def test_stdio_mode_env_var(self):
-        """No OAuth, no HTTP request → env var."""
+        """No verified credential (stdio: no HTTP layer exists) → the
+        env var is the credential, resolved by the constructor."""
         tool = self._get_tool()
         with (
             patch(
                 "courtlistener.mcp.tools.mcp_tool.get_access_token",
                 return_value=None,
-            ),
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_http_request",
-                side_effect=RuntimeError("no HTTP request"),
             ),
             patch.dict(
                 "os.environ",
@@ -183,28 +152,6 @@ class TestMCPToolGetClient:
             cl = tool.get_client()
         assert cl.api_token == "env-api-token"
         assert cl.access_token is None
-        assert cl.client.headers["Authorization"] == "Token env-api-token"
-
-    def test_http_mode_without_auth_header_falls_back_to_env(self):
-        """HTTP request present but no Authorization header → env var."""
-        tool = self._get_tool()
-        request = MagicMock()
-        request.headers = {}
-        with (
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_access_token",
-                return_value=None,
-            ),
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_http_request",
-                return_value=request,
-            ),
-            patch.dict(
-                "os.environ",
-                {"COURTLISTENER_API_TOKEN": "env-api-token"},
-            ),
-        ):
-            cl = tool.get_client()
         assert cl.client.headers["Authorization"] == "Token env-api-token"
 
 
@@ -461,44 +408,48 @@ class TestResolveToken:
 
 
 class TestServerAuthWiring:
-    """``build_auth`` activates when ``MCP_REQUIRE_OAUTH`` is set to "true",
-    and ``create_mcp_server`` itself never pulls auth from the
-    environment — the HTTP factory is the only caller that does."""
+    """The HTTP factory always attaches the dual-scheme provider —
+    there is no auth-off HTTP mode — while ``create_mcp_server`` itself
+    stays auth-free so stdio remains credential-free."""
 
-    def test_build_auth_returns_verifier_when_set(self):
-        """OAuth on → returns a RemoteAuthProvider that publishes the
-        RFC 9728 protected-resource metadata, wrapping the CourtListener
-        verifier. Tokens are validated via CL's OIDC userinfo endpoint,
-        and the resolved user_hash is cached in Redis so session state
-        survives access-token rotation.
-        """
-        from fastmcp.server.auth.auth import RemoteAuthProvider
+    def test_http_app_always_authenticates(self):
+        """Regression guard for the removed ``MCP_REQUIRE_OAUTH`` flag,
+        which fail-opened: any value other than exactly "true" silently
+        deployed an unauthenticated server. The factory now wires auth
+        with no conditional at all, and the setting itself is gone."""
+        from key_value.aio.stores.memory import MemoryStore
+        from starlette.middleware.authentication import (
+            AuthenticationMiddleware,
+        )
 
-        with patch.dict(
-            "os.environ",
-            {
-                "MCP_REQUIRE_OAUTH": "true",
-                "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
-                "MCP_BASE_URL": "https://mcp.example.test",
-            },
+        import courtlistener.mcp.server as server_mod
+        import courtlistener.mcp.settings as settings_mod
+
+        assert not hasattr(settings_mod, "MCP_REQUIRE_OAUTH")
+        with (
+            patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": "false"}),
+            patch.object(server_mod, "REDIS_URL", "redis://localhost:6379"),
+            patch.object(server_mod, "RedisStore", lambda url: MemoryStore()),
         ):
-            # Reload so module-level constants pick up the patched env.
-            # Re-read the class from the reloaded module so isinstance()
-            # sees the new class object, not a stale reference.
-            import importlib
+            app = server_mod.create_http_app()
+        assert AuthenticationMiddleware in [
+            mw.cls for mw in app.user_middleware
+        ]
 
-            import courtlistener.mcp.server as server_mod
-            import courtlistener.mcp.settings as settings_mod
+    def test_provider_publishes_protected_resource_metadata(self):
+        """The provider publishes the RFC 9728 protected-resource
+        metadata; the discovery route is advertised so clients can find
+        the auth server without the MCP serving
+        .well-known/oauth-authorization-server itself."""
+        from courtlistener.mcp.auth import CourtListenerAuthProvider
 
-            importlib.reload(settings_mod)
-            importlib.reload(server_mod)
-            auth = server_mod.build_auth()
-            verifier_cls = server_mod.CourtListenerTokenVerifier
-        assert isinstance(auth, RemoteAuthProvider)
-        assert isinstance(auth.token_verifier, verifier_cls)
-        # Discovery route is advertised so clients can find the auth
-        # server without the MCP having to serve
-        # .well-known/oauth-authorization-server itself.
+        auth = CourtListenerAuthProvider(
+            token_verifier=CourtListenerTokenVerifier(
+                base_url="https://mcp.example.test"
+            ),
+            authorization_servers=[AnyHttpUrl("https://example.test")],
+            base_url="https://mcp.example.test",
+        )
         routes = auth.get_routes(mcp_path="/")
         paths = {getattr(r, "path", None) for r in routes}
         assert "/.well-known/oauth-protected-resource" in paths
@@ -608,56 +559,13 @@ class TestServerAuthWiring:
             assert run(verifier.verify_token("")) is None
         resolve.assert_not_awaited()
 
-    def test_build_auth_respects_require_oauth_setting(self):
-        """``build_auth`` reads ``settings.MCP_REQUIRE_OAUTH`` at call
-        time, so it can be patched like any other setting."""
-        from courtlistener.mcp.server import build_auth
-
-        with patch("courtlistener.mcp.settings.MCP_REQUIRE_OAUTH", False):
-            assert build_auth() is None
-        with patch("courtlistener.mcp.settings.MCP_REQUIRE_OAUTH", True):
-            assert build_auth() is not None
-
-    def test_require_oauth_parses_true_case_insensitively(self):
-        """``MCP_REQUIRE_OAUTH=TRUE`` / ``True`` also enables OAuth."""
-        import importlib
-
-        import courtlistener.mcp.settings as settings_mod
-
-        try:
-            for value in ("true", "TRUE", "True"):
-                with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": value}):
-                    importlib.reload(settings_mod)
-                    assert settings_mod.MCP_REQUIRE_OAUTH is True, value
-        finally:
-            importlib.reload(settings_mod)
-
-    def test_require_oauth_ignores_other_truthy_values(self):
-        """Only the literal string ``true`` (any casing) enables OAuth.
-
-        Prevents accidental activation from stray values like ``1`` or
-        ``yes`` in deployment configs.
-        """
-        import importlib
-
-        import courtlistener.mcp.settings as settings_mod
-
-        try:
-            for value in ("1", "yes", "on", "True ", " true", "false", ""):
-                with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": value}):
-                    importlib.reload(settings_mod)
-                    assert settings_mod.MCP_REQUIRE_OAUTH is False, value
-        finally:
-            importlib.reload(settings_mod)
-
     def test_create_mcp_server_does_not_enable_auth_by_default(self):
-        """Bare ``create_mcp_server`` should not wire in OAuth, even
-        when ``MCP_REQUIRE_OAUTH`` is set — only the HTTP factory does.
-        """
+        """Bare ``create_mcp_server`` wires no auth — the HTTP factory
+        attaches it explicitly, which is what keeps stdio (``main``)
+        credential-free."""
         from courtlistener.mcp.server import create_mcp_server
 
-        with patch.dict("os.environ", {"MCP_REQUIRE_OAUTH": "true"}):
-            mcp = create_mcp_server()
+        mcp = create_mcp_server()
         # FastMCP exposes its auth provider via ``auth`` (or ``_auth``
         # depending on version); both should be falsy here.
         auth = getattr(mcp, "auth", None) or getattr(mcp, "_auth", None)
@@ -872,6 +780,18 @@ class TestCourtListenerAuthProvider:
         assert "/.well-known/oauth-protected-resource" in paths
 
 
+def _auth_provider():
+    """The provider create_http_app attaches, built for tests."""
+    from courtlistener.mcp.auth import CourtListenerAuthProvider
+    from courtlistener.mcp.settings import MCP_BASE_URL, OAUTH_ISSUER
+
+    return CourtListenerAuthProvider(
+        token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
+        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
+        base_url=MCP_BASE_URL,
+    )
+
+
 class TestAuthOverHttp:
     """End to end through FastMCP's middleware stack: the scheme has to
     survive the whole chain, not just our backend in isolation."""
@@ -885,9 +805,10 @@ class TestAuthOverHttp:
     def _app(self):
         from starlette.testclient import TestClient
 
-        import courtlistener.mcp.server as server_mod
+        from courtlistener.mcp.server import create_mcp_server
 
-        mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
+        # Mirrors create_http_app's wiring, minus the Redis store.
+        mcp = create_mcp_server(auth=_auth_provider())
         return TestClient(mcp.http_app(path="/"))
 
     def _initialize(self, headers):
@@ -977,26 +898,12 @@ class TestHealthEndpoint:
         when the HTTP app has an OAuth ``AuthProvider`` attached."""
         from starlette.testclient import TestClient
 
+        from courtlistener.mcp.server import create_mcp_server
+
         # Skip the RedisStore wiring (create_http_app requires Redis);
         # we only care that /health routes through FastMCP's starlette
-        # app unauthenticated. Build the server the same way
-        # create_http_app does — auth via build_auth().
-        with patch.dict(
-            "os.environ",
-            {
-                "MCP_REQUIRE_OAUTH": "true",
-                "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
-                "MCP_BASE_URL": "https://mcp.example.test",
-            },
-        ):
-            import importlib
-
-            import courtlistener.mcp.server as server_mod
-            import courtlistener.mcp.settings as settings_mod
-
-            importlib.reload(settings_mod)
-            importlib.reload(server_mod)
-            mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
+        # app unauthenticated, with the same provider attached.
+        mcp = create_mcp_server(auth=_auth_provider())
 
         app = mcp.http_app(path="/")
         with TestClient(app) as http_client:
@@ -1018,23 +925,11 @@ class TestOpenAIAppsChallenge:
         has an OAuth ``AuthProvider`` attached."""
         from starlette.testclient import TestClient
 
-        with patch.dict(
-            "os.environ",
-            {
-                "MCP_REQUIRE_OAUTH": "true",
-                "COURTLISTENER_OAUTH_ISSUER": "https://example.test",
-                "MCP_BASE_URL": "https://mcp.example.test",
-            },
-        ):
-            import importlib
+        from courtlistener.mcp.server import create_mcp_server
+        from courtlistener.mcp.settings import OPENAI_APPS_CHALLENGE_TOKEN
 
-            import courtlistener.mcp.server as server_mod
-            import courtlistener.mcp.settings as settings_mod
-
-            importlib.reload(settings_mod)
-            importlib.reload(server_mod)
-            mcp = server_mod.create_mcp_server(auth=server_mod.build_auth())
-            token = server_mod.OPENAI_APPS_CHALLENGE_TOKEN
+        token = OPENAI_APPS_CHALLENGE_TOKEN
+        mcp = create_mcp_server(auth=_auth_provider())
 
         app = mcp.http_app(path="/")
         with TestClient(app) as http_client:

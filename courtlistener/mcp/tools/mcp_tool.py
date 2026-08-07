@@ -4,7 +4,7 @@ from functools import cached_property
 from typing import Any
 
 from fastmcp.server.context import Context
-from fastmcp.server.dependencies import get_access_token, get_http_request
+from fastmcp.server.dependencies import get_access_token
 from fastmcp.tools import Tool
 from jsonschema import Draft202012Validator
 from mcp.types import ToolAnnotations
@@ -21,41 +21,23 @@ class MCPTool:
     def get_client(self) -> CourtListener:
         """Build a CourtListener client for the current request.
 
-        Resolution order:
-        1. HTTP + auth mode: the credential FastMCP verified. Its
-           ``token_kind`` claim says which scheme CL expects it back
-           under — an OAuth access token as ``Authorization: Bearer
-           <jwt>`` (accepted because ``OAuth2Authentication`` is
-           registered in CL's ``DEFAULT_AUTHENTICATION_CLASSES``), or a
-           CL API token as ``Authorization: Token <api_token>``. Sending
-           either under the other scheme is rejected by CL.
-        2. HTTP + auth disabled: ``Authorization: Token <api_token>``
-           header (existing stdio-over-HTTP / testing path). Reachable
-           only while ``MCP_REQUIRE_OAUTH`` can turn the auth provider
-           off; with it on, the auth layer consumes the header first.
-        3. stdio mode: ``COURTLISTENER_API_TOKEN`` env var, resolved
-           by the ``CourtListener`` constructor.
+        HTTP mode: the credential FastMCP verified. Its ``token_kind``
+        claim says which scheme CL expects it back under — an OAuth
+        access token as ``Authorization: Bearer <jwt>`` (accepted
+        because ``OAuth2Authentication`` is registered in CL's
+        ``DEFAULT_AUTHENTICATION_CLASSES``), or a CL API token as
+        ``Authorization: Token <api_token>``. Sending either under the
+        other scheme is rejected by CL.
+
+        stdio mode: there is no HTTP layer, so no access token exists;
+        the credential is the ``COURTLISTENER_API_TOKEN`` env var,
+        resolved by the ``CourtListener`` constructor.
         """
-        # 1. Verified credential (HTTP + auth provider active)
         access_token = get_access_token()
         if access_token is not None:
             if access_token.claims.get("token_kind") == TokenKind.API:
                 return CourtListener(api_token=access_token.token)
             return CourtListener(access_token=access_token.token)
-
-        # 2. "Token ..." header pass-through (auth provider off).
-        #    get_http_request() raises when called outside an HTTP
-        #    request (e.g. stdio mode), so guard against that.
-        try:
-            request = get_http_request()
-        except RuntimeError:
-            request = None
-        if request is not None:
-            auth = request.headers.get("Authorization")
-            if auth and auth.startswith("Token "):
-                return CourtListener(api_token=auth[len("Token ") :] or None)
-
-        # 3. stdio mode — env var
         return CourtListener()
 
     def get_tool(self) -> Tool:

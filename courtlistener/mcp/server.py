@@ -1,7 +1,6 @@
 import base64
 
 from fastmcp import FastMCP
-from fastmcp.server.auth.auth import AuthProvider
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from key_value.aio.stores.redis import RedisStore
 from mcp.types import Icon
@@ -15,7 +14,6 @@ from starlette.responses import (
 )
 from starlette.routing import Route
 
-from courtlistener.mcp import settings
 from courtlistener.mcp.auth import (
     CourtListenerAuthProvider,
     CourtListenerTokenVerifier,
@@ -130,17 +128,6 @@ def create_mcp_server(**kwargs):
     return mcp
 
 
-def build_auth() -> AuthProvider | None:
-    """Return an ``AuthProvider`` when OAuth is configured, else ``None``."""
-    if not settings.MCP_REQUIRE_OAUTH:
-        return None
-    return CourtListenerAuthProvider(
-        token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
-        authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
-        base_url=MCP_BASE_URL,
-    )
-
-
 async def protected_resource_metadata(request):
     # Hand-rolled override of FastMCP/MCP SDK's auto-generated
     # /.well-known/oauth-protected-resource. The SDK types
@@ -167,7 +154,11 @@ def create_http_app():
     redis_store = RedisStore(url=REDIS_URL)
     mcp = create_mcp_server(
         session_state_store=redis_store,
-        auth=build_auth(),
+        auth=CourtListenerAuthProvider(
+            token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
+            authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
+            base_url=MCP_BASE_URL,
+        ),
     )
     middleware = [
         Middleware(

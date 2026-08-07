@@ -8,11 +8,12 @@ Features:
 - Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
 
 Changes:
+- Remove `MCP_REQUIRE_OAUTH`. The HTTP server now always authenticates — the auth provider accepts both OAuth bearer tokens and CL API tokens, so an auth-off HTTP mode no longer has a purpose, and the flag's fail-open parsing (any value other than exactly `"true"` silently disabled auth) goes with it. The `Authorization: Token` header pass-through in `MCPTool.get_client` is removed as dead code; stdio mode still resolves its credential from `COURTLISTENER_API_TOKEN`.
 - Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
 - Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
 - Token verification degrades to direct verification when the session store is unavailable, instead of turning a Redis blip into a 500 on every request.
 - Add `verify_api_token`, which validates a CourtListener API token against the API root and namespaces it by an HMAC of the token — the same namespace stdio mode already derives.
-- Tools that only make CL API calls have been changed to have `openWorldHint=True`.
+- Tools that only make CL API calls have been changed to have `openWorldHint=False`.
 - Remove `comma_separated_pre_validator`, now redundant as `multiple_choice_validator` already splits on commas and whitespace, and splitting up front broke choice labels containing a comma (`"District Court, D. Alaska"`).
 
 Fix:

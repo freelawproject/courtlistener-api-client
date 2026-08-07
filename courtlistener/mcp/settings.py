@@ -44,9 +44,6 @@ SENTRY_TRACES_SAMPLE_RATE = float(
 # How long a verified token's info is cached.
 TOKEN_CACHE_TTL_SECONDS = int(os.getenv("MCP_TOKEN_CACHE_TTL", "600"))
 
-# Whether the HTTP app requires OAuth.
-MCP_REQUIRE_OAUTH = os.getenv("MCP_REQUIRE_OAUTH", "true").lower() == "true"
-
 # Session-scoped state (query pagination, citation jobs) lives this long.
 SESSION_TTL_SECONDS = 3600  # 1 hour
 
