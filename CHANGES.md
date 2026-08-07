@@ -13,7 +13,7 @@ Changes:
 - Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
 - Token verification degrades to direct verification when the session store is unavailable, instead of turning a Redis blip into a 500 on every request.
 - Add `verify_api_token`, which validates a CourtListener API token against the API root and namespaces it by an HMAC of the token — the same namespace stdio mode already derives.
-- Tools that only make CL API calls have been changed to have `openWorldHint=True`.
+- Tools that only make CL API calls have been changed to have `openWorldHint=False`.
 - Remove `comma_separated_pre_validator`, now redundant as `multiple_choice_validator` already splits on commas and whitespace, and splitting up front broke choice labels containing a comma (`"District Court, D. Alaska"`).
 
 Fix:
