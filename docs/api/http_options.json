@@ -25547,5 +25547,20 @@
       "date_created",
       "date_modified"
     ]
+  },
+  "api-usage": {
+    "name": "Api Usage List",
+    "description": "Provides the authenticated user's API usage and rate limits.\n\nReturns current throttle usage, 14-day historical usage, and membership\ninformation.\n\nThis endpoint uses its own dedicated ``api_usage`` throttle scope, which is\ndeliberately kept separate from the main API quota. That isolation serves\ntwo purposes: monitoring your usage never consumes the quota being\nmonitored, and a user who has exhausted their API quota elsewhere can still\nreach this endpoint to inspect their usage and ``reset_at`` \u2014 exactly when\nthat information is most useful. The ``api_usage`` scope carries a generous\nlimit of its own only to keep the endpoint from being abused; that limit is\nreported alongside the others in the ``current_usage`` list.",
+    "renders": [
+      "application/json",
+      "text/html",
+      "application/xml"
+    ],
+    "parses": [
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data",
+      "application/xml"
+    ]
   }
 }
