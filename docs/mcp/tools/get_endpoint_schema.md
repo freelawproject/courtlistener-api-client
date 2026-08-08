@@ -5,7 +5,7 @@
 **Get Endpoint Schema**
 
 - **Source:** `courtlistener/mcp/tools/get_endpoint_schema_tool.py`
-- **Estimated definition size:** ~360 tokens (description ~43, input schema ~236; cl100k_base)
+- **Estimated definition size:** ~365 tokens (description ~43, input schema ~241; cl100k_base)
 - **Parameters:** 1 (1 required)
 - **Raw input schema:** [`get_endpoint_schema.inputs.json`](./get_endpoint_schema.inputs.json)
 
@@ -31,6 +31,6 @@ search endpoint and often include more detailed metadata.
 
 ### `endpoint_id`
 
-enum · **required** · one of: `"dockets"`, `"bankruptcy-information"`, `"originating-court-information"`, `"docket-entries"`, `"recap-documents"`, `"courts"`, `"audio"`, `"clusters"`, `"opinions"`, `"opinions-cited"`, `"tag"`, `"people"`, `"positions"`, `"retention-events"`, `"educations"`, `"schools"`, `"political-affiliations"`, `"sources"`, `"aba-ratings"`, `"parties"`, `"attorneys"`, `"recap-fetch"`, `"recap-query"`, `"fjc-integrated-database"`, `"tags"`, `"docket-tags"`, `"prayers"`, `"increment-event"`, `"visualizations/json"`, `"visualizations"`, `"agreements"`, `"debts"`, `"financial-disclosures"`, `"gifts"`, `"investments"`, `"non-investment-incomes"`, `"disclosure-positions"`, `"reimbursements"`, `"spouse-incomes"`, `"alerts"`, `"docket-alerts"`
+enum · **required** · one of: `"dockets"`, `"bankruptcy-information"`, `"originating-court-information"`, `"docket-entries"`, `"recap-documents"`, `"courts"`, `"audio"`, `"clusters"`, `"opinions"`, `"opinions-cited"`, `"tag"`, `"people"`, `"positions"`, `"retention-events"`, `"educations"`, `"schools"`, `"political-affiliations"`, `"sources"`, `"aba-ratings"`, `"parties"`, `"attorneys"`, `"recap-fetch"`, `"recap-query"`, `"fjc-integrated-database"`, `"tags"`, `"docket-tags"`, `"prayers"`, `"increment-event"`, `"visualizations/json"`, `"visualizations"`, `"agreements"`, `"debts"`, `"financial-disclosures"`, `"gifts"`, `"investments"`, `"non-investment-incomes"`, `"disclosure-positions"`, `"reimbursements"`, `"spouse-incomes"`, `"alerts"`, `"docket-alerts"`, `"api-usage"`
 
 The endpoint to get the schema for.

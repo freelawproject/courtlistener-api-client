@@ -7,6 +7,7 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.endpoints.aba_ratings import AbaRatingsEndpoint
 from courtlistener.models.endpoints.agreements import AgreementsEndpoint
 from courtlistener.models.endpoints.alerts import AlertsEndpoint
+from courtlistener.models.endpoints.api_usage import ApiUsageEndpoint
 from courtlistener.models.endpoints.attorneys import AttorneysEndpoint
 from courtlistener.models.endpoints.audio import AudioEndpoint
 from courtlistener.models.endpoints.bankruptcy_information import (
@@ -128,6 +129,7 @@ __all__ = [
     "SpouseIncomesEndpoint",
     "AlertsEndpoint",
     "DocketAlertsEndpoint",
+    "ApiUsageEndpoint",
     "OpinionSearchEndpoint",
     "RecapSearchEndpoint",
     "RecapDocumentSearchEndpoint",
@@ -179,6 +181,7 @@ ENDPOINTS: dict[str, type[Endpoint]] = {
     "spouse_incomes": SpouseIncomesEndpoint,
     "alerts": AlertsEndpoint,
     "docket_alerts": DocketAlertsEndpoint,
+    "api_usage": ApiUsageEndpoint,
     "opinion_search": OpinionSearchEndpoint,
     "recap_search": RecapSearchEndpoint,
     "recap_document_search": RecapDocumentSearchEndpoint,

@@ -5,7 +5,7 @@
 **Get Item by ID**
 
 - **Source:** `courtlistener/mcp/tools/get_endpoint_item_tool.py`
-- **Estimated definition size:** ~443 tokens (description ~12, input schema ~353; cl100k_base)
+- **Estimated definition size:** ~448 tokens (description ~12, input schema ~358; cl100k_base)
 - **Parameters:** 3 (2 required)
 - **Raw input schema:** [`get_endpoint_item.inputs.json`](./get_endpoint_item.inputs.json)
 
@@ -27,7 +27,7 @@ Get an item by ID from a CourtListener API endpoint.
 
 ### `endpoint_id`
 
-enum · **required** · one of: `"dockets"`, `"bankruptcy-information"`, `"originating-court-information"`, `"docket-entries"`, `"recap-documents"`, `"courts"`, `"audio"`, `"clusters"`, `"opinions"`, `"opinions-cited"`, `"tag"`, `"people"`, `"positions"`, `"retention-events"`, `"educations"`, `"schools"`, `"political-affiliations"`, `"sources"`, `"aba-ratings"`, `"parties"`, `"attorneys"`, `"recap-fetch"`, `"recap-query"`, `"fjc-integrated-database"`, `"tags"`, `"docket-tags"`, `"prayers"`, `"increment-event"`, `"visualizations/json"`, `"visualizations"`, `"agreements"`, `"debts"`, `"financial-disclosures"`, `"gifts"`, `"investments"`, `"non-investment-incomes"`, `"disclosure-positions"`, `"reimbursements"`, `"spouse-incomes"`, `"alerts"`, `"docket-alerts"`
+enum · **required** · one of: `"dockets"`, `"bankruptcy-information"`, `"originating-court-information"`, `"docket-entries"`, `"recap-documents"`, `"courts"`, `"audio"`, `"clusters"`, `"opinions"`, `"opinions-cited"`, `"tag"`, `"people"`, `"positions"`, `"retention-events"`, `"educations"`, `"schools"`, `"political-affiliations"`, `"sources"`, `"aba-ratings"`, `"parties"`, `"attorneys"`, `"recap-fetch"`, `"recap-query"`, `"fjc-integrated-database"`, `"tags"`, `"docket-tags"`, `"prayers"`, `"increment-event"`, `"visualizations/json"`, `"visualizations"`, `"agreements"`, `"debts"`, `"financial-disclosures"`, `"gifts"`, `"investments"`, `"non-investment-incomes"`, `"disclosure-positions"`, `"reimbursements"`, `"spouse-incomes"`, `"alerts"`, `"docket-alerts"`, `"api-usage"`
 
 The endpoint to get an item from.
 
