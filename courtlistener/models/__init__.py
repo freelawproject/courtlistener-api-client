@@ -9,7 +9,8 @@ try:
 except Exception as exc:
     logging.warning(
         f"Error importing filters and endpoints: {exc}\n"
-        "You may need to run `scripts/generate_models.py` to generate them."
+        "You may need to run `scripts/generate_endpoint_models.py` "
+        "to generate them."
     )
     ENDPOINTS = {}
     FILTERS = {}
