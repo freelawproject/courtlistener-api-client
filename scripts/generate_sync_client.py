@@ -1,3 +1,4 @@
+import re
 import subprocess
 
 import unasync
@@ -67,6 +68,19 @@ DEPRECATED_ALIASES = '''    # --------------------------------------------------
         return self.get_results()'''
 
 
+SYNC_NAME_RE = re.compile(r"\bSync[A-Z]\w*")
+
+
+def check_no_sync_names(text: str, name: str) -> None:
+    leaked = sorted(set(SYNC_NAME_RE.findall(text)))
+    if leaked:
+        raise RuntimeError(
+            f"Generated {name} contains {', '.join(leaked)}: unasync "
+            "renames unmapped Async* names to Sync* instead of stripping "
+            "the prefix. Add the missing entries to REPLACEMENTS."
+        )
+
+
 def replace_once(text: str, anchor: str, replacement: str, name: str) -> str:
     if text.count(anchor) != 1:
         raise RuntimeError(
@@ -106,6 +120,7 @@ def main() -> None:
                 "\n\n" + DEPRECATED_ALIASES + DEPRECATED_ALIASES_ANCHOR,
                 path.name,
             )
+        check_no_sync_names(text, path.name)
         path.write_text(text)
 
     expected_files = {path.name for path in generated}
