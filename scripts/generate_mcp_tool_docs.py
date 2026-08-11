@@ -12,11 +12,11 @@ from utils import (
 
 from courtlistener.mcp.tools import MCP_TOOLS
 
-TOOLS_DOCS_DIR = DOCS_DIR / "mcp" / "tools"
+TOOLS_DOCS_DIR = DOCS_DIR / "mcp_tools"
 
 ENCODING = tiktoken.get_encoding("cl100k_base")
 
-GENERATED_NOTICE = generated_notice("update_tool_docs.py")
+GENERATED_NOTICE = generated_notice("generate_mcp_tool_docs.py")
 
 STANDARD_SCHEMA_KEYS = {
     "$defs",

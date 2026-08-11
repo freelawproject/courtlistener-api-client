@@ -69,15 +69,15 @@ jobs:
 
       - name: Regenerate docs
         run: |
-          uv run python scripts/update_tool_docs.py
-          uv run python scripts/update_endpoint_docs.py
+          uv run python scripts/generate_mcp_tool_docs.py
+          uv run python scripts/generate_endpoint_docs.py
 
       - name: Check docs are up to date
         run: |
           git add -A docs
           if ! git diff --cached --quiet -- docs; then
             git --no-pager diff --cached --stat -- docs
-            echo "::error::Generated docs are stale. Run 'uv run python scripts/update_tool_docs.py' and 'uv run python scripts/update_endpoint_docs.py', then commit the changes."
+            echo "::error::Generated docs are stale. Run 'uv run python scripts/generate_mcp_tool_docs.py' and 'uv run python scripts/generate_endpoint_docs.py', then commit the changes."
             exit 1
           fi
 

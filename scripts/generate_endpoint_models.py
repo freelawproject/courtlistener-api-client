@@ -14,7 +14,7 @@ from courtlistener import CourtListener
 TEMPLATES_DIR = BASE_DIR / "templates"
 ENDPOINTS_DIR = BASE_DIR / "courtlistener" / "models" / "endpoints"
 FILTERS_DIR = BASE_DIR / "courtlistener" / "models" / "filters"
-HTTP_OPTIONS_PATH = DOCS_DIR / "api" / "http_options.json"
+HTTP_OPTIONS_PATH = DOCS_DIR / "http_options.json"
 
 RELATED_ENDPOINT_MAP = {
     "opinion-clusters": "clusters",

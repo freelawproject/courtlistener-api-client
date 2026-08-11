@@ -11,9 +11,9 @@ from utils import (
 from courtlistener.mcp.tools.utils import inline_refs
 from courtlistener.models import ENDPOINTS
 
-ENDPOINTS_DOCS_DIR = DOCS_DIR / "api" / "endpoints"
+ENDPOINTS_DOCS_DIR = DOCS_DIR / "endpoints"
 
-GENERATED_NOTICE = generated_notice("update_endpoint_docs.py")
+GENERATED_NOTICE = generated_notice("generate_endpoint_docs.py")
 
 CHOICES_COLLAPSE_THRESHOLD = 10
 
