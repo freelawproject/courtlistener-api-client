@@ -9,6 +9,8 @@ Features:
 
 Changes:
 - Add a PR template with an AI Disclosure section.
+- Flatten the generated docs tree: endpoint docs move from `docs/api/endpoints/` to `docs/endpoints/`, MCP tool docs from `docs/mcp/tools/` to `docs/mcp_tools/`, and the cached HTTP OPTIONS dump from `docs/api/http_options.json` to `docs/http_options.json`. The `docs/api/` and `docs/mcp/` folders and their stub READMEs are gone.
+- Rename the generator scripts for consistency: `generate_models.py` → `generate_endpoint_models.py`, `update_endpoint_docs.py` → `generate_endpoint_docs.py`, and `update_tool_docs.py` → `generate_mcp_tool_docs.py`.
 - Remove `MCP_REQUIRE_OAUTH`. The HTTP server now always authenticates — the auth provider accepts both OAuth bearer tokens and CL API tokens, so an auth-off HTTP mode no longer has a purpose, and the flag's fail-open parsing (any value other than exactly `"true"` silently disabled auth) goes with it. The `Authorization: Token` header pass-through in `MCPTool.get_client` is removed as dead code; stdio mode still resolves its credential from `COURTLISTENER_API_TOKEN`.
 - Add `courtlistener/settings.py` with `get_api_base_url()`, now the single source of truth for the CourtListener API root.
 - Cache a structured record of each verified token instead of a bare user hash, keyed by credential kind (`mcp:token_info:{kind}:{hmac}`), so an entry verified as one kind can never satisfy a lookup for another. Entries under the old `mcp:token_to_user:` namespace are ignored and re-verified once.
