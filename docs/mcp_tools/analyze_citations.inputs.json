@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Legal text to analyze. Citations will be extracted locally and verified against CourtListener."
+    },
+    "opinion_id": {
+      "type": "integer",
+      "description": "Alternatively, if the opinion is available in CourtListener, you can provide the opinion ID"
+    },
+    "cluster_id": {
+      "type": "integer",
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Analyzes the case's main opinion; ids for any concurrences or dissents are named in the output so they can be analyzed separately."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "The ID of the search alert to delete."
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "additionalProperties": false
+}

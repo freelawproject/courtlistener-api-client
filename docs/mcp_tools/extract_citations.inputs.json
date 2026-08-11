@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Legal text to extract citations from."
+    },
+    "resolve": {
+      "type": "boolean",
+      "description": "Whether to resolve id./supra/short cites to their antecedents. Defaults to true.",
+      "default": true
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": false
+}

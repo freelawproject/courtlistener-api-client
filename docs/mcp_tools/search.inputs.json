@@ -1,0 +1,555 @@
+{
+  "type": "object",
+  "properties": {
+    "fields": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Filter which fields are returned. Use the field names as they appear in search results (e.g. `caseName`, `dateFiled`), which differ from the API field names used by `call_endpoint` and `get_endpoint_item`."
+    },
+    "num_results": {
+      "type": "integer",
+      "description": "Number of results to return (1-100). Defaults to 20.",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 20
+    },
+    "type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid choices:\n\n[\n  {\n    \"display_name\": \"Opinion\",\n    \"value\": \"o\"\n  },\n  {\n    \"display_name\": \"Recap\",\n    \"value\": \"r\"\n  },\n  {\n    \"display_name\": \"Document\",\n    \"value\": \"rd\"\n  },\n  {\n    \"display_name\": \"Docket\",\n    \"value\": \"d\"\n  },\n  {\n    \"display_name\": \"Judge\",\n    \"value\": \"p\"\n  },\n  {\n    \"display_name\": \"Oral Argument\",\n    \"value\": \"oa\"\n  }\n]"
+    },
+    "court": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']\n\nThis field has 470 valid choices. Examples: scotus (Supreme Court of the United States), ca1 (Court of Appeals for the First Circuit), ca2 (Court of Appeals for the Second Circuit), ca3 (Court of Appeals for the Third Circuit), ca4 (Court of Appeals for the Fourth Circuit), ...\n\nUse the `get_choices` tool with endpoint_id=\"search\" and field_name=\"court\" to see all choices."
+    },
+    "q": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']"
+    },
+    "semantic": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "available_only": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "case_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'oa']"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "docket_number": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'oa']"
+    },
+    "nature_of_suit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "cause": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "filed_before": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd']"
+    },
+    "filed_after": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd']"
+    },
+    "entry_date_filed_before": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "entry_date_filed_after": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "document_number": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "attachment_number": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "assigned_to": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "referred_to": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "party_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "atty_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['r', 'rd', 'd']"
+    },
+    "judge": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'oa']"
+    },
+    "citation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "neutral_cite": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Published": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Unpublished": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Errata": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Separate": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_In-chambers": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Relating-to": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "stat_Unknown": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "cited_gt": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "cited_lt": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o']"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "born_before": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "born_after": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "dob_city": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "dob_state": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']\n\nThis field has 59 valid choices. Examples: AL (Alabama), AK (Alaska), AS (American Samoa), AZ (Arizona), AR (Arkansas), ...\n\nUse the `get_choices` tool with endpoint_id=\"search\" and field_name=\"dob_state\" to see all choices."
+    },
+    "school": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "appointer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']"
+    },
+    "selection_method": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']\n\nValid choices:\n\n[\n  {\n    \"display_name\": \"Partisan Election\",\n    \"value\": \"e_part\"\n  },\n  {\n    \"display_name\": \"Non-Partisan Election\",\n    \"value\": \"appoine_non_parttment\"\n  },\n  {\n    \"display_name\": \"Appointment (President)\",\n    \"value\": \"a_pres\"\n  },\n  {\n    \"display_name\": \"Appointment (Governor)\",\n    \"value\": \"a_gov\"\n  },\n  {\n    \"display_name\": \"Appointment (Legislature)\",\n    \"value\": \"a_legis\"\n  },\n  {\n    \"display_name\": \"Appointment (Judge)\",\n    \"value\": \"a_judge\"\n  },\n  {\n    \"display_name\": \"Transferred (Court Restructuring)\",\n    \"value\": \"ct_trans\"\n  }\n]"
+    },
+    "political_affiliation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['p']\n\nValid choices:\n\n[\n  {\n    \"display_name\": \"Democratic\",\n    \"value\": \"d\"\n  },\n  {\n    \"display_name\": \"Republican\",\n    \"value\": \"r\"\n  },\n  {\n    \"display_name\": \"Independent\",\n    \"value\": \"i\"\n  },\n  {\n    \"display_name\": \"Green\",\n    \"value\": \"g\"\n  },\n  {\n    \"display_name\": \"Libertarian\",\n    \"value\": \"l\"\n  },\n  {\n    \"display_name\": \"Federalist\",\n    \"value\": \"f\"\n  },\n  {\n    \"display_name\": \"Whig\",\n    \"value\": \"w\"\n  },\n  {\n    \"display_name\": \"Jeffersonian Republican\",\n    \"value\": \"j\"\n  },\n  {\n    \"display_name\": \"National Union\",\n    \"value\": \"u\"\n  },\n  {\n    \"display_name\": \"Reform Party\",\n    \"value\": \"z\"\n  }\n]"
+    },
+    "argued_before": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['oa']"
+    },
+    "argued_after": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['oa']"
+    },
+    "order_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']\n\nValid choices:\n\n[\n  {\n    \"display_name\": \"Relevance\",\n    \"value\": \"score desc\"\n  },\n  {\n    \"display_name\": \"Newest Cases First\",\n    \"value\": \"dateFiled desc\"\n  },\n  {\n    \"display_name\": \"Oldest Cases First\",\n    \"value\": \"dateFiled asc\"\n  },\n  {\n    \"display_name\": \"Most Cited First\",\n    \"value\": \"citeCount desc\"\n  },\n  {\n    \"display_name\": \"Least Cited First\",\n    \"value\": \"citeCount asc\"\n  },\n  {\n    \"display_name\": \"Newest Documents First\",\n    \"value\": \"entry_date_filed desc\"\n  },\n  {\n    \"display_name\": \"Oldest Documents First\",\n    \"value\": \"entry_date_filed asc\"\n  },\n  {\n    \"display_name\": \"Last Name\",\n    \"value\": \"name_reverse asc\"\n  },\n  {\n    \"display_name\": \"Most Recently Born\",\n    \"value\": \"dob desc,name_reverse asc\"\n  },\n  {\n    \"display_name\": \"Least Recently Born\",\n    \"value\": \"dob asc,name_reverse asc\"\n  },\n  {\n    \"display_name\": \"Most Recently Deceased\",\n    \"value\": \"dod desc,name_reverse asc\"\n  },\n  {\n    \"display_name\": \"Newest First\",\n    \"value\": \"dateArgued desc\"\n  },\n  {\n    \"display_name\": \"Oldest First\",\n    \"value\": \"dateArgued asc\"\n  }\n]"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "additionalProperties": false
+}

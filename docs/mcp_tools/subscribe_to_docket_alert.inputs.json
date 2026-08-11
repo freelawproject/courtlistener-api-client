@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "docket": {
+      "type": "integer",
+      "description": "The docket ID to subscribe to."
+    }
+  },
+  "required": [
+    "docket"
+  ],
+  "additionalProperties": false
+}

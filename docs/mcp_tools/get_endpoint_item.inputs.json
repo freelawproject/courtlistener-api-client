@@ -1,0 +1,85 @@
+{
+  "type": "object",
+  "properties": {
+    "endpoint_id": {
+      "type": "string",
+      "enum": [
+        "dockets",
+        "bankruptcy-information",
+        "originating-court-information",
+        "docket-entries",
+        "recap-documents",
+        "courts",
+        "audio",
+        "clusters",
+        "opinions",
+        "opinions-cited",
+        "tag",
+        "people",
+        "positions",
+        "retention-events",
+        "educations",
+        "schools",
+        "political-affiliations",
+        "sources",
+        "aba-ratings",
+        "parties",
+        "attorneys",
+        "recap-fetch",
+        "recap-query",
+        "fjc-integrated-database",
+        "tags",
+        "docket-tags",
+        "prayers",
+        "increment-event",
+        "visualizations/json",
+        "visualizations",
+        "agreements",
+        "debts",
+        "financial-disclosures",
+        "gifts",
+        "investments",
+        "non-investment-incomes",
+        "disclosure-positions",
+        "reimbursements",
+        "spouse-incomes",
+        "alerts",
+        "docket-alerts"
+      ],
+      "description": "The endpoint to get an item from."
+    },
+    "item_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "description": "The ID of the item to get."
+    },
+    "fields": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Filter which fields are returned. Use the field names from the endpoint's own schema (see the `get_endpoint_schema` tool), not the field names returned by the `search` tool."
+    }
+  },
+  "required": [
+    "endpoint_id",
+    "item_id"
+  ],
+  "additionalProperties": false
+}

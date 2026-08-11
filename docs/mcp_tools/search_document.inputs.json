@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "properties": {
+    "opinion_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      ],
+      "description": "ID or list of IDs of opinions to search (up to 10)."
+    },
+    "recap_document_id": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      ],
+      "description": "ID or list of IDs of RECAP documents to search (up to 10)."
+    },
+    "cluster_id": {
+      "type": "integer",
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`."
+    },
+    "query": {
+      "type": "string",
+      "description": "Literal phrase to search for (case-insensitive). Up to 20 matches are returned per document."
+    },
+    "snippet_size": {
+      "type": "integer",
+      "description": "Characters of context to show on each side of a match (default 300).",
+      "minimum": 50,
+      "default": 300
+    }
+  },
+  "required": [
+    "query"
+  ],
+  "additionalProperties": false
+}

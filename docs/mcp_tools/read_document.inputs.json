@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "opinion_id": {
+      "type": "integer",
+      "description": "ID of the opinion to read."
+    },
+    "recap_document_id": {
+      "type": "integer",
+      "description": "ID of the RECAP document to read."
+    },
+    "cluster_id": {
+      "type": "integer",
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Reads the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`."
+    },
+    "chunk_index": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      ],
+      "description": "0-based index (or list of indexes) of the chunk(s) to return.  Omit to receive the full document text."
+    },
+    "chunk_size": {
+      "type": "integer",
+      "description": "Characters per chunk (default 8000). Only relevant when chunk_index is supplied.",
+      "minimum": 100,
+      "default": 8000
+    }
+  },
+  "additionalProperties": false
+}

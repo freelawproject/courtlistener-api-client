@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "A name for the alert."
+    },
+    "query": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object"
+        }
+      ],
+      "description": "Search query as a URL query string (e.g. \"q=test&court=scotus\") or a structured dict (e.g. {\"q\": \"test\", \"court\": \"scotus\"})."
+    },
+    "rate": {
+      "type": "string",
+      "enum": [
+        "rt",
+        "dly",
+        "wly",
+        "mly",
+        "off"
+      ],
+      "description": "Alert frequency: \"rt\" (real time), \"dly\" (daily), \"wly\" (weekly), \"mly\" (monthly), or \"off\" (disabled)."
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "o",
+        "r",
+        "d",
+        "oa"
+      ],
+      "description": "Optional alert type matching the search `type` in the query: \"o\" (opinion), \"r\" (recap), \"d\" (docket), or \"oa\" (oral argument). If omitted, the server infers it from the query."
+    }
+  },
+  "required": [
+    "name",
+    "query",
+    "rate"
+  ],
+  "additionalProperties": false
+}
