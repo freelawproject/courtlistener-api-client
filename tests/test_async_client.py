@@ -47,12 +47,6 @@ PAIRS = [
 # behavior is covered by tests/test_pagination.py.
 DEPRECATED_ALIASES = frozenset(RENAMES[ResourceIterator])
 
-# (class name, member) pairs whose docstrings deliberately differ.
-DOCSTRING_EXEMPT = {
-    # The async flavor intentionally keeps the one-line summary.
-    ("DocketAlerts", "unsubscribe"),
-}
-
 
 def _doc(cls, name):
     """Docstring of a class member, or None if it isn't documentable."""
@@ -82,7 +76,12 @@ SELF_ONLY = [
 
 
 class TestSyncAsyncParity:
-    """Guardrails for keeping the two clients aligned (see unasync plan)."""
+    """Guardrails for keeping the two clients aligned.
+
+    The sync client is generated from the async one by
+    scripts/generate_sync_client.py; these tests guard the generator's
+    output rather than hand-maintained parity.
+    """
 
     @pytest.mark.parametrize(
         "sync_cls,async_cls", PAIRS, ids=lambda c: c.__name__
@@ -167,16 +166,14 @@ class TestSyncAsyncParity:
     def test_docstrings_match(self, sync_cls, async_cls):
         """Shared members carry the same docs in both flavors.
 
-        Guards the unasync plan: once the sync client is generated from
-        the async source, any prose that only exists on the sync side is
-        silently lost. Deliberate divergences go in DOCSTRING_EXEMPT.
+        The sync client is generated from the async source, so any
+        prose that only exists on the sync side has been silently
+        lost — most likely by editing the generated files by hand.
         """
         assert inspect.getdoc(sync_cls) == inspect.getdoc(async_cls)
         renames = RENAMES.get(sync_cls, {})
         for name in _public_members(sync_cls):
             if name in DEPRECATED_ALIASES:
-                continue
-            if (sync_cls.__name__, name) in DOCSTRING_EXEMPT:
                 continue
             sync_doc = _doc(sync_cls, name)
             if sync_doc is None:
@@ -184,10 +181,11 @@ class TestSyncAsyncParity:
             assert sync_doc == _doc(async_cls, renames.get(name, name)), name
 
     def test_duplicated_citation_helpers_are_identical(self):
-        """The pure helpers are deliberately duplicated per flavor.
+        """The pure helpers exist verbatim in both flavors.
 
-        Until the sync side is generated with unasync, keep the copies
-        byte-identical so they can't drift.
+        The sync copy is generated with unasync; byte-identical sources
+        prove the generator's token replacements leave the pure helpers
+        untouched.
         """
         import courtlistener.async_client.citation_lookup as async_mod
         import courtlistener.sync_client.citation_lookup as sync_mod

@@ -53,11 +53,13 @@ class AsyncResourceIterator:
 
     async def has_next(self) -> bool:
         """Whether there is a next page."""
-        return (await self.get_current_page()).next is not None
+        current_page = await self.get_current_page()
+        return current_page.next is not None
 
     async def has_previous(self) -> bool:
         """Whether there is a previous page."""
-        return (await self.get_current_page()).previous is not None
+        current_page = await self.get_current_page()
+        return current_page.previous is not None
 
     async def next(self) -> None:
         """Get the next page."""
@@ -107,11 +109,13 @@ class AsyncResourceIterator:
 
     async def get_document_count(self) -> int | None:
         """Total count of nested documents for recap search endpoint."""
-        return (await self.get_current_page()).document_count
+        current_page = await self.get_current_page()
+        return current_page.document_count
 
     async def get_results(self) -> list[dict[str, Any]]:
         """Results from the current page."""
-        return (await self.get_current_page()).results
+        current_page = await self.get_current_page()
+        return current_page.results
 
     async def dump(self) -> dict[str, Any]:
         """Serialize the iterator state to a dict for later restoration."""

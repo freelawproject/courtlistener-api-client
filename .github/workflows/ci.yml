@@ -81,6 +81,36 @@ jobs:
             exit 1
           fi
 
+  sync-client:
+    name: Sync Client Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra mcp
+
+      - name: Regenerate sync client
+        run: uv run python scripts/generate_sync_client.py
+
+      - name: Check sync client is up to date
+        run: |
+          git add -A courtlistener/sync_client
+          if ! git diff --cached --quiet -- courtlistener/sync_client; then
+            git --no-pager diff --cached -- courtlistener/sync_client
+            echo "::error::Generated sync client is stale. Run 'uv run python scripts/generate_sync_client.py' and commit the changes."
+            exit 1
+          fi
+
   tests:
     name: Tests
     runs-on: ubuntu-latest
