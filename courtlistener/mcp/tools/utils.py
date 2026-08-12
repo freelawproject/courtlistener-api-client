@@ -2,15 +2,14 @@ import json
 import logging
 import re
 import uuid
-from itertools import islice
 
 import tiktoken
 
-from courtlistener import CourtListener
+from courtlistener import AsyncCourtListener
+from courtlistener.async_client.resource import AsyncResourceIterator
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import DEFAULT_NUM_RESULTS
 from courtlistener.models import ENDPOINTS
-from courtlistener.sync_client.resource import ResourceIterator
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +44,28 @@ def endpoint_id_property(
     }
 
 
-def collect_results(
-    response: ResourceIterator, num_results: int = DEFAULT_NUM_RESULTS
+async def collect_results(
+    response: AsyncResourceIterator, num_results: int = DEFAULT_NUM_RESULTS
 ) -> list[dict]:
-    """Consume up to *num_results* items from a ResourceIterator."""
-    return list(islice(response, num_results))
+    """Consume up to *num_results* items from an AsyncResourceIterator."""
+    results: list[dict] = []
+    if num_results <= 0:
+        return results
+    async for item in response:
+        results.append(item)
+        if len(results) >= num_results:
+            break
+    return results
 
 
 async def prepare_query_id(
-    response: ResourceIterator,
-    client: CourtListener,
+    response: AsyncResourceIterator,
+    client: AsyncCourtListener,
     fields: list[str] | None = None,
 ) -> str:
     """Store the query response and return a short UUID query ID."""
     query_id = make_id()
-    data: dict = {"response": response.dump()}
+    data: dict = {"response": await response.dump()}
     if fields is not None:
         data["fields"] = fields
     await get_session().store_query(query_id, data, client)
@@ -183,18 +189,18 @@ def prepare_count(count: int | str | None, query_id: str) -> int | str | None:
     return None
 
 
-def has_more_results(response: ResourceIterator) -> bool:
-    """Check whether a ResourceIterator has unconsumed results."""
-    page = response.get_current_page()
+async def has_more_results(response: AsyncResourceIterator) -> bool:
+    """Check whether an AsyncResourceIterator has unconsumed results."""
+    page = await response.get_current_page()
     if response._page_result_index < len(page.results):
         return True
-    return response.has_next()
+    return await response.has_next()
 
 
-def prepare_has_more_str(
-    response: ResourceIterator, query_id: str
+async def prepare_has_more_str(
+    response: AsyncResourceIterator, query_id: str
 ) -> str | None:
-    if has_more_results(response):
+    if await has_more_results(response):
         return (
             f"More results are available. Use the `get_more_results` "
             f'tool with query_id="{query_id}" to retrieve them.'
@@ -208,7 +214,7 @@ def make_id() -> str:
 
 
 async def fetch_document_text(
-    doc_type: str, doc_id: int, client: CourtListener
+    doc_type: str, doc_id: int, client: AsyncCourtListener
 ) -> str | None:
     """Return full document text, fetching from the API on cache miss."""
     doc_types = {
@@ -224,7 +230,7 @@ async def fetch_document_text(
         return cached
 
     resource_name, field = doc_types[doc_type]
-    item = getattr(client, resource_name).get(doc_id, fields=[field])
+    item = await getattr(client, resource_name).get(doc_id, fields=[field])
     text = item.get(field) or ""
 
     if text:
@@ -271,8 +277,8 @@ def add_opinion_ids(results: list[dict]) -> None:
             result.setdefault("opinion_id", main["id"])
 
 
-def resolve_cluster_opinion_ids(
-    cluster_id: int, client: CourtListener
+async def resolve_cluster_opinion_ids(
+    cluster_id: int, client: AsyncCourtListener
 ) -> list[int]:
     """Return a cluster's opinion ids, main opinion first."""
     response = client.opinions.list(
@@ -280,7 +286,7 @@ def resolve_cluster_opinion_ids(
     )
     opinions = [
         opinion
-        for opinion in collect_results(response, 20)
+        for opinion in await collect_results(response, 20)
         if opinion.get("id") is not None
     ]
     if not opinions:
