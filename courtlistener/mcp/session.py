@@ -5,6 +5,8 @@ import hmac
 import json
 import logging
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Any
 
@@ -145,6 +147,15 @@ class Session:
             logger.warning("failed to invalidate token cache: %s", exc)
 
 
+@contextmanager
+def degrade_on_connection_error(op: str) -> Iterator[None]:
+    """Treat redis connection errors as cache misses."""
+    try:
+        yield
+    except (redis.ConnectionError, redis.TimeoutError) as exc:
+        logger.error("redis %s failed; degrading to miss: %s", op, exc)
+
+
 class RedisSession(Session):
     """Redis-backed session storage, shared across workers."""
 
@@ -161,13 +172,17 @@ class RedisSession(Session):
         return self._client
 
     async def _get(self, key: str) -> str | None:
-        return await self.client.get(key)
+        with degrade_on_connection_error("get"):
+            return await self.client.get(key)
+        return None
 
     async def _set(self, key: str, value: str, ttl_seconds: int) -> None:
-        await self.client.set(key, value, ex=ttl_seconds)
+        with degrade_on_connection_error("set"):
+            await self.client.set(key, value, ex=ttl_seconds)
 
     async def _delete(self, key: str) -> None:
-        await self.client.delete(key)
+        with degrade_on_connection_error("delete"):
+            await self.client.delete(key)
 
 
 class InMemorySession(Session):
