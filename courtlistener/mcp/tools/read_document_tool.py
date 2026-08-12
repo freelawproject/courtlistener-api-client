@@ -123,9 +123,11 @@ class ReadDocumentTool(MCPTool):
         chunk_size = arguments.get("chunk_size", DEFAULT_CHUNK_SIZE)
 
         siblings: list[int] = []
-        with self.get_client() as client:
+        async with self.get_client() as client:
             if cluster_id is not None:
-                resolved = resolve_cluster_opinion_ids(cluster_id, client)
+                resolved = await resolve_cluster_opinion_ids(
+                    cluster_id, client
+                )
                 doc_type, doc_id = "opinion", resolved[0]
                 siblings = resolved[1:]
             elif opinion_id is not None:

@@ -39,6 +39,6 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         docket = arguments["docket"]
 
-        with self.get_client() as client:
-            client.docket_alerts.unsubscribe(docket)
+        async with self.get_client() as client:
+            await client.docket_alerts.unsubscribe(docket)
             return f"Unsubscribed from docket alert for docket {docket}."

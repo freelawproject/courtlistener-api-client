@@ -185,10 +185,12 @@ class SearchDocumentTool(MCPTool):
         multi = False
         siblings: list[int] = []
 
-        with self.get_client() as client:
+        async with self.get_client() as client:
             if cluster_id is not None:
                 doc_type = "opinion"
-                resolved = resolve_cluster_opinion_ids(cluster_id, client)
+                resolved = await resolve_cluster_opinion_ids(
+                    cluster_id, client
+                )
                 doc_ids = resolved[:1]
                 siblings = resolved[1:]
             else:

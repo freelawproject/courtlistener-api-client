@@ -66,9 +66,9 @@ class CreateSearchAlertTool(MCPTool):
         rate = arguments["rate"]
         alert_type = arguments.get("alert_type")
 
-        with self.get_client() as client:
+        async with self.get_client() as client:
             try:
-                return client.alerts.create(
+                return await client.alerts.create(
                     name=name,
                     query=query,
                     rate=rate,

@@ -1,6 +1,7 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.async_client.resource import AsyncResourceIterator
 from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import (
@@ -16,7 +17,6 @@ from courtlistener.mcp.tools.utils import (
     normalize_fields,
     prepare_has_more_str,
 )
-from courtlistener.sync_client.resource import ResourceIterator
 
 
 class GetMoreResultsTool(MCPTool):
@@ -65,7 +65,7 @@ class GetMoreResultsTool(MCPTool):
         query_id = arguments["query_id"]
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
 
-        with self.get_client() as client:
+        async with self.get_client() as client:
             query = await get_session().get_query(query_id, client)
             if query is None:
                 raise SessionDataNotFoundError(
@@ -75,15 +75,15 @@ class GetMoreResultsTool(MCPTool):
                     argument_name="query_id",
                 )
 
-            response = ResourceIterator.load(client, query["response"])
+            response = AsyncResourceIterator.load(client, query["response"])
 
-            if not has_more_results(response):
+            if not await has_more_results(response):
                 return f"No more results available for query {query_id!r}."
 
-            results = collect_results(response, num_results)
+            results = await collect_results(response, num_results)
             add_opinion_ids(results)
 
-            updated_data = {"response": response.dump()}
+            updated_data = {"response": await response.dump()}
             fields = query.get("fields")
             if fields is not None:
                 updated_data["fields"] = fields
@@ -98,7 +98,7 @@ class GetMoreResultsTool(MCPTool):
                 "results": filtered_results,
             }
 
-            has_more_str = prepare_has_more_str(response, query_id)
+            has_more_str = await prepare_has_more_str(response, query_id)
             if has_more_str is not None:
                 outputs["has_more"] = has_more_str
 

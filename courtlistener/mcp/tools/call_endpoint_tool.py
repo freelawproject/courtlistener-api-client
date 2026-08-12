@@ -74,15 +74,14 @@ class CallEndpointTool(MCPTool):
         num_results = arguments.get("num_results", DEFAULT_NUM_RESULTS)
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
-                with self.get_client() as client:
+                async with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
                     response = resource.list(**query)
 
-                    results = collect_results(response, num_results)
+                    results = await collect_results(response, num_results)
                     query_id = await prepare_query_id(response, client)
-                    count = prepare_count(
-                        response.get_current_page().count, query_id
-                    )
+                    current_page = await response.get_current_page()
+                    count = prepare_count(current_page.count, query_id)
 
                     outputs = {
                         "query_id": query_id,
@@ -90,7 +89,9 @@ class CallEndpointTool(MCPTool):
                         "results": results,
                     }
 
-                    has_more_str = prepare_has_more_str(response, query_id)
+                    has_more_str = await prepare_has_more_str(
+                        response, query_id
+                    )
                     if has_more_str is not None:
                         outputs["has_more"] = has_more_str
                     return outputs

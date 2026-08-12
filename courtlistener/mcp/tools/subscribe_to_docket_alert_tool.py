@@ -37,9 +37,9 @@ class SubscribeToDocketAlertTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> dict | str:
         docket = arguments["docket"]
 
-        with self.get_client() as client:
+        async with self.get_client() as client:
             try:
-                return client.docket_alerts.subscribe(docket)
+                return await client.docket_alerts.subscribe(docket)
             except CourtListenerAPIError as e:
                 if e.status_code != 400:
                     raise

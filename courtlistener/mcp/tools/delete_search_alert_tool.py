@@ -36,9 +36,9 @@ class DeleteSearchAlertTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         alert_id = arguments["id"]
 
-        with self.get_client() as client:
+        async with self.get_client() as client:
             try:
-                client.alerts.delete(alert_id)
+                await client.alerts.delete(alert_id)
             except CourtListenerAPIError as e:
                 if e.status_code == 404:
                     return f"No alert found with id {alert_id}."

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from courtlistener import CourtListener
+from courtlistener import AsyncCourtListener
 from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.session import (
     InMemorySession,
@@ -33,7 +33,7 @@ def reset_session_singleton():
 
 @pytest.fixture
 def client():
-    return CourtListener(api_token="test-token")
+    return AsyncCourtListener(api_token="test-token")
 
 
 def run(coro):
@@ -98,7 +98,7 @@ class TestSessionDomainMethods:
 
     def test_queries_are_user_scoped(self, client):
         session = InMemorySession()
-        other = CourtListener(api_token="other-token")
+        other = AsyncCourtListener(api_token="other-token")
         run(session.store_query("abc123", {"response": 1}, client))
         assert run(session.get_query("abc123", other)) is None
 
