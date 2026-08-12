@@ -11,7 +11,7 @@ from typing import Any
 import redis.asyncio as redis
 from fastmcp.server.dependencies import get_access_token
 
-from courtlistener import CourtListener
+from courtlistener import AsyncCourtListener
 from courtlistener.mcp import settings
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.settings import (
@@ -41,7 +41,7 @@ def token_info_key(token: str, kind: TokenKind) -> str:
     return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
 
-def user_hash(client: CourtListener) -> str:
+def user_hash(client: AsyncCourtListener) -> str:
     """Return the stable per-user key prefix for the current request."""
     try:
         access_token = get_access_token()
@@ -72,7 +72,7 @@ class Session:
         raise NotImplementedError("_delete must be implemented by subclass")
 
     async def _get_user_scoped(
-        self, client: CourtListener, suffix: str
+        self, client: AsyncCourtListener, suffix: str
     ) -> Any:
         raw = await self._get(f"mcp:{user_hash(client)}:{suffix}")
         if raw is None:
@@ -80,7 +80,7 @@ class Session:
         return json.loads(raw)
 
     async def _set_user_scoped(
-        self, client: CourtListener, suffix: str, value: Any
+        self, client: AsyncCourtListener, suffix: str, value: Any
     ) -> None:
         await self._set(
             f"mcp:{user_hash(client)}:{suffix}",
@@ -89,22 +89,22 @@ class Session:
         )
 
     async def get_query(
-        self, query_id: str, client: CourtListener
+        self, query_id: str, client: AsyncCourtListener
     ) -> dict | None:
         return await self._get_user_scoped(client, f"query:{query_id}")
 
     async def store_query(
-        self, query_id: str, data: dict, client: CourtListener
+        self, query_id: str, data: dict, client: AsyncCourtListener
     ) -> None:
         await self._set_user_scoped(client, f"query:{query_id}", data)
 
     async def get_citation_analysis(
-        self, job_id: str, client: CourtListener
+        self, job_id: str, client: AsyncCourtListener
     ) -> dict | None:
         return await self._get_user_scoped(client, f"citation:{job_id}")
 
     async def store_citation_analysis(
-        self, job_id: str, data: dict, client: CourtListener
+        self, job_id: str, data: dict, client: AsyncCourtListener
     ) -> None:
         await self._set_user_scoped(client, f"citation:{job_id}", data)
 
