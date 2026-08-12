@@ -38,7 +38,7 @@ MCP_SECRET_BYTES = MCP_SECRET_KEY.encode("utf-8")
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None
 SENTRY_TRACES_SAMPLE_RATE = float(
-    os.getenv("SENTRY_TRACES_SAMPLE_RATE") or 0.02
+    os.getenv("SENTRY_TRACES_SAMPLE_RATE") or 0.05
 )
 
 # How long a verified token's info is cached.
