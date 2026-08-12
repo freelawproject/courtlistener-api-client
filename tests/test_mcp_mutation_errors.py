@@ -7,7 +7,7 @@ clients. They now catch the well-defined client-error cases and
 return clean messages, while still bubbling genuine server errors.
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
@@ -31,17 +31,18 @@ def _api_error(status_code: int, detail) -> CourtListenerAPIError:
 
 
 def _client_cm(client):
-    """Wrap a mock client in a context manager (for ``with get_client()``)."""
+    """Wrap a mock client in an async context manager (for
+    ``async with get_client()``)."""
     cm = MagicMock()
-    cm.__enter__.return_value = client
-    cm.__exit__.return_value = False
+    cm.__aenter__.return_value = client
+    cm.__aexit__.return_value = False
     return cm
 
 
 class TestDeleteSearchAlertErrors:
     @pytest.mark.asyncio
     async def test_missing_id_returns_clean_message(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.alerts.delete.side_effect = _api_error(
             404, {"detail": "No Alert matches the given query."}
         )
@@ -54,7 +55,7 @@ class TestDeleteSearchAlertErrors:
 
     @pytest.mark.asyncio
     async def test_server_error_still_raises(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.alerts.delete.side_effect = _api_error(500, "boom")
         tool = DeleteSearchAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -65,7 +66,7 @@ class TestDeleteSearchAlertErrors:
 
     @pytest.mark.asyncio
     async def test_success_path_unchanged(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.alerts.delete.return_value = None
         tool = DeleteSearchAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -89,7 +90,7 @@ class TestSubscribeToDocketAlertErrors:
             "alert_type": 1,
             "already_subscribed": True,
         }
-        client = MagicMock()
+        client = AsyncMock()
         client.docket_alerts.subscribe.return_value = existing
         tool = SubscribeToDocketAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -101,7 +102,7 @@ class TestSubscribeToDocketAlertErrors:
     @pytest.mark.asyncio
     async def test_other_400_returns_clean_message(self, monkeypatch):
         detail = {"docket": ["Invalid pk - object does not exist."]}
-        client = MagicMock()
+        client = AsyncMock()
         client.docket_alerts.subscribe.side_effect = _api_error(400, detail)
         tool = SubscribeToDocketAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -115,7 +116,7 @@ class TestSubscribeToDocketAlertErrors:
 
     @pytest.mark.asyncio
     async def test_server_error_still_raises(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.docket_alerts.subscribe.side_effect = _api_error(500, "boom")
         tool = SubscribeToDocketAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -127,7 +128,7 @@ class TestSubscribeToDocketAlertErrors:
     @pytest.mark.asyncio
     async def test_success_path_returns_alert_dict(self, monkeypatch):
         alert = {"id": 1, "docket": 1, "alert_type": 1}
-        client = MagicMock()
+        client = AsyncMock()
         client.docket_alerts.subscribe.return_value = alert
         tool = SubscribeToDocketAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))
@@ -140,7 +141,7 @@ class TestSubscribeToDocketAlertErrors:
 class TestCreateSearchAlertErrors:
     @pytest.mark.asyncio
     async def test_bad_request_returns_clean_message(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.alerts.create.side_effect = _api_error(
             400, {"query": ["Invalid query syntax."]}
         )
@@ -158,7 +159,7 @@ class TestCreateSearchAlertErrors:
 
     @pytest.mark.asyncio
     async def test_server_error_still_raises(self, monkeypatch):
-        client = MagicMock()
+        client = AsyncMock()
         client.alerts.create.side_effect = _api_error(500, "boom")
         tool = CreateSearchAlertTool()
         monkeypatch.setattr(tool, "get_client", lambda: _client_cm(client))

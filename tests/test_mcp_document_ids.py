@@ -30,7 +30,7 @@ from courtlistener.mcp.tools.utils import (
 
 
 class FakeIterator:
-    """The slice of the ResourceIterator interface the tools consume."""
+    """The slice of the AsyncResourceIterator interface the tools consume."""
 
     def __init__(self, results):
         self._results = list(results)
@@ -39,16 +39,17 @@ class FakeIterator:
         )
         self._page_result_index = len(self._results)
 
-    def get_current_page(self):
+    async def get_current_page(self):
         return self._current_page
 
-    def __iter__(self):
-        return iter(self._results)
+    async def __aiter__(self):
+        for item in self._results:
+            yield item
 
-    def has_next(self):
+    async def has_next(self):
         return False
 
-    def dump(self):
+    async def dump(self):
         return {}
 
 
@@ -73,10 +74,10 @@ def make_client(
     as bare ids or as dicts when a test cares about ``type`` order.
     """
     client = MagicMock()
-    client.__enter__.return_value = client
-    client.__exit__.return_value = False
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = False
 
-    def opinions_get(doc_id, fields=None):
+    async def opinions_get(doc_id, fields=None):
         return {"html_with_citations": (opinion_texts or {}).get(doc_id, "")}
 
     def opinions_list(cluster=None, fields=None):
@@ -195,7 +196,7 @@ class TestAddOpinionIds:
             ),
             patch(
                 "courtlistener.mcp.tools.get_more_results_tool."
-                "ResourceIterator"
+                "AsyncResourceIterator"
             ) as iterator_cls,
         ):
             iterator_cls.load.return_value = fake
@@ -206,7 +207,7 @@ class TestAddOpinionIds:
 class TestResolveClusterOpinionIds:
     def test_returns_the_cluster_s_opinion_ids(self):
         client = make_client(cluster_opinions={8695893: [8678997, 8678998]})
-        assert resolve_cluster_opinion_ids(8695893, client) == [
+        assert run(resolve_cluster_opinion_ids(8695893, client)) == [
             8678997,
             8678998,
         ]
@@ -214,7 +215,7 @@ class TestResolveClusterOpinionIds:
     def test_empty_cluster_raises(self):
         client = make_client(cluster_opinions={})
         with pytest.raises(ValueError, match="no opinions"):
-            resolve_cluster_opinion_ids(123, client)
+            run(resolve_cluster_opinion_ids(123, client))
 
     def test_ordering_key_decides(self):
         """Citizens United (cluster 1741) as the API really returns it:
@@ -248,7 +249,7 @@ class TestResolveClusterOpinionIds:
                 ]
             }
         )
-        assert resolve_cluster_opinion_ids(1741, client) == [
+        assert run(resolve_cluster_opinion_ids(1741, client)) == [
             9413187,  # Kennedy's majority, ordering_key 1
             9413188,
             9413189,
@@ -268,15 +269,15 @@ class TestResolveClusterOpinionIds:
                 ]
             }
         )
-        assert resolve_cluster_opinion_ids(5, client)[0] == 12
+        assert run(resolve_cluster_opinion_ids(5, client))[0] == 12
 
     def test_untyped_opinions_keep_a_stable_order(self):
         client = make_client(cluster_opinions={5: [12, 10, 11]})
-        assert resolve_cluster_opinion_ids(5, client) == [10, 11, 12]
+        assert run(resolve_cluster_opinion_ids(5, client)) == [10, 11, 12]
 
     def test_requests_only_the_fields_it_sorts_on(self):
         client = make_client(cluster_opinions={5: [10]})
-        resolve_cluster_opinion_ids(5, client)
+        run(resolve_cluster_opinion_ids(5, client))
         client.opinions.list.assert_called_once_with(
             cluster=5, fields=["id", "type", "ordering_key"]
         )
