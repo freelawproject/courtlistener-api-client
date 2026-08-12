@@ -116,10 +116,12 @@ class AnalyzeCitationsTool(MCPTool):
             )
 
         note = ""
-        with self.get_client() as client:
+        async with self.get_client() as client:
             siblings = ""
             if cluster_id is not None:
-                resolved = resolve_cluster_opinion_ids(cluster_id, client)
+                resolved = await resolve_cluster_opinion_ids(
+                    cluster_id, client
+                )
                 opinion_id = resolved[0]
                 if len(resolved) > 1:
                     siblings = (
@@ -134,7 +136,7 @@ class AnalyzeCitationsTool(MCPTool):
                     )
 
             if opinion_id is not None:
-                opinion = client.opinions.get(opinion_id)
+                opinion = await client.opinions.get(opinion_id)
                 text = opinion.get("html_with_citations")
                 if not text:
                     if cluster_id is not None:
@@ -221,7 +223,9 @@ class AnalyzeCitationsTool(MCPTool):
                 batch = pending[:MAX_CITATIONS_PER_REQUEST]
                 compact_text = build_compact_string(batch)
                 try:
-                    results = client.citation_lookup.lookup_text(compact_text)
+                    results = await client.citation_lookup.lookup_text(
+                        compact_text
+                    )
                 except CourtListenerAPIError as e:
                     if e.status_code != 429:
                         raise

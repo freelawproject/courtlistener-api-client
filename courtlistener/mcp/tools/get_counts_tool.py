@@ -1,10 +1,10 @@
 from fastmcp.server.context import Context
 from mcp.types import ToolAnnotations
 
+from courtlistener.async_client.resource import AsyncResourceIterator
 from courtlistener.mcp.exceptions import SessionDataNotFoundError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.tools.mcp_tool import MCPTool
-from courtlistener.sync_client.resource import ResourceIterator
 
 
 class GetCountsTool(MCPTool):
@@ -40,7 +40,7 @@ class GetCountsTool(MCPTool):
 
     async def __call__(self, arguments: dict, ctx: Context) -> dict[str, int]:
         query_id = arguments["query_id"]
-        with self.get_client() as client:
+        async with self.get_client() as client:
             data = await get_session().get_query(query_id, client)
             if data is None:
                 raise SessionDataNotFoundError(
@@ -49,6 +49,6 @@ class GetCountsTool(MCPTool):
                     tool_name=self.name,
                     argument_name="query_id",
                 )
-            response = ResourceIterator.load(client, data["response"])
-            count = response.get_count()
+            response = AsyncResourceIterator.load(client, data["response"])
+            count = await response.get_count()
             return {"count": count}

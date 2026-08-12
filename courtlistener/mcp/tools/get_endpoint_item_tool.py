@@ -62,9 +62,9 @@ class GetEndpointItemTool(MCPTool):
 
         for endpoint_name, endpoint in ENDPOINTS.items():
             if endpoint.endpoint_id == endpoint_id:
-                with self.get_client() as client:
+                async with self.get_client() as client:
                     resource = getattr(client, endpoint_name)
-                    item = resource.get(item_id, fields=fields)
+                    item = await resource.get(item_id, fields=fields)
                     return item
 
         # Unreachable: the schema's endpoint_id enum is validated in

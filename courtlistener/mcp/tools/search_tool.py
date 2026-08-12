@@ -105,16 +105,17 @@ class SearchTool(MCPTool):
 
     async def __call__(self, arguments: dict, ctx: Context) -> Any:
         """Call the search tool."""
-        with self.get_client() as client:
+        async with self.get_client() as client:
             fields = normalize_fields(arguments.pop("fields", None))
             num_results = arguments.pop("num_results", DEFAULT_NUM_RESULTS)
 
             response = client.search.list(**arguments)
-            results = collect_results(response, num_results)
+            results = await collect_results(response, num_results)
             add_opinion_ids(results)
 
             query_id = await prepare_query_id(response, client, fields=fields)
-            count = prepare_count(response.get_current_page().count, query_id)
+            current_page = await response.get_current_page()
+            count = prepare_count(current_page.count, query_id)
             filtered_results, missing_fields = filter_results_by_fields(
                 results, fields
             )
@@ -131,7 +132,7 @@ class SearchTool(MCPTool):
                     f"Available fields: {', '.join(results[0].keys())}"
                 )
 
-            has_more_str = prepare_has_more_str(response, query_id)
+            has_more_str = await prepare_has_more_str(response, query_id)
             if has_more_str is not None:
                 outputs["has_more"] = has_more_str
 

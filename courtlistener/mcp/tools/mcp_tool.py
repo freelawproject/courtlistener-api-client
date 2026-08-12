@@ -9,7 +9,7 @@ from fastmcp.tools import Tool
 from jsonschema import Draft202012Validator
 from mcp.types import ToolAnnotations
 
-from courtlistener import CourtListener
+from courtlistener import AsyncCourtListener
 from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.exceptions import ToolArgumentValidationError
 
@@ -18,7 +18,7 @@ class MCPTool:
     name: str | None = None
     annotations: ToolAnnotations | None = None
 
-    def get_client(self) -> CourtListener:
+    def get_client(self) -> AsyncCourtListener:
         """Build a CourtListener client for the current request.
 
         HTTP mode: the credential FastMCP verified. Its ``token_kind``
@@ -31,14 +31,14 @@ class MCPTool:
 
         stdio mode: there is no HTTP layer, so no access token exists;
         the credential is the ``COURTLISTENER_API_TOKEN`` env var,
-        resolved by the ``CourtListener`` constructor.
+        resolved by the ``AsyncCourtListener`` constructor.
         """
         access_token = get_access_token()
         if access_token is not None:
             if access_token.claims.get("token_kind") == TokenKind.API:
-                return CourtListener(api_token=access_token.token)
-            return CourtListener(access_token=access_token.token)
-        return CourtListener()
+                return AsyncCourtListener(api_token=access_token.token)
+            return AsyncCourtListener(access_token=access_token.token)
+        return AsyncCourtListener()
 
     def get_tool(self) -> Tool:
         if self.name is None:

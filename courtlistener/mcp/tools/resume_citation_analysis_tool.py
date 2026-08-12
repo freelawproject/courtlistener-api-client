@@ -66,7 +66,7 @@ class ResumeCitationAnalysisTool(MCPTool):
     async def __call__(self, arguments: dict, ctx: Context) -> str:
         job_id = arguments["job_id"]
         wait = bool(arguments.get("wait", False))
-        with self.get_client() as client:
+        async with self.get_client() as client:
             job = await get_session().get_citation_analysis(job_id, client)
             if job is None:
                 raise SessionDataNotFoundError(
@@ -84,7 +84,7 @@ class ResumeCitationAnalysisTool(MCPTool):
             batch = pending[:MAX_CITATIONS_PER_REQUEST]
             compact_text = build_compact_string(batch)
             try:
-                results = client.citation_lookup.lookup_text(
+                results = await client.citation_lookup.lookup_text(
                     compact_text, retry_on_rate_limit=wait
                 )
             except CourtListenerAPIError as e:
