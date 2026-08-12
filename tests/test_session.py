@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import ResponseError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from courtlistener import AsyncCourtListener
 from courtlistener.mcp.auth_types import TokenKind
@@ -232,6 +235,55 @@ class TestGetSessionFallback:
         from_url.assert_called_once_with(
             "redis://example.test:6379", decode_responses=True, protocol=3
         )
+
+
+class TestRedisSessionDegradation:
+    """Connection-level Redis failures (the DNS blips behind Sentry
+    MCP-2G) must read as cache misses and skip writes rather than fail
+    the request that touched them. Command-level errors still raise:
+    those are bugs, and swallowing them would hide corruption."""
+
+    def _failing_session(self, exc: Exception) -> RedisSession:
+        session = RedisSession("redis://example.test:6379")
+        session._client = MagicMock(
+            get=AsyncMock(side_effect=exc),
+            set=AsyncMock(side_effect=exc),
+            delete=AsyncMock(side_effect=exc),
+        )
+        return session
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            RedisConnectionError(
+                "Error -3 connecting to redis:6379. "
+                "Temporary failure in name resolution."
+            ),
+            RedisTimeoutError("Timeout connecting to server"),
+        ],
+    )
+    def test_primitives_degrade_instead_of_raising(self, exc):
+        session = self._failing_session(exc)
+        assert run(session._get("key")) is None
+        run(session._set("key", "value", 60))
+        run(session._delete("key"))
+
+    def test_domain_methods_degrade_end_to_end(self, client):
+        """A blip mid-tool-call surfaces as "not found" (each reader
+        already turns ``None`` into a clean retry message) instead of
+        an unhandled error."""
+        session = self._failing_session(RedisConnectionError("dns"))
+        assert run(session.get_query("abc", client)) is None
+        run(session.store_query("abc", {"response": 1}, client))
+        assert run(session.get_document("opinion", 42)) is None
+        assert run(session.get_token_info("tok", "oauth")) is None
+
+    def test_command_errors_still_raise(self):
+        session = self._failing_session(
+            ResponseError("WRONGTYPE Operation against a key")
+        )
+        with pytest.raises(ResponseError):
+            run(session._get("key"))
 
 
 class TestBaseSessionIsAbstract:

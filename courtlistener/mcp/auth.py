@@ -80,12 +80,7 @@ async def resolve_token(
 ) -> ResolvedToken | None:
     """Verify *token* as a credential of *kind*, or return ``None``."""
     session = get_session()
-    try:
-        cached = await session.get_token_info(token, kind)
-    except Exception as exc:
-        logger.warning("token cache read failed; verifying directly: %s", exc)
-        cached = None
-
+    cached = await session.get_token_info(token, kind)
     if cached:
         return ResolvedToken(**cached, kind=kind, cached=True)
 
@@ -99,10 +94,7 @@ async def resolve_token(
         return None
 
     logger.info("verified %s credential", kind)
-    try:
-        await session.store_token_info(token, kind, info)
-    except Exception as exc:
-        logger.warning("token cache write failed: %s", exc)
+    await session.store_token_info(token, kind, info)
     return ResolvedToken(**info, kind=kind, cached=False)
 
 

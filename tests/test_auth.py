@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 from pydantic import AnyHttpUrl
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import (
@@ -23,6 +24,7 @@ from courtlistener.mcp.auth import (
 from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.session import (
     InMemorySession,
+    RedisSession,
     get_session,
     hmac_hex,
     set_session,
@@ -376,15 +378,18 @@ class TestResolveToken:
             run(get_session().get_token_info("tok", TokenKind.OAUTH)) is None
         )
 
-    def test_cache_read_failure_degrades_to_direct_verification(self):
+    def test_session_store_outage_degrades_to_direct_verification(self):
         """A session-store outage must not turn every request into a
-        500 — verification carries on without the cache."""
-
-        class ExplodingSession(InMemorySession):
-            async def _get(self, key):
-                raise ConnectionError("redis down")
-
-        set_session(ExplodingSession())
+        500. The degradation lives in the Redis backend — connection
+        failures read as misses and skip writes — so ``resolve_token``
+        itself carries no guards and verification runs uncached."""
+        down = RedisConnectionError("redis down")
+        session = RedisSession("redis://example.test:6379")
+        session._client = MagicMock(
+            get=AsyncMock(side_effect=down),
+            set=AsyncMock(side_effect=down),
+        )
+        set_session(session)
         with patch(
             "courtlistener.mcp.auth.verify_oauth_token",
             new=AsyncMock(return_value={"user_hash": "uh"}),
@@ -392,19 +397,7 @@ class TestResolveToken:
             info = run(resolve_token("tok", kind=TokenKind.OAUTH))
         assert info is not None
         assert info["user_hash"] == "uh"
-
-    def test_cache_write_failure_does_not_escape(self):
-        class ExplodingSession(InMemorySession):
-            async def _set(self, key, value, ttl_seconds):
-                raise ConnectionError("redis down")
-
-        set_session(ExplodingSession())
-        with patch(
-            "courtlistener.mcp.auth.verify_oauth_token",
-            new=AsyncMock(return_value={"user_hash": "uh"}),
-        ):
-            info = run(resolve_token("tok", kind=TokenKind.OAUTH))
-        assert info is not None
+        assert info["cached"] is False
 
 
 class TestServerAuthWiring:
