@@ -5,7 +5,7 @@
 **Search Document**
 
 - **Source:** `courtlistener/mcp/tools/search_document_tool.py`
-- **Estimated definition size:** ~558 tokens (description ~187, input schema ~286; cl100k_base)
+- **Estimated definition size:** ~574 tokens (description ~187, input schema ~302; cl100k_base)
 - **Parameters:** 5 (1 required)
 - **Raw input schema:** [`search_document.inputs.json`](./search_document.inputs.json)
 
@@ -57,7 +57,7 @@ ID or list of IDs of RECAP documents to search (up to 10).
 
 integer · optional
 
-ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`.
+ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; every opinion in the cluster (with type and author) is listed in `cluster_opinions`, so concurrences and dissents can be searched by `opinion_id`.
 
 ### `query`
 

@@ -5,6 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+- Opinion search results and the `cluster_id` mode of `read_document`, `search_document`, and `analyze_citations` now report every opinion in the cluster in `cluster_opinions`, main opinion first, with each one's `type` and authorship (`author`, `author_id`, `joined_by`, `per_curiam`) where the source carries it. This replaces the bare `sibling_opinion_ids` list, so the model can tell a dissent from a concurrence before reading it. No extra API calls: the data comes from the opinion list search already nests and the single `opinions` request the cluster resolution already made. `cluster_opinions` survives `fields` filtering like `opinion_id` does.
 - Add `client.prayers` for the Pray and Pay API: `create(recap_document)` and `delete(id)` map to the endpoint's `POST` and `DELETE`; `list()` and `get()` work as on any other endpoint.
 - Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
 
