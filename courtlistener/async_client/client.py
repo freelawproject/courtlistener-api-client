@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         AsyncSearchAlerts,
     )
     from courtlistener.async_client.citation_lookup import AsyncCitationLookup
+    from courtlistener.async_client.prayers import AsyncPrayers
 
 
 class AsyncCourtListener:
@@ -77,6 +78,15 @@ class AsyncCourtListener:
 
             self._docket_alerts = AsyncDocketAlerts(self)
         return self._docket_alerts
+
+    @property
+    def prayers(self) -> AsyncPrayers:
+        """Access the Pray and Pay API."""
+        if not hasattr(self, "_prayers"):
+            from courtlistener.async_client.prayers import AsyncPrayers
+
+            self._prayers = AsyncPrayers(self)
+        return self._prayers
 
     @property
     def citation_lookup(self) -> AsyncCitationLookup:

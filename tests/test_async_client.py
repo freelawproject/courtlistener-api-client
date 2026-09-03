@@ -10,12 +10,14 @@ from courtlistener.async_client.alerts import (
     AsyncSearchAlerts,
 )
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
+from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import (
     AsyncResource,
     AsyncResourceIterator,
 )
 from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
 from courtlistener.sync_client.citation_lookup import CitationLookup
+from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource, ResourceIterator
 
 # Sync members that are intentionally renamed in the async API. Both
@@ -39,6 +41,7 @@ PAIRS = [
     (ResourceIterator, AsyncResourceIterator),
     (SearchAlerts, AsyncSearchAlerts),
     (DocketAlerts, AsyncDocketAlerts),
+    (Prayers, AsyncPrayers),
     (CitationLookup, AsyncCitationLookup),
 ]
 
@@ -121,6 +124,7 @@ class TestSyncAsyncParity:
             AsyncResourceIterator.has_previous,
             AsyncSearchAlerts.create,
             AsyncDocketAlerts.subscribe,
+            AsyncPrayers.create,
             AsyncCitationLookup.lookup_text,
         ):
             assert inspect.iscoroutinefunction(method), method
@@ -239,6 +243,7 @@ class TestAsyncClientConstruction:
         cl = AsyncCourtListener(api_token="tok")
         assert isinstance(cl.alerts, AsyncSearchAlerts)
         assert isinstance(cl.docket_alerts, AsyncDocketAlerts)
+        assert isinstance(cl.prayers, AsyncPrayers)
         assert isinstance(cl.citation_lookup, AsyncCitationLookup)
 
     @pytest.mark.asyncio

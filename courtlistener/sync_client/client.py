@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         SearchAlerts,
     )
     from courtlistener.sync_client.citation_lookup import CitationLookup
+    from courtlistener.sync_client.prayers import Prayers
 
 
 class CourtListener:
@@ -83,6 +84,15 @@ class CourtListener:
 
             self._docket_alerts = DocketAlerts(self)
         return self._docket_alerts
+
+    @property
+    def prayers(self) -> Prayers:
+        """Access the Pray and Pay API."""
+        if not hasattr(self, "_prayers"):
+            from courtlistener.sync_client.prayers import Prayers
+
+            self._prayers = Prayers(self)
+        return self._prayers
 
     @property
     def citation_lookup(self) -> CitationLookup:

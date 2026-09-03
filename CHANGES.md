@@ -5,6 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+- Add `client.prayers` for the Pray and Pay API: `create(recap_document)` and `delete(id)` map to the endpoint's `POST` and `DELETE`; `list()` and `get()` work as on any other endpoint.
 - Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
 
 Changes:

@@ -10,6 +10,7 @@ from courtlistener.sync_client.alerts import (
 )
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.client import CourtListener
+from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import (
     Resource,
     ResourceIterator,
@@ -19,6 +20,7 @@ __all__ = [
     "CitationLookup",
     "CourtListener",
     "DocketAlerts",
+    "Prayers",
     "Resource",
     "ResourceIterator",
     "SearchAlerts",

@@ -14,6 +14,7 @@ REPLACEMENTS = {
     "AsyncResourceIterator": "ResourceIterator",
     "AsyncSearchAlerts": "SearchAlerts",
     "AsyncDocketAlerts": "DocketAlerts",
+    "AsyncPrayers": "Prayers",
     "AsyncCitationLookup": "CitationLookup",
     "AsyncClient": "Client",
     "aclose": "close",
