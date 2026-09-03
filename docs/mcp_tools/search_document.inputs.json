@@ -35,7 +35,7 @@
     },
     "cluster_id": {
       "type": "integer",
-      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`."
+      "description": "ID of an opinion cluster (the `cluster_id` in search results).  Searches the case's main opinion; every opinion in the cluster (with type and author) is listed in `cluster_opinions`, so concurrences and dissents can be searched by `opinion_id`."
     },
     "query": {
       "type": "string",

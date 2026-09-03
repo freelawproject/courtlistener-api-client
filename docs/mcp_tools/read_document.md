@@ -5,7 +5,7 @@
 **Read Document**
 
 - **Source:** `courtlistener/mcp/tools/read_document_tool.py`
-- **Estimated definition size:** ~585 tokens (description ~244, input schema ~252; cl100k_base)
+- **Estimated definition size:** ~601 tokens (description ~244, input schema ~268; cl100k_base)
 - **Parameters:** 5 (0 required)
 - **Raw input schema:** [`read_document.inputs.json`](./read_document.inputs.json)
 
@@ -62,7 +62,7 @@ ID of the RECAP document to read.
 
 integer · optional
 
-ID of an opinion cluster (the `cluster_id` in search results).  Reads the case's main opinion; ids for any concurrences or dissents are returned in `sibling_opinion_ids`.
+ID of an opinion cluster (the `cluster_id` in search results).  Reads the case's main opinion; every opinion in the cluster (with type and author) is listed in `cluster_opinions`, so concurrences and dissents can be read by `opinion_id`.
 
 ### `chunk_index`
 
