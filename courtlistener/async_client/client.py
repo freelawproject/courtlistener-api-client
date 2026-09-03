@@ -1,22 +1,20 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
 
+from courtlistener.async_client.alerts import (
+    AsyncDocketAlerts,
+    AsyncSearchAlerts,
+)
+from courtlistener.async_client.citation_lookup import AsyncCitationLookup
+from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import AsyncResource
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
 from courtlistener.settings import get_api_base_url
-
-if TYPE_CHECKING:
-    from courtlistener.async_client.alerts import (
-        AsyncDocketAlerts,
-        AsyncSearchAlerts,
-    )
-    from courtlistener.async_client.citation_lookup import AsyncCitationLookup
-    from courtlistener.async_client.prayers import AsyncPrayers
 
 
 class AsyncCourtListener:
@@ -61,43 +59,10 @@ class AsyncCourtListener:
         self._http_client: httpx.AsyncClient | None = None
         self._resources: dict[str, AsyncResource] = {}
 
-    @property
-    def alerts(self) -> AsyncSearchAlerts:
-        """Access the search alerts API."""
-        if not hasattr(self, "_alerts"):
-            from courtlistener.async_client.alerts import AsyncSearchAlerts
-
-            self._alerts = AsyncSearchAlerts(self)
-        return self._alerts
-
-    @property
-    def docket_alerts(self) -> AsyncDocketAlerts:
-        """Access the docket alerts API."""
-        if not hasattr(self, "_docket_alerts"):
-            from courtlistener.async_client.alerts import AsyncDocketAlerts
-
-            self._docket_alerts = AsyncDocketAlerts(self)
-        return self._docket_alerts
-
-    @property
-    def prayers(self) -> AsyncPrayers:
-        """Access the Pray and Pay API."""
-        if not hasattr(self, "_prayers"):
-            from courtlistener.async_client.prayers import AsyncPrayers
-
-            self._prayers = AsyncPrayers(self)
-        return self._prayers
-
-    @property
-    def citation_lookup(self) -> AsyncCitationLookup:
-        """Access the citation lookup and verification API."""
-        if not hasattr(self, "_citation_lookup"):
-            from courtlistener.async_client.citation_lookup import (
-                AsyncCitationLookup,
-            )
-
-            self._citation_lookup = AsyncCitationLookup(self)
-        return self._citation_lookup
+        self.alerts = AsyncSearchAlerts(self)
+        self.docket_alerts = AsyncDocketAlerts(self)
+        self.prayers = AsyncPrayers(self)
+        self.citation_lookup = AsyncCitationLookup(self)
 
     def __getattr__(self, name: str) -> AsyncResource:
         """Dynamically create resource accessors based on registered endpoints."""

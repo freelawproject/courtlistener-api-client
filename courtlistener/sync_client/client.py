@@ -7,22 +7,20 @@ from `courtlistener/async_client/client.py`.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
 from courtlistener.settings import get_api_base_url
+from courtlistener.sync_client.alerts import (
+    DocketAlerts,
+    SearchAlerts,
+)
+from courtlistener.sync_client.citation_lookup import CitationLookup
+from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource
-
-if TYPE_CHECKING:
-    from courtlistener.sync_client.alerts import (
-        DocketAlerts,
-        SearchAlerts,
-    )
-    from courtlistener.sync_client.citation_lookup import CitationLookup
-    from courtlistener.sync_client.prayers import Prayers
 
 
 class CourtListener:
@@ -67,43 +65,10 @@ class CourtListener:
         self._http_client: httpx.Client | None = None
         self._resources: dict[str, Resource] = {}
 
-    @property
-    def alerts(self) -> SearchAlerts:
-        """Access the search alerts API."""
-        if not hasattr(self, "_alerts"):
-            from courtlistener.sync_client.alerts import SearchAlerts
-
-            self._alerts = SearchAlerts(self)
-        return self._alerts
-
-    @property
-    def docket_alerts(self) -> DocketAlerts:
-        """Access the docket alerts API."""
-        if not hasattr(self, "_docket_alerts"):
-            from courtlistener.sync_client.alerts import DocketAlerts
-
-            self._docket_alerts = DocketAlerts(self)
-        return self._docket_alerts
-
-    @property
-    def prayers(self) -> Prayers:
-        """Access the Pray and Pay API."""
-        if not hasattr(self, "_prayers"):
-            from courtlistener.sync_client.prayers import Prayers
-
-            self._prayers = Prayers(self)
-        return self._prayers
-
-    @property
-    def citation_lookup(self) -> CitationLookup:
-        """Access the citation lookup and verification API."""
-        if not hasattr(self, "_citation_lookup"):
-            from courtlistener.sync_client.citation_lookup import (
-                CitationLookup,
-            )
-
-            self._citation_lookup = CitationLookup(self)
-        return self._citation_lookup
+        self.alerts = SearchAlerts(self)
+        self.docket_alerts = DocketAlerts(self)
+        self.prayers = Prayers(self)
+        self.citation_lookup = CitationLookup(self)
 
     def __getattr__(self, name: str) -> Resource:
         """Dynamically create resource accessors based on registered endpoints."""
