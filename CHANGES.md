@@ -5,9 +5,11 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+- Add `client.prayers` for the Pray and Pay API: `create(recap_document)` and `delete(id)` map to the endpoint's `POST` and `DELETE`; `list()` and `get()` work as on any other endpoint.
 - Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
 
 Changes:
+- The client's helper accessors (`alerts`, `docket_alerts`, `prayers`, `citation_lookup`) are now plain attributes set in `__init__` instead of lazy properties with inline imports. The helpers only import the client under `TYPE_CHECKING`, so there was no import cycle to defer around, and constructing them is free.
 - The MCP server now uses `AsyncCourtListener` for all tool calls. The sync client inside async tool handlers blocked the worker's event loop, so concurrent tool calls serialized per worker and produced burst client-disconnect noise under load. All tools, the shared tool helpers (`collect_results`, `has_more_results`, `resolve_cluster_opinion_ids`, ...), and the session-store signatures now run on the async client end to end.
 - Generate the sync client from the async one: `courtlistener/async_client/` is now the handwritten source of truth, and `courtlistener/sync_client/` is generated from it with unasync by the new `scripts/generate_sync_client.py` script. Like the generated docs and endpoint models, CI regenerates the sync client and fails if the checked-in copy is stale. The generated code is API-identical to the old handwritten sync client, including the deprecated `ResourceIterator` property aliases, which the generator injects since they exist only in the sync flavor.
 - Add a PR template with an AI Disclosure section.

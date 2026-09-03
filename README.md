@@ -96,6 +96,7 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 | `financial_disclosures` | Financial disclosures |
 | `alerts` | User alerts |
 | `docket_alerts` | Docket alerts |
+| `prayers` | Pray and Pay requests |
 | `tags` | User-created tags |
 | `visualizations` | Visualization data |
 | `schools` | Schools |
