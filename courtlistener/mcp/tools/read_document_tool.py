@@ -7,7 +7,7 @@ from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     fetch_document_text,
-    resolve_cluster_opinion_ids,
+    resolve_cluster_opinions,
 )
 
 DEFAULT_CHUNK_SIZE = 8000
@@ -65,8 +65,10 @@ class ReadDocumentTool(MCPTool):
                     "description": (
                         "ID of an opinion cluster (the `cluster_id` in "
                         "search results).  Reads the case's main "
-                        "opinion; ids for any concurrences or dissents "
-                        "are returned in `sibling_opinion_ids`."
+                        "opinion; every opinion in the cluster (with "
+                        "type and author) is listed in `cluster_opinions`, "
+                        "so concurrences and dissents can be read by "
+                        "`opinion_id`."
                     ),
                 },
                 "chunk_index": {
@@ -122,14 +124,13 @@ class ReadDocumentTool(MCPTool):
         chunk_index = arguments.get("chunk_index")
         chunk_size = arguments.get("chunk_size", DEFAULT_CHUNK_SIZE)
 
-        siblings: list[int] = []
+        cluster_opinions: list[dict] = []
         async with self.get_client() as client:
             if cluster_id is not None:
-                resolved = await resolve_cluster_opinion_ids(
+                cluster_opinions = await resolve_cluster_opinions(
                     cluster_id, client
                 )
-                doc_type, doc_id = "opinion", resolved[0]
-                siblings = resolved[1:]
+                doc_type, doc_id = "opinion", cluster_opinions[0]["id"]
             elif opinion_id is not None:
                 doc_type, doc_id = "opinion", opinion_id
             else:
@@ -140,22 +141,20 @@ class ReadDocumentTool(MCPTool):
                 text = await fetch_document_text(doc_type, doc_id, client)
             except Exception as exc:
                 # In cluster mode the resolution already succeeded, so
-                # keep the sibling ids usable instead of losing them to
-                # a bare error on the first opinion.
+                # keep the other opinions usable instead of losing them
+                # to a bare error on the first opinion.
                 if cluster_id is None:
                     raise
-                failure: dict = {
+                return {
                     "doc_type": doc_type,
                     "doc_id": doc_id,
                     "error": str(exc),
+                    "cluster_opinions": cluster_opinions,
                 }
-                if siblings:
-                    failure["sibling_opinion_ids"] = siblings
-                return failure
 
         result: dict = {"doc_type": doc_type, "doc_id": doc_id}
-        if siblings:
-            result["sibling_opinion_ids"] = siblings
+        if cluster_opinions:
+            result["cluster_opinions"] = cluster_opinions
 
         if not text:
             result["error"] = "No text is available for this document."

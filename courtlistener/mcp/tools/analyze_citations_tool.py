@@ -22,8 +22,9 @@ from courtlistener.mcp.tools.citation_utils import (
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
+    describe_opinion,
     make_id,
-    resolve_cluster_opinion_ids,
+    resolve_cluster_opinions,
 )
 
 
@@ -119,15 +120,15 @@ class AnalyzeCitationsTool(MCPTool):
         async with self.get_client() as client:
             siblings = ""
             if cluster_id is not None:
-                resolved = await resolve_cluster_opinion_ids(
-                    cluster_id, client
-                )
-                opinion_id = resolved[0]
+                resolved = await resolve_cluster_opinions(cluster_id, client)
+                opinion_id = resolved[0]["id"]
                 if len(resolved) > 1:
+                    others = ", ".join(
+                        describe_opinion(opinion) for opinion in resolved[1:]
+                    )
                     siblings = (
                         "Analyze the others separately, one call per "
-                        "opinion_id: "
-                        f"{', '.join(str(i) for i in resolved[1:])}."
+                        f"opinion_id: {others}."
                     )
                     note = (
                         f"Analyzed opinion {opinion_id}, the main opinion "

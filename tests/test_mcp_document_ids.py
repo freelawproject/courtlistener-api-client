@@ -24,8 +24,12 @@ from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
 from courtlistener.mcp.tools.search_document_tool import SearchDocumentTool
 from courtlistener.mcp.tools.search_tool import SearchTool
 from courtlistener.mcp.tools.utils import (
+    CLUSTER_OPINION_FIELDS,
     add_opinion_ids,
-    resolve_cluster_opinion_ids,
+    describe_opinion,
+    filter_results_by_fields,
+    resolve_cluster_opinions,
+    summarize_opinions,
 )
 
 
@@ -55,6 +59,10 @@ class FakeIterator:
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def ids(opinions):
+    return [opinion["id"] for opinion in opinions]
 
 
 @pytest.fixture(autouse=True)
@@ -134,6 +142,12 @@ class TestAddOpinionIds:
         ]
         add_opinion_ids(results)
         assert results[0]["opinion_id"] == 9413187
+        assert ids(results[0]["cluster_opinions"]) == [
+            9413187,
+            9413190,
+            9413191,
+            1741,  # no ordering_key, so last
+        ]
 
     def test_search_type_spellings_rank_when_unordered(self):
         """With no ordering_key anywhere, search's own type labels
@@ -153,6 +167,53 @@ class TestAddOpinionIds:
         results = [{"docket_id": 1}, {"opinions": []}, {"opinions": None}]
         add_opinion_ids(results)
         assert all("opinion_id" not in r for r in results)
+        assert all("cluster_opinions" not in r for r in results)
+
+    def test_cluster_opinions_carry_search_authorship_fields(self):
+        results = [
+            {
+                "opinions": [
+                    {
+                        "id": 2,
+                        "type": "dissent",
+                        "author_id": None,
+                        "joined_by_ids": [],
+                        "per_curiam": False,
+                        "cites": [1, 2, 3],
+                        "snippet": "...",
+                    },
+                    {
+                        "id": 1,
+                        "type": "lead-opinion",
+                        "author_id": 1747,
+                        "joined_by_ids": [9],
+                        "per_curiam": False,
+                    },
+                ]
+            }
+        ]
+        add_opinion_ids(results)
+        assert results[0]["cluster_opinions"] == [
+            {
+                "id": 1,
+                "type": "lead-opinion",
+                "author_id": 1747,
+                "joined_by_ids": [9],
+            },
+            {"id": 2, "type": "dissent"},
+        ]
+
+    def test_fields_filtering_keeps_cluster_opinions(self):
+        results = [{"caseName": "X", "opinions": [{"id": 1}], "other": 1}]
+        add_opinion_ids(results)
+        filtered, _ = filter_results_by_fields(results, ["caseName"])
+        assert filtered == [
+            {
+                "caseName": "X",
+                "opinion_id": 1,
+                "cluster_opinions": [{"id": 1}],
+            }
+        ]
 
     def test_does_not_clobber_existing_opinion_id(self):
         results = [{"opinion_id": 1, "opinions": [{"id": 2}]}]
@@ -179,6 +240,7 @@ class TestAddOpinionIds:
             {
                 "caseName": "NYSA Series Trust v. Dessein",
                 "opinion_id": 8678997,
+                "cluster_opinions": [{"id": 8678997}],
             }
         ]
         assert "missing_fields" not in result
@@ -207,7 +269,7 @@ class TestAddOpinionIds:
 class TestResolveClusterOpinionIds:
     def test_returns_the_cluster_s_opinion_ids(self):
         client = make_client(cluster_opinions={8695893: [8678997, 8678998]})
-        assert run(resolve_cluster_opinion_ids(8695893, client)) == [
+        assert ids(run(resolve_cluster_opinions(8695893, client))) == [
             8678997,
             8678998,
         ]
@@ -215,7 +277,7 @@ class TestResolveClusterOpinionIds:
     def test_empty_cluster_raises(self):
         client = make_client(cluster_opinions={})
         with pytest.raises(ValueError, match="no opinions"):
-            run(resolve_cluster_opinion_ids(123, client))
+            run(resolve_cluster_opinions(123, client))
 
     def test_ordering_key_decides(self):
         """Citizens United (cluster 1741) as the API really returns it:
@@ -249,7 +311,7 @@ class TestResolveClusterOpinionIds:
                 ]
             }
         )
-        assert run(resolve_cluster_opinion_ids(1741, client)) == [
+        assert ids(run(resolve_cluster_opinions(1741, client))) == [
             9413187,  # Kennedy's majority, ordering_key 1
             9413188,
             9413189,
@@ -269,18 +331,91 @@ class TestResolveClusterOpinionIds:
                 ]
             }
         )
-        assert run(resolve_cluster_opinion_ids(5, client))[0] == 12
+        assert ids(run(resolve_cluster_opinions(5, client)))[0] == 12
 
     def test_untyped_opinions_keep_a_stable_order(self):
         client = make_client(cluster_opinions={5: [12, 10, 11]})
-        assert run(resolve_cluster_opinion_ids(5, client)) == [10, 11, 12]
+        assert ids(run(resolve_cluster_opinions(5, client))) == [10, 11, 12]
 
     def test_requests_only_the_fields_it_sorts_on(self):
         client = make_client(cluster_opinions={5: [10]})
-        run(resolve_cluster_opinion_ids(5, client))
+        run(resolve_cluster_opinions(5, client))
         client.opinions.list.assert_called_once_with(
-            cluster=5, fields=["id", "type", "ordering_key"]
+            cluster=5, fields=CLUSTER_OPINION_FIELDS
         )
+
+    def test_keeps_authorship_and_drops_empty_fields(self):
+        """Citizens United as the REST API returns it: `author_str` is
+        set on the modern sub-opinions, `author_id` only on the legacy
+        combined one, and `joined_by_str` is empty throughout."""
+        client = make_client(
+            cluster_opinions={
+                1741: [
+                    {
+                        "id": 9413187,
+                        "type": "020lead",
+                        "ordering_key": 1,
+                        "author_str": "Kennedy",
+                        "author_id": None,
+                        "joined_by_str": "",
+                        "per_curiam": False,
+                    },
+                    {
+                        "id": 1741,
+                        "type": "010combined",
+                        "ordering_key": None,
+                        "author_str": "",
+                        "author_id": 1747,
+                        "joined_by_str": "",
+                        "per_curiam": False,
+                    },
+                ]
+            }
+        )
+        assert run(resolve_cluster_opinions(1741, client)) == [
+            {"id": 9413187, "type": "020lead", "author": "Kennedy"},
+            {"id": 1741, "type": "010combined", "author_id": 1747},
+        ]
+
+
+class TestSummarizeOpinions:
+    def test_per_curiam_and_joined_by(self):
+        assert summarize_opinions(
+            [
+                {
+                    "id": 1,
+                    "type": "020lead",
+                    "per_curiam": True,
+                    "joined_by_str": "Alito, Thomas",
+                    "joined_by_ids": [5, 6],
+                }
+            ]
+        ) == [
+            {
+                "id": 1,
+                "type": "020lead",
+                "joined_by": "Alito, Thomas",
+                "joined_by_ids": [5, 6],
+                "per_curiam": True,
+            }
+        ]
+
+    def test_skips_entries_without_ids(self):
+        assert summarize_opinions([{"type": "020lead"}, None, {"id": 3}]) == [
+            {"id": 3}
+        ]
+
+    def test_describe_opinion(self):
+        assert (
+            describe_opinion(
+                {"id": 9413188, "type": "030concurrence", "author": "Roberts"}
+            )
+            == "9413188 (030concurrence, Roberts)"
+        )
+        assert describe_opinion({"id": 7, "per_curiam": True}) == (
+            "7 (per curiam)"
+        )
+        assert describe_opinion({"id": 7}) == "7"
 
 
 class TestReadDocumentClusterId:
@@ -293,7 +428,10 @@ class TestReadDocumentClusterId:
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(tool({"cluster_id": 8695893}, None))
         assert result["doc_id"] == 8678997
-        assert result["sibling_opinion_ids"] == [9000001]
+        assert result["cluster_opinions"] == [
+            {"id": 8678997},
+            {"id": 9000001},
+        ]
         assert result["text"] == "securities text"
 
     def test_rejects_multiple_id_kinds(self):
@@ -303,7 +441,7 @@ class TestReadDocumentClusterId:
     def test_schema_accepts_cluster_id(self):
         MCP_TOOLS["read_document"].validate_arguments({"cluster_id": 123})
 
-    def test_fetch_failure_in_cluster_mode_keeps_siblings(self):
+    def test_fetch_failure_in_cluster_mode_keeps_cluster_opinions(self):
         tool = ReadDocumentTool()
         client = make_client(cluster_opinions={5: [10, 11]})
         client.opinions.get.side_effect = RuntimeError("HTTP 404: not found")
@@ -311,7 +449,7 @@ class TestReadDocumentClusterId:
             result = run(tool({"cluster_id": 5}, None))
         assert result["doc_id"] == 10
         assert result["error"] == "HTTP 404: not found"
-        assert result["sibling_opinion_ids"] == [11]
+        assert ids(result["cluster_opinions"]) == [10, 11]
 
 
 class TestSearchDocumentClusterId:
@@ -330,10 +468,10 @@ class TestSearchDocumentClusterId:
             result = run(tool({"cluster_id": 5, "query": "alpha"}, None))
         assert result["doc_id"] == 10
         assert result["match_count"] == 1
-        assert result["sibling_opinion_ids"] == [11]
+        assert ids(result["cluster_opinions"]) == [10, 11]
         assert "results" not in result  # single result, not a list
 
-    def test_single_opinion_cluster_reports_no_siblings(self):
+    def test_single_opinion_cluster_lists_only_itself(self):
         tool = SearchDocumentTool()
         client = make_client(
             opinion_texts={10: "alpha"},
@@ -344,7 +482,7 @@ class TestSearchDocumentClusterId:
         ):
             result = run(tool({"cluster_id": 5, "query": "alpha"}, None))
         assert result["doc_id"] == 10
-        assert "sibling_opinion_ids" not in result
+        assert result["cluster_opinions"] == [{"id": 10}]
 
     def test_empty_cluster_raises(self):
         tool = SearchDocumentTool()

@@ -62,6 +62,13 @@ Opinion ids and cluster ids are separate id-spaces. A search result's
 to these tools, or pass `cluster_id` and they will resolve the cluster's
 opinion(s) for you.
 
+A decision may consist of several opinions (majority, concurrences,
+dissents). Opinion search results and the `cluster_id` mode of the document
+tools list them all in `cluster_opinions`, main opinion first, with each
+one's `type` and author where known. Check that list before treating a case
+as fully read: the holding is in the main opinion, but its scope is often
+qualified by a concurrence or contested by a dissent.
+
 When fetching opinion or RECAP document records via `call_endpoint` or
 `get_endpoint_item`, exclude text fields (`html_with_citations`, `plain_text`,
 `html`, `html_lawbox`, etc.) from the fields you request — they can be

@@ -7,7 +7,7 @@ from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 from courtlistener.mcp.tools.utils import (
     fetch_document_text,
-    resolve_cluster_opinion_ids,
+    resolve_cluster_opinions,
 )
 
 DEFAULT_SNIPPET_SIZE = 300
@@ -83,8 +83,10 @@ class SearchDocumentTool(MCPTool):
                     "description": (
                         "ID of an opinion cluster (the `cluster_id` in "
                         "search results).  Searches the case's main "
-                        "opinion; ids for any concurrences or dissents "
-                        "are returned in `sibling_opinion_ids`."
+                        "opinion; every opinion in the cluster (with "
+                        "type and author) is listed in `cluster_opinions`, "
+                        "so concurrences and dissents can be searched by "
+                        "`opinion_id`."
                     ),
                 },
                 "query": {
@@ -183,16 +185,15 @@ class SearchDocumentTool(MCPTool):
         snippet_size = arguments.get("snippet_size", DEFAULT_SNIPPET_SIZE)
 
         multi = False
-        siblings: list[int] = []
+        cluster_opinions: list[dict] = []
 
         async with self.get_client() as client:
             if cluster_id is not None:
                 doc_type = "opinion"
-                resolved = await resolve_cluster_opinion_ids(
+                cluster_opinions = await resolve_cluster_opinions(
                     cluster_id, client
                 )
-                doc_ids = resolved[:1]
-                siblings = resolved[1:]
+                doc_ids = [cluster_opinions[0]["id"]]
             else:
                 if opinion_id is not None:
                     doc_type, raw = "opinion", opinion_id
@@ -212,6 +213,6 @@ class SearchDocumentTool(MCPTool):
             return {"results": results}
 
         result = results[0]
-        if siblings:
-            result["sibling_opinion_ids"] = siblings
+        if cluster_opinions:
+            result["cluster_opinions"] = cluster_opinions
         return result

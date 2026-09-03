@@ -87,8 +87,8 @@ def filter_results_by_fields(
         {
             k: v
             for k, v in r.items()
-            # Always keep opinion_id to avoid cluster_id confusion
-            if k in fields or k == "opinion_id"
+            # Always keep the opinion ids to avoid cluster_id confusion
+            if k in fields or k in ("opinion_id", "cluster_opinions")
         }
         for r in results
     ]
@@ -264,32 +264,84 @@ def opinion_sort_key(opinion: dict) -> tuple[int, int, int]:
     )
 
 
-def add_opinion_ids(results: list[dict]) -> None:
-    """Copy each opinion search result's main opinion id to top level."""
-    for result in results:
-        opinions = [
-            opinion
-            for opinion in result.get("opinions") or []
-            if isinstance(opinion, dict) and opinion.get("id") is not None
-        ]
-        if opinions:
-            main = min(opinions, key=opinion_sort_key)
-            result.setdefault("opinion_id", main["id"])
+def summarize_opinions(opinions: list[dict]) -> list[dict]:
+    """Compact, main-opinion-first summary of a cluster's opinions.
 
-
-async def resolve_cluster_opinion_ids(
-    cluster_id: int, client: AsyncCourtListener
-) -> list[int]:
-    """Return a cluster's opinion ids, main opinion first."""
-    response = client.opinions.list(
-        cluster=cluster_id, fields=["id", "type", "ordering_key"]
-    )
-    opinions = [
+    Accepts opinion records from either the search index or the REST
+    API and keeps only the identifying fields: ``id``, ``type``, and
+    whichever authorship fields are populated.
+    """
+    valid = [
         opinion
-        for opinion in await collect_results(response, 20)
-        if opinion.get("id") is not None
+        for opinion in opinions
+        if isinstance(opinion, dict) and opinion.get("id") is not None
     ]
+    valid.sort(key=opinion_sort_key)
+    summary = []
+    for opinion in valid:
+        entry: dict = {"id": opinion["id"]}
+        if opinion.get("type"):
+            entry["type"] = opinion["type"]
+        if opinion.get("author_str"):
+            entry["author"] = opinion["author_str"]
+        if opinion.get("author_id") is not None:
+            entry["author_id"] = opinion["author_id"]
+        if opinion.get("joined_by_str"):
+            entry["joined_by"] = opinion["joined_by_str"]
+        if opinion.get("joined_by_ids"):
+            entry["joined_by_ids"] = opinion["joined_by_ids"]
+        if opinion.get("per_curiam"):
+            entry["per_curiam"] = True
+        summary.append(entry)
+    return summary
+
+
+def describe_opinion(opinion: dict) -> str:
+    """Render a summarized opinion as ``id (type, author)`` for prose."""
+    details = [
+        str(value)
+        for value in (opinion.get("type"), opinion.get("author"))
+        if value
+    ]
+    if opinion.get("per_curiam"):
+        details.append("per curiam")
+    if details:
+        return f"{opinion['id']} ({', '.join(details)})"
+    return str(opinion["id"])
+
+
+def add_opinion_ids(results: list[dict]) -> None:
+    """Add ``opinion_id`` and ``cluster_opinions`` to opinion search results.
+
+    ``opinion_id`` is the main opinion's id; ``cluster_opinions`` lists
+    every opinion in the cluster, main first, with type and authorship.
+    """
+    for result in results:
+        summary = summarize_opinions(result.get("opinions") or [])
+        if summary:
+            result.setdefault("opinion_id", summary[0]["id"])
+            result.setdefault("cluster_opinions", summary)
+
+
+CLUSTER_OPINION_FIELDS = [
+    "id",
+    "type",
+    "ordering_key",
+    "author_str",
+    "author_id",
+    "joined_by_str",
+    "per_curiam",
+]
+
+
+async def resolve_cluster_opinions(
+    cluster_id: int, client: AsyncCourtListener
+) -> list[dict]:
+    """Return a cluster's opinions, summarized, main opinion first."""
+    response = client.opinions.list(
+        cluster=cluster_id, fields=CLUSTER_OPINION_FIELDS
+    )
+    opinions = summarize_opinions(await collect_results(response, 20))
     if not opinions:
         raise ValueError(f"Cluster {cluster_id} has no opinions.")
-    opinions.sort(key=opinion_sort_key)
-    return [opinion["id"] for opinion in opinions]
+    return opinions
