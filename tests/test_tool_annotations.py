@@ -24,11 +24,14 @@ WRITE_TOOLS = {
     "delete_search_alert",
     "subscribe_to_docket_alert",
     "unsubscribe_from_docket_alert",
+    "pray_for_document",
+    "withdraw_prayer",
 }
 
 DESTRUCTIVE_TOOLS = {
     "delete_search_alert",
     "unsubscribe_from_docket_alert",
+    "withdraw_prayer",
 }
 
 OPEN_WORLD_TOOLS = {
@@ -36,6 +39,8 @@ OPEN_WORLD_TOOLS = {
     "delete_search_alert",
     "subscribe_to_docket_alert",
     "unsubscribe_from_docket_alert",
+    "pray_for_document",
+    "withdraw_prayer",
 }
 
 # Tools where repeating a call with the same arguments has an
@@ -45,6 +50,7 @@ OPEN_WORLD_TOOLS = {
 NON_IDEMPOTENT_TOOLS = {
     "create_search_alert",
     "subscribe_to_docket_alert",
+    "pray_for_document",
     "get_more_results",
     "resume_citation_analysis",
 }
@@ -66,6 +72,8 @@ EXPECTED_TITLES = {
     "delete_search_alert": "Delete Search Alert",
     "subscribe_to_docket_alert": "Subscribe to Docket Alert",
     "unsubscribe_from_docket_alert": "Unsubscribe from Docket Alert",
+    "pray_for_document": "Pray for Document",
+    "withdraw_prayer": "Withdraw Prayer",
 }
 
 

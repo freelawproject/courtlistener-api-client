@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "recap_document_id": {
+      "type": "integer",
+      "description": "ID of the RECAP document to pray for (the `id` of a `recap_documents` record, not a docket entry or docket ID)."
+    }
+  },
+  "required": [
+    "recap_document_id"
+  ],
+  "additionalProperties": false
+}

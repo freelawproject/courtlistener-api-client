@@ -18,3 +18,5 @@
 - [`delete_search_alert`](./delete_search_alert.md)
 - [`subscribe_to_docket_alert`](./subscribe_to_docket_alert.md)
 - [`unsubscribe_from_docket_alert`](./unsubscribe_from_docket_alert.md)
+- [`pray_for_document`](./pray_for_document.md)
+- [`withdraw_prayer`](./withdraw_prayer.md)
