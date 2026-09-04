@@ -19,6 +19,7 @@ from courtlistener.mcp.tools.get_endpoint_schema_tool import (
 )
 from courtlistener.mcp.tools.get_more_results_tool import GetMoreResultsTool
 from courtlistener.mcp.tools.mcp_tool import MCPTool
+from courtlistener.mcp.tools.pray_for_document_tool import PrayForDocumentTool
 from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
 from courtlistener.mcp.tools.resume_citation_analysis_tool import (
     ResumeCitationAnalysisTool,
@@ -31,6 +32,7 @@ from courtlistener.mcp.tools.subscribe_to_docket_alert_tool import (
 from courtlistener.mcp.tools.unsubscribe_from_docket_alert_tool import (
     UnsubscribeFromDocketAlertTool,
 )
+from courtlistener.mcp.tools.withdraw_prayer_tool import WithdrawPrayerTool
 
 mcp_tool_registry: list[type[MCPTool]] = [
     SearchTool,
@@ -49,6 +51,8 @@ mcp_tool_registry: list[type[MCPTool]] = [
     DeleteSearchAlertTool,
     SubscribeToDocketAlertTool,
     UnsubscribeFromDocketAlertTool,
+    PrayForDocumentTool,
+    WithdrawPrayerTool,
 ]
 
 MCP_TOOLS = {mcp_tool.name: mcp_tool() for mcp_tool in mcp_tool_registry}
