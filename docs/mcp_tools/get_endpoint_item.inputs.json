@@ -44,7 +44,8 @@
         "reimbursements",
         "spouse-incomes",
         "alerts",
-        "docket-alerts"
+        "docket-alerts",
+        "api-usage"
       ],
       "description": "The endpoint to get an item from."
     },
