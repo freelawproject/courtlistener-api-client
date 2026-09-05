@@ -7,7 +7,7 @@
 - **Path:** `/visualizations/json/`
 - **Endpoint ID:** `visualizations/json`
 - **Source:** `courtlistener/models/endpoints/visualizations_json.py`
-- **Fields:** 1
+- **Fields:** 0
 
 ## Description
 
@@ -15,19 +15,4 @@ Visualizations/Json Endpoint
 
 ## Fields
 
-### `fields`
-
-string | array of string
-
-Filter which fields are returned.
-
-Choices (6):
-
-| Value | Label |
-|---|---|
-| `"resource_uri"` | Resource uri |
-| `"id"` | Id |
-| `"date_created"` | Date created |
-| `"date_modified"` | Date modified |
-| `"json_data"` | Json data |
-| `"map"` | Map |
+*No fields.*
