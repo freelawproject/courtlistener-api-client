@@ -72,8 +72,10 @@ class ToolHandlerMiddleware(Middleware):
             elif exc.status_code == 429:
                 # Routine API rate limit errors are exempt.
                 raise SentryExemptToolError(
-                    f"Rate limit exceeded: {exc}. For higher rate limits, "
-                    "you can upgrade your membership at https://donate.free.law/forms/membership"
+                    f"Rate limit exceeded: {exc}. Call `get_api_usage` to "
+                    "see current usage and when the limit resets. For "
+                    "higher rate limits, you can upgrade your membership "
+                    "at https://donate.free.law/forms/membership"
                 ) from exc
             elif exc.status_code >= 500:
                 raise UpstreamCourtListenerError(
