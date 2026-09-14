@@ -32,9 +32,9 @@ def _api_error(status_code: int, detail) -> CourtListenerAPIError:
     return CourtListenerAPIError(status_code, detail, response)
 
 
-async def _call_tool_raising(monkeypatch, exc):
+async def _call_tool_raising(monkeypatch, exc, tool_name="fake_tool"):
     class FakeTool(MCPTool):
-        name = "fake_tool"
+        name = tool_name
 
         def get_input_schema(self) -> dict:
             return {"type": "object", "properties": {}}
@@ -43,10 +43,10 @@ async def _call_tool_raising(monkeypatch, exc):
             raise exc
 
     monkeypatch.setattr(
-        "courtlistener.mcp.middleware.MCP_TOOLS", {"fake_tool": FakeTool()}
+        "courtlistener.mcp.middleware.MCP_TOOLS", {tool_name: FakeTool()}
     )
     context = MagicMock()
-    context.message.name = "fake_tool"
+    context.message.name = tool_name
     context.message.arguments = {}
     context.fastmcp_context = MagicMock()
     middleware = ToolHandlerMiddleware()
@@ -62,6 +62,19 @@ class TestMiddlewareErrorClassification:
         with pytest.raises(SentryExemptToolError) as excinfo:
             await _call_tool_raising(monkeypatch, error)
         assert "Rate limit exceeded" in str(excinfo.value)
+        assert "Call `get_api_usage`" in str(excinfo.value)
+        assert "donate.free.law" in str(excinfo.value)
+
+    @pytest.mark.asyncio
+    async def test_429_from_usage_tool_does_not_point_at_itself(
+        self, monkeypatch
+    ):
+        error = _api_error(429, {"detail": "Request was throttled."})
+        with pytest.raises(SentryExemptToolError) as excinfo:
+            await _call_tool_raising(
+                monkeypatch, error, tool_name="get_api_usage"
+            )
+        assert "get_api_usage" not in str(excinfo.value)
         assert "donate.free.law" in str(excinfo.value)
 
     def _fake_access_token(self, monkeypatch, cached, token_kind="oauth"):
