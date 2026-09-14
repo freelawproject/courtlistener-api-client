@@ -8,6 +8,7 @@ from courtlistener.sync_client.alerts import (
     DocketAlerts,
     SearchAlerts,
 )
+from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.client import CourtListener
 from courtlistener.sync_client.prayers import Prayers
@@ -17,6 +18,7 @@ from courtlistener.sync_client.resource import (
 )
 
 __all__ = [
+    "ApiUsage",
     "CitationLookup",
     "CourtListener",
     "DocketAlerts",

@@ -9,6 +9,7 @@ from courtlistener.async_client.alerts import (
     AsyncDocketAlerts,
     AsyncSearchAlerts,
 )
+from courtlistener.async_client.api_usage import AsyncApiUsage
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
 from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import AsyncResource
@@ -63,6 +64,7 @@ class AsyncCourtListener:
         self.docket_alerts = AsyncDocketAlerts(self)
         self.prayers = AsyncPrayers(self)
         self.citation_lookup = AsyncCitationLookup(self)
+        self.api_usage = AsyncApiUsage(self)
 
     def __getattr__(self, name: str) -> AsyncResource:
         """Dynamically create resource accessors based on registered endpoints."""

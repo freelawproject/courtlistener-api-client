@@ -18,6 +18,7 @@ from courtlistener.sync_client.alerts import (
     DocketAlerts,
     SearchAlerts,
 )
+from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource
@@ -69,6 +70,7 @@ class CourtListener:
         self.docket_alerts = DocketAlerts(self)
         self.prayers = Prayers(self)
         self.citation_lookup = CitationLookup(self)
+        self.api_usage = ApiUsage(self)
 
     def __getattr__(self, name: str) -> Resource:
         """Dynamically create resource accessors based on registered endpoints."""
