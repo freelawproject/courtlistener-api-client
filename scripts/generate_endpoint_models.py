@@ -23,6 +23,10 @@ RELATED_ENDPOINT_MAP = {
     "american-bar-association-ratings": "aba-ratings",
 }
 
+# Router-registered endpoints that don't fit the list/detail shape and
+# are served by handwritten client helpers instead of generated models.
+CUSTOM_ENDPOINTS = {"api-usage"}
+
 
 COURT_CHOICES = json.loads(
     Path(BASE_DIR / "scripts" / "court_choices.json").read_text()
@@ -670,6 +674,8 @@ def get_endpoint_data(use_cache: bool = True) -> dict[str, Any]:
     # Assemble endpoints data
     endpoints: dict[str, Any] = {}
     for endpoint_id, endpoint_options in options.items():
+        if endpoint_id in CUSTOM_ENDPOINTS:
+            continue
         fields = endpoint_options.get("actions", {}).get("POST", {})
         filters = endpoint_options.get("filters", {})
         order_by = get_orderings(endpoint_options)
