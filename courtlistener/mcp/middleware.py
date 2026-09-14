@@ -70,10 +70,18 @@ class ToolHandlerMiddleware(Middleware):
                 # Otherwise, this is a real disagreement between CL and MCP.
                 raise UnauthorizedToolError(message, tool_name=name) from exc
             elif exc.status_code == 429:
-                # Routine API rate limit errors are exempt.
+                # Routine API rate limit errors are exempt. The usage
+                # tool has its own throttle, so don't point it at itself.
+                hint = (
+                    ""
+                    if name == "get_api_usage"
+                    else "Call `get_api_usage` to see current usage and "
+                    "when the limit resets. "
+                )
                 raise SentryExemptToolError(
-                    f"Rate limit exceeded: {exc}. For higher rate limits, "
-                    "you can upgrade your membership at https://donate.free.law/forms/membership"
+                    f"Rate limit exceeded: {exc}. {hint}For higher rate "
+                    "limits, you can upgrade your membership at "
+                    "https://donate.free.law/forms/membership"
                 ) from exc
             elif exc.status_code >= 500:
                 raise UpstreamCourtListenerError(

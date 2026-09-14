@@ -162,6 +162,12 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 | `analyze_citations` | Extract citations *and* verify each unique case citation against the CourtListener database. Returns the canonical case name, court, date, and a status (`good`, `bad`, `ambiguous`). Large jobs are batched and return a `job_id` for resumption. |
 | `resume_citation_analysis` | Continue verifying remaining citations from an `analyze_citations` job that exceeded the per-call batch limit. |
 
+### Account
+
+| Tool | What it does |
+| --- | --- |
+| `get_api_usage` | Check your API usage and rate limits: remaining requests in the main `user` quota, daily request counts for the last 14 days, and membership status. Has its own throttle scope, so it works even when you are rate limited. |
+
 ### Alerts and subscriptions
 
 | Tool | What it does |
