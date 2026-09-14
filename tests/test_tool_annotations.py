@@ -17,6 +17,7 @@ READ_ONLY_TOOLS = {
     "extract_citations",
     "analyze_citations",
     "resume_citation_analysis",
+    "get_api_usage",
 }
 
 WRITE_TOOLS = {
@@ -74,6 +75,7 @@ EXPECTED_TITLES = {
     "unsubscribe_from_docket_alert": "Unsubscribe from Docket Alert",
     "pray_for_document": "Pray for Document",
     "withdraw_prayer": "Withdraw Prayer",
+    "get_api_usage": "Get API Usage",
 }
 
 

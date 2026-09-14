@@ -11,6 +11,7 @@ from courtlistener.mcp.tools.delete_search_alert_tool import (
 from courtlistener.mcp.tools.extract_citations_tool import (
     ExtractCitationsTool,
 )
+from courtlistener.mcp.tools.get_api_usage_tool import GetApiUsageTool
 from courtlistener.mcp.tools.get_choices_tool import GetChoicesTool
 from courtlistener.mcp.tools.get_counts_tool import GetCountsTool
 from courtlistener.mcp.tools.get_endpoint_item_tool import GetEndpointItemTool
@@ -53,6 +54,7 @@ mcp_tool_registry: list[type[MCPTool]] = [
     UnsubscribeFromDocketAlertTool,
     PrayForDocumentTool,
     WithdrawPrayerTool,
+    GetApiUsageTool,
 ]
 
 MCP_TOOLS = {mcp_tool.name: mcp_tool() for mcp_tool in mcp_tool_registry}
