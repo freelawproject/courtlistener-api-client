@@ -16,6 +16,7 @@ REPLACEMENTS = {
     "AsyncDocketAlerts": "DocketAlerts",
     "AsyncPrayers": "Prayers",
     "AsyncCitationLookup": "CitationLookup",
+    "AsyncApiUsage": "ApiUsage",
     "AsyncClient": "Client",
     "aclose": "close",
     "asyncio": "time",

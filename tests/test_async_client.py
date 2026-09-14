@@ -9,6 +9,7 @@ from courtlistener.async_client.alerts import (
     AsyncDocketAlerts,
     AsyncSearchAlerts,
 )
+from courtlistener.async_client.api_usage import AsyncApiUsage
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
 from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import (
@@ -16,6 +17,7 @@ from courtlistener.async_client.resource import (
     AsyncResourceIterator,
 )
 from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
+from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource, ResourceIterator
@@ -43,6 +45,7 @@ PAIRS = [
     (DocketAlerts, AsyncDocketAlerts),
     (Prayers, AsyncPrayers),
     (CitationLookup, AsyncCitationLookup),
+    (ApiUsage, AsyncApiUsage),
 ]
 
 # Sync-only backwards-compat shims. They document the alias rather than
@@ -126,6 +129,7 @@ class TestSyncAsyncParity:
             AsyncDocketAlerts.subscribe,
             AsyncPrayers.create,
             AsyncCitationLookup.lookup_text,
+            AsyncApiUsage.get,
         ):
             assert inspect.iscoroutinefunction(method), method
 
@@ -245,6 +249,7 @@ class TestAsyncClientConstruction:
         assert isinstance(cl.docket_alerts, AsyncDocketAlerts)
         assert isinstance(cl.prayers, AsyncPrayers)
         assert isinstance(cl.citation_lookup, AsyncCitationLookup)
+        assert isinstance(cl.api_usage, AsyncApiUsage)
 
     @pytest.mark.asyncio
     async def test_context_manager_closes_client(self):

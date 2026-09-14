@@ -107,6 +107,22 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 
 See the [CourtListener API docs](https://www.courtlistener.com/api/rest-info/) for the full list and available filters.
 
+## API usage and rate limits
+
+`client.api_usage.get()` returns your live throttle usage per scope and rate,
+daily request counts for the last 14 days, and membership status. The endpoint
+has its own throttle scope, so checking usage never spends the quota being
+checked and it stays reachable when you are rate limited.
+
+```python
+usage = client.api_usage.get()
+
+for row in usage["current_usage"]:
+    print(row["scope"], row["rate"], row["remaining"], row["reset_at"])
+
+print(usage["historical_usage"]["total"])
+```
+
 ## Async
 
 `AsyncCourtListener` mirrors `CourtListener` method for method. Anything that
