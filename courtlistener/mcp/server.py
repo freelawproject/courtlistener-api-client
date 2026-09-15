@@ -11,6 +11,7 @@ from starlette.responses import (
     FileResponse,
     JSONResponse,
     PlainTextResponse,
+    Response,
 )
 from starlette.routing import Route
 
@@ -18,6 +19,7 @@ from courtlistener.mcp.auth import (
     CourtListenerAuthProvider,
     CourtListenerTokenVerifier,
 )
+from courtlistener.mcp.metrics import render_metrics
 from courtlistener.mcp.middleware import ToolHandlerMiddleware
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.settings import (
@@ -124,6 +126,11 @@ def create_mcp_server(**kwargs):
                 "services": services,
             }
         )
+
+    @mcp.custom_route("/metrics", methods=["GET"])
+    async def metrics(request):
+        body, content_type = render_metrics()
+        return Response(body, media_type=content_type)
 
     return mcp
 
