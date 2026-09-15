@@ -188,6 +188,7 @@ These tools modify your CourtListener account state. Your client should prompt y
 - **Citation analysis batching.** `analyze_citations` verifies up to ~250 unique citations per call to stay under request budgets. Anything larger returns a `job_id`; call `resume_citation_analysis` to continue.
 - **Field filtering.** Most read tools accept a `fields` parameter to return only the columns you need, which keeps tool output compact and helps the model focus on what matters.
 - **Health check.** `https://mcp.courtlistener.com/health` returns JSON with server status and the deployed Git SHA — useful for incident reports.
+- **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome). On the hosted deployment this path is not reachable from the public internet.
 
 ---
 
@@ -260,6 +261,7 @@ This launches the MCP server on `http://localhost:8080` with Redis. Required env
 | `COURTLISTENER_OAUTH_ISSUER` | no | OAuth issuer; defaults to `https://www.courtlistener.com`. |
 | `COURTLISTENER_API_BASE_URL` | no | Override for the upstream CourtListener API (useful when pointing at a staging instance). |
 | `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
+| `PROMETHEUS_MULTIPROC_DIR` | no | Directory for per-worker Prometheus metric files, merged by `/metrics`. The Docker entrypoint sets it; needed whenever more than one worker process serves the app. |
 
 Source code: [github.com/freelawproject/courtlistener-api-client](https://github.com/freelawproject/courtlistener-api-client)
 
