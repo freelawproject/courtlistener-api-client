@@ -18,6 +18,7 @@ from courtlistener.mcp.exceptions import (
     UnauthorizedToolError,
     UpstreamCourtListenerError,
 )
+from courtlistener.mcp.metrics import outcome_for, tool_calls_total
 from courtlistener.mcp.session import get_session, json_default
 from courtlistener.mcp.tools import MCP_TOOLS
 
@@ -38,6 +39,15 @@ class ToolHandlerMiddleware(Middleware):
         if ctx is None:
             raise ValueError("No context found")
 
+        try:
+            result = await self._call_tool(mcp_tool, name, arguments, ctx)
+        except Exception as exc:
+            tool_calls_total.labels(tool=name, outcome=outcome_for(exc)).inc()
+            raise
+        tool_calls_total.labels(tool=name, outcome="ok").inc()
+        return result
+
+    async def _call_tool(self, mcp_tool, name, arguments, ctx) -> ToolResult:
         mcp_tool.validate_arguments(arguments)
 
         try:
