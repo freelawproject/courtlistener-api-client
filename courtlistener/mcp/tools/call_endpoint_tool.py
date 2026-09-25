@@ -47,7 +47,10 @@ class CallEndpointTool(MCPTool):
                         "`get_endpoint_schema` tool. Every endpoint "
                         "parameter goes in here, including `fields` — "
                         "unlike the `search` tool, this tool takes no "
-                        "top-level `fields` argument."
+                        "top-level `fields` argument. Do not put "
+                        "`page_size` or `num_results` in here; to control "
+                        "how many results come back, use the top-level "
+                        "`num_results` argument."
                     ),
                     "additionalProperties": True,
                 },
