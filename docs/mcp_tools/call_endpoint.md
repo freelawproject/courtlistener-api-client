@@ -5,7 +5,7 @@
 **Call API Endpoint**
 
 - **Source:** `courtlistener/mcp/tools/call_endpoint_tool.py`
-- **Estimated definition size:** ~463 tokens (description ~39, input schema ~344; cl100k_base)
+- **Estimated definition size:** ~496 tokens (description ~39, input schema ~377; cl100k_base)
 - **Parameters:** 3 (1 required)
 - **Raw input schema:** [`call_endpoint.inputs.json`](./call_endpoint.inputs.json)
 
@@ -39,7 +39,7 @@ The endpoint to call.
 
 object · optional
 
-Should match the endpoint schema returned by the `get_endpoint_schema` tool. Every endpoint parameter goes in here, including `fields` — unlike the `search` tool, this tool takes no top-level `fields` argument.
+Should match the endpoint schema returned by the `get_endpoint_schema` tool. Every endpoint parameter goes in here, including `fields` — unlike the `search` tool, this tool takes no top-level `fields` argument. Do not put `page_size` or `num_results` in here; to control how many results come back, use the top-level `num_results` argument.
 
 ### `num_results`
 
