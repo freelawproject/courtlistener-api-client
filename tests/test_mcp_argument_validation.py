@@ -16,11 +16,15 @@ strict tool calling sends nulls, and tool bodies read optionals with
 rebuilt on every call (``search``'s schema costs ~17ms to build).
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastmcp.exceptions import ToolError
 from jsonschema import Draft202012Validator
 
 from courtlistener.mcp.tools import MCP_TOOLS
+from courtlistener.mcp.tools.mcp_tool import coerce_integral_floats
+from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
 from courtlistener.mcp.tools.utils import endpoint_id_choices
 from courtlistener.models import ENDPOINTS
 from courtlistener.utils import did_you_mean, validate_model_fields
@@ -336,11 +340,15 @@ class TestJsonEncodedArguments:
         decoded = MCP_TOOLS["search"].decode_json_arguments({"q": raw})
         assert decoded["q"] == raw
 
-    def test_float_text_not_coerced_to_integer(self):
+    @pytest.mark.parametrize(
+        "raw,expected", [("5.0", 5), ("[1.0, 2]", [1, 2]), ("5.5", "5.5")]
+    )
+    def test_float_text_decoded_to_integer(self, raw, expected):
         decoded = MCP_TOOLS["read_document"].decode_json_arguments(
-            {"chunk_index": "5.0"}
+            {"chunk_index": raw}
         )
-        assert decoded["chunk_index"] == "5.0"
+        assert decoded["chunk_index"] == expected
+        assert type(decoded["chunk_index"]) is type(expected)
 
     @pytest.mark.parametrize(
         "schema,expected",
@@ -372,3 +380,109 @@ class TestJsonEncodedArguments:
             properties["chunk_index"] = original
             tool.__dict__.pop("property_validators", None)
         assert decoded["chunk_index"] == 5.0
+
+
+class TestIntegralFloatArguments:
+    """jsonschema accepts ``1.0`` as an integer (issue #322)."""
+
+    @pytest.mark.parametrize(
+        "tool,name,value,expected",
+        [
+            ("read_document", "opinion_id", 217512.0, 217512),
+            ("read_document", "chunk_index", 1.0, 1),
+            ("read_document", "chunk_index", [1.0, 2.0], [1, 2]),
+            ("search_document", "opinion_id", [15.0, 85], [15, 85]),
+            ("search", "cited_gt", 10.0, 10),
+            ("get_endpoint_item", "item_id", 5.0, 5),
+        ],
+    )
+    def test_coerces(self, tool, name, value, expected):
+        coerced = MCP_TOOLS[tool].coerce_integral_float_arguments(
+            {name: value}
+        )
+        assert coerced[name] == expected
+        assert repr(coerced[name]) == repr(expected)
+
+    @pytest.mark.parametrize(
+        "name,value,expected",
+        [
+            ("opinion_id", 1.5, 1.5),
+            ("chunk_index", [1.0, 2.5], [1, 2.5]),
+            ("opinion_id", True, True),
+            ("opinion_id", "7.0", "7.0"),
+        ],
+    )
+    def test_leaves_alone(self, name, value, expected):
+        coerced = MCP_TOOLS["read_document"].coerce_integral_float_arguments(
+            {name: value}
+        )
+        assert repr(coerced[name]) == repr(expected)
+
+    def test_non_integral_float_still_rejected(self):
+        tool = MCP_TOOLS["read_document"]
+        arguments = tool.coerce_integral_float_arguments({"opinion_id": 1.5})
+        with pytest.raises(ToolError, match="opinion_id"):
+            tool.validate_arguments(arguments)
+
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            {"type": "number"},
+            {"anyOf": [{"type": "integer"}, {"type": "number"}]},
+            {"type": "string"},
+            {},
+        ],
+    )
+    def test_non_integer_schemas_untouched(self, schema):
+        assert repr(coerce_integral_floats(5.0, schema)) == "5.0"
+
+    def test_free_form_objects_untouched(self):
+        coerced = MCP_TOOLS["call_endpoint"].coerce_integral_float_arguments(
+            {"query": {"id": 5.0}}
+        )
+        assert repr(coerced["query"]["id"]) == "5.0"
+
+    @pytest.mark.asyncio
+    async def test_run_passes_coerced_arguments(self, monkeypatch):
+        tool = MCP_TOOLS["read_document"]
+        seen = {}
+
+        async def fake_call(self, arguments):
+            seen.update(arguments)
+            return {}
+
+        monkeypatch.setattr(type(tool), "call", fake_call)
+        await tool.run({"opinion_id": 217512.0, "chunk_index": "[1.0, 2]"})
+        assert repr(seen) == repr(
+            {"opinion_id": 217512, "chunk_index": [1, 2]}
+        )
+
+    @pytest.mark.asyncio
+    async def test_read_document_slices_float_chunk_indexes(self):
+        tool = ReadDocumentTool()
+
+        async def fake_fetch(doc_type, doc_id, client):
+            assert doc_id == 217512 and type(doc_id) is int
+            return "a" * 100 + "b" * 100 + "c" * 50
+
+        client = MagicMock()
+        client.__aenter__.return_value = client
+        with (
+            patch.object(ReadDocumentTool, "get_client", return_value=client),
+            patch(
+                "courtlistener.mcp.tools.read_document_tool."
+                "fetch_document_text",
+                fake_fetch,
+            ),
+        ):
+            result = await tool.run(
+                {
+                    "opinion_id": 217512.0,
+                    "chunk_index": [1.0, 2.0, 99],
+                    "chunk_size": 100.0,
+                }
+            )
+        text = result.content[0].text
+        assert '"text": "' + "b" * 100 + '"' in text
+        assert '"text": "' + "c" * 50 + '"' in text
+        assert "chunk_index 99 is past the end" in text

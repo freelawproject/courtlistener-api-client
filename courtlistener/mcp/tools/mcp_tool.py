@@ -38,6 +38,32 @@ def schema_allows_type(schema: Mapping[str, Any], type_name: str) -> bool:
     )
 
 
+def array_item_schemas(schema: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The ``items`` schemas of *schema* and its union branches."""
+    items = schema.get("items")
+    return ([items] if isinstance(items, Mapping) else []) + [
+        item
+        for key in ("anyOf", "oneOf")
+        for branch in schema.get(key, [])
+        for item in array_item_schemas(branch)
+    ]
+
+
+def coerce_integral_floats(value: Any, schema: Mapping[str, Any]) -> Any:
+    """*value* with integral floats as ints where *schema* wants integers."""
+    if isinstance(value, float):
+        if (
+            value.is_integer()
+            and schema_allows_type(schema, "integer")
+            and not schema_allows_type(schema, "number")
+        ):
+            return int(value)
+    elif isinstance(value, list):
+        items = {"anyOf": array_item_schemas(schema)}
+        return [coerce_integral_floats(item, items) for item in value]
+    return value
+
+
 class MCPTool(Tool):
     """A FastMCP tool with a hand-written input schema and a CL client."""
 
@@ -109,13 +135,9 @@ class MCPTool(Tool):
                 parsed = json.loads(value)
             except (ValueError, RecursionError):
                 continue
+            schema = self.parameters["properties"][name]
+            parsed = coerce_integral_floats(parsed, schema)
             if isinstance(parsed, str) or not validator.is_valid(parsed):
-                continue
-            # jsonschema passes "5.0" as an integer; only keep floats
-            # where the schema actually allows a number.
-            if isinstance(parsed, float) and not schema_allows_type(
-                self.parameters["properties"][name], "number"
-            ):
                 continue
             # Containers win even where the raw string is also valid
             # (e.g. `fields`); scalars only rescue an invalid string.
@@ -124,6 +146,16 @@ class MCPTool(Tool):
             ):
                 decoded[name] = parsed
         return decoded
+
+    def coerce_integral_float_arguments(self, arguments: dict) -> dict:
+        """Turn ``5.0`` into ``5`` where the schema wants an integer."""
+        properties = self.parameters.get("properties", {})
+        return {
+            name: coerce_integral_floats(value, properties[name])
+            if name in properties
+            else value
+            for name, value in arguments.items()
+        }
 
     def validate_arguments(self, arguments: dict) -> None:
         """Check arguments against the tool's input schema."""
@@ -168,6 +200,7 @@ class MCPTool(Tool):
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
         """FastMCP's entry point for a tool call."""
         arguments = self.decode_json_arguments(arguments)
+        arguments = self.coerce_integral_float_arguments(arguments)
         self.validate_arguments(arguments)
         try:
             result = await self.call(arguments)
