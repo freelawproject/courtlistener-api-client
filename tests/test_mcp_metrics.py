@@ -8,6 +8,7 @@ from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from prometheus_client import REGISTRY
+from pydantic import BaseModel, ValidationError
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.exceptions import (
@@ -30,6 +31,18 @@ def _api_error(status_code: int) -> CourtListenerAPIError:
     response = MagicMock(spec=httpx.Response)
     response.status_code = status_code
     return CourtListenerAPIError(status_code, {"detail": "x"}, response)
+
+
+class _Model(BaseModel):
+    n: int
+
+
+def _validation_error() -> ValidationError:
+    try:
+        _Model(n="x")
+    except ValidationError as exc:
+        return exc
+    raise AssertionError("expected a ValidationError")
 
 
 def _count(tool: str, outcome: str) -> float:
@@ -59,9 +72,10 @@ class TestOutcomeFor:
             error_outcome(ToolArgumentValidationError("m", "t", ["a"]))
             == "validation_error"
         )
+        assert error_outcome(_validation_error()) == "validation_error"
         assert (
             error_outcome(SessionDataNotFoundError("m", "t", "a"))
-            == "validation_error"
+            == "session_data_not_found"
         )
         assert error_outcome(UnauthorizedToolError("m", "t")) == "unauthorized"
         assert (
@@ -89,6 +103,8 @@ class TestOutcomeFor:
     def test_every_outcome_is_declared(self):
         seen = {
             error_outcome(ToolArgumentValidationError("m", "t", ["a"])),
+            error_outcome(_validation_error()),
+            error_outcome(SessionDataNotFoundError("m", "t", "a")),
             error_outcome(UnauthorizedToolError("m", "t")),
             error_outcome(UpstreamCourtListenerError("m", "t", "503")),
             error_outcome(RuntimeError()),

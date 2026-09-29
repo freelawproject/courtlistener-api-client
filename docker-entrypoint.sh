@@ -3,8 +3,9 @@ set -e
 
 # Must be set before prometheus_client is imported
 export PROMETHEUS_MULTIPROC_DIR="${PROMETHEUS_MULTIPROC_DIR:-/tmp/prometheus}"
-rm -rf "$PROMETHEUS_MULTIPROC_DIR"
 mkdir -p "$PROMETHEUS_MULTIPROC_DIR"
+# Drop metric files from a previous run, never the directory itself.
+find "$PROMETHEUS_MULTIPROC_DIR" -maxdepth 1 -type f -name '*.db' -delete
 
 if [ "$TARGET_ENV" = "prod" ]; then
     # Production command

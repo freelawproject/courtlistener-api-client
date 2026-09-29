@@ -8,6 +8,7 @@ from prometheus_client import (
     generate_latest,
     multiprocess,
 )
+from pydantic import ValidationError
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.exceptions import (
@@ -34,6 +35,7 @@ Labels:
 OUTCOMES = (
     "ok",
     "validation_error",
+    "session_data_not_found",
     "unauthorized",
     "rate_limited",
     "api_error",
@@ -44,10 +46,10 @@ OUTCOMES = (
 
 def error_outcome(exc: BaseException) -> str:
     """Map a tool-call exception to a bounded outcome label."""
-    if isinstance(
-        exc, (ToolArgumentValidationError, SessionDataNotFoundError)
-    ):
+    if isinstance(exc, (ToolArgumentValidationError, ValidationError)):
         return "validation_error"
+    if isinstance(exc, SessionDataNotFoundError):
+        return "session_data_not_found"
     if isinstance(exc, UnauthorizedToolError):
         return "unauthorized"
     if isinstance(exc, UpstreamCourtListenerError):
