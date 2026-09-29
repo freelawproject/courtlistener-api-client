@@ -28,7 +28,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 WORKDIR /app
 
 # Copy all necessary files
-COPY pyproject.toml uv.lock README.md docker-entrypoint.sh ./
+COPY pyproject.toml uv.lock README.md docker-entrypoint.sh gunicorn.conf.py ./
 # Copy source code
 COPY courtlistener/ courtlistener/
 
