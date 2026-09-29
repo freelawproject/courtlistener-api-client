@@ -24,6 +24,7 @@ from courtlistener.mcp.settings import (
     OAUTH_USERINFO_URL,
     VERIFICATION_TIMEOUT_SECONDS,
 )
+from courtlistener.mcp.transport import get_transport
 from courtlistener.settings import get_api_base_url
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ async def verify_oauth_token(token: str) -> TokenInfo | None:
     """Return token info if *token* is a valid OAuth access token."""
     try:
         async with httpx.AsyncClient(
-            timeout=VERIFICATION_TIMEOUT_SECONDS
+            timeout=VERIFICATION_TIMEOUT_SECONDS, transport=get_transport()
         ) as http:
             resp = await http.get(
                 OAUTH_USERINFO_URL,
@@ -61,7 +62,7 @@ async def verify_api_token(token: str) -> TokenInfo | None:
     """Return token info if *token* is a valid CL API token."""
     try:
         async with httpx.AsyncClient(
-            timeout=VERIFICATION_TIMEOUT_SECONDS
+            timeout=VERIFICATION_TIMEOUT_SECONDS, transport=get_transport()
         ) as http:
             resp = await http.get(
                 f"{get_api_base_url()}/",

@@ -20,6 +20,7 @@ from courtlistener.mcp.auth import (
     CourtListenerTokenVerifier,
     resolve_token,
     verify_api_token,
+    verify_oauth_token,
 )
 from courtlistener.mcp.auth_types import TokenKind
 from courtlistener.mcp.session import (
@@ -29,6 +30,11 @@ from courtlistener.mcp.session import (
     hmac_hex,
     set_session,
 )
+from courtlistener.mcp.settings import (
+    OAUTH_USERINFO_URL,
+    VERIFICATION_TIMEOUT_SECONDS,
+)
+from courtlistener.mcp.transport import get_transport
 from courtlistener.settings import get_api_base_url
 
 
@@ -83,7 +89,8 @@ class TestClientAuthHeader:
 
 
 class TestMCPToolGetClient:
-    """``MCPTool.get_client`` picks the right credential source."""
+    """``MCPTool.get_client`` picks the right credential source and sends
+    it per request over the shared pool."""
 
     def _get_tool(self):
         # Import lazily so tests don't require optional MCP deps to load.
@@ -97,82 +104,109 @@ class TestMCPToolGetClient:
         access_token.claims = {"user_hash": "uh", **claims}
         return access_token
 
-    def test_oauth_bearer_when_access_token_present(self):
-        """With a FastMCP AccessToken available, use Bearer auth."""
-        tool = self._get_tool()
+    def _client_for(self, access_token):
         with patch(
             "courtlistener.mcp.tools.mcp_tool.get_access_token",
-            return_value=self._verified(
-                "oauth-jwt", token_kind=TokenKind.OAUTH
-            ),
+            return_value=access_token,
         ):
-            cl = tool.get_client()
-        assert cl.access_token == "oauth-jwt"
-        assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
+            return self._get_tool().get_client()
 
-    def test_api_token_credential_uses_the_token_scheme(self):
+    def _sent_authorization(self, cl, requests):
+        run(cl._request("GET", "/courts/"))
+        return requests[-1].headers["Authorization"]
+
+    def test_oauth_bearer_when_access_token_present(self, mock_http):
+        """With a FastMCP AccessToken available, use Bearer auth."""
+        requests = mock_http(ok)
+        cl = self._client_for(
+            self._verified("oauth-jwt", token_kind=TokenKind.OAUTH)
+        )
+        assert cl.access_token == "oauth-jwt"
+        assert self._sent_authorization(cl, requests) == "Bearer oauth-jwt"
+
+    def test_api_token_credential_uses_the_token_scheme(self, mock_http):
         """A verified API token must go back out under DRF's ``Token``
         scheme — CL rejects an API token presented as Bearer."""
-        tool = self._get_tool()
-        with patch(
-            "courtlistener.mcp.tools.mcp_tool.get_access_token",
-            return_value=self._verified(
-                "cl-api-token", token_kind=TokenKind.API
-            ),
-        ):
-            cl = tool.get_client()
+        requests = mock_http(ok)
+        cl = self._client_for(
+            self._verified("cl-api-token", token_kind=TokenKind.API)
+        )
         assert cl.api_token == "cl-api-token"
         assert cl.access_token is None
-        assert cl.client.headers["Authorization"] == "Token cl-api-token"
+        assert self._sent_authorization(cl, requests) == "Token cl-api-token"
 
-    def test_missing_kind_claim_defaults_to_bearer(self):
+    def test_missing_kind_claim_defaults_to_bearer(self, mock_http):
         """Defensive: an AccessToken with no ``token_kind`` claim is
         treated as OAuth rather than silently mis-schemed."""
-        tool = self._get_tool()
-        with patch(
-            "courtlistener.mcp.tools.mcp_tool.get_access_token",
-            return_value=self._verified("oauth-jwt"),
-        ):
-            cl = tool.get_client()
+        requests = mock_http(ok)
+        cl = self._client_for(self._verified("oauth-jwt"))
         assert cl.access_token == "oauth-jwt"
-        assert cl.client.headers["Authorization"] == "Bearer oauth-jwt"
+        assert self._sent_authorization(cl, requests) == "Bearer oauth-jwt"
 
-    def test_stdio_mode_env_var(self):
+    def test_stdio_mode_env_var(self, mock_http):
         """No verified credential (stdio: no HTTP layer exists) → the
         env var is the credential, resolved by the constructor."""
-        tool = self._get_tool()
-        with (
-            patch(
-                "courtlistener.mcp.tools.mcp_tool.get_access_token",
-                return_value=None,
-            ),
-            patch.dict(
-                "os.environ",
-                {"COURTLISTENER_API_TOKEN": "env-api-token"},
-            ),
+        requests = mock_http(ok)
+        with patch.dict(
+            "os.environ", {"COURTLISTENER_API_TOKEN": "env-api-token"}
         ):
-            cl = tool.get_client()
+            cl = self._client_for(None)
         assert cl.api_token == "env-api-token"
         assert cl.access_token is None
-        assert cl.client.headers["Authorization"] == "Token env-api-token"
+        assert self._sent_authorization(cl, requests) == "Token env-api-token"
+
+    def test_users_share_the_pool_but_not_the_credential(self, mock_http):
+        """Concurrent calls from two users go through one connection
+        pool, and each request carries only its own user's credential."""
+        requests = mock_http(ok)
+        alice = self._client_for(
+            self._verified("alice-jwt", token_kind=TokenKind.OAUTH)
+        )
+        bob = self._client_for(
+            self._verified("bob-api-token", token_kind=TokenKind.API)
+        )
+        assert alice.client is not bob.client
+        assert alice.client._transport.pool is bob.client._transport.pool
+
+        async def interleave():
+            await asyncio.gather(
+                *(
+                    cl._request("GET", f"/courts/?who={who}")
+                    for _ in range(5)
+                    for cl, who in ((alice, "alice"), (bob, "bob"))
+                )
+            )
+
+        run(interleave())
+        assert len(requests) == 10
+        sent = {
+            (r.url.params["who"], r.headers["Authorization"]) for r in requests
+        }
+        assert sent == {
+            ("alice", "Bearer alice-jwt"),
+            ("bob", "Token bob-api-token"),
+        }
+
+    def test_closing_a_tool_client_keeps_the_pool_open(self, mock_http):
+        mock_http(ok)
+        cl = self._client_for(
+            self._verified("oauth-jwt", token_kind=TokenKind.OAUTH)
+        )
+
+        async def use():
+            async with cl:
+                await cl._request("GET", "/courts/")
+
+        run(use())
+        assert not get_transport().pool.closed
 
 
-def http_response(status_code: int):
-    resp = MagicMock()
-    resp.status_code = status_code
-    return resp
+def ok(request):
+    return httpx.Response(200, json={})
 
 
-def patch_http(response=None, side_effect=None):
-    """Patch the httpx client the verification calls use."""
-    http = MagicMock()
-    http.get = AsyncMock(return_value=response, side_effect=side_effect)
-    ctx = MagicMock()
-    ctx.__aenter__ = AsyncMock(return_value=http)
-    ctx.__aexit__ = AsyncMock(return_value=False)
-    return patch(
-        "courtlistener.mcp.auth.httpx.AsyncClient", return_value=ctx
-    ), http
+def respond(status_code: int):
+    return lambda request: httpx.Response(status_code)
 
 
 class TestVerifyApiToken:
@@ -180,21 +214,19 @@ class TestVerifyApiToken:
     API root, which lists the available endpoints and 401s for any bad
     credential (confirmed against production)."""
 
-    def test_valid_token_resolves_to_the_token_hmac(self):
-        client_patch, _ = patch_http(http_response(200))
-        with client_patch:
-            info = run(verify_api_token("cl-api-token"))
+    def test_valid_token_resolves_to_the_token_hmac(self, mock_http):
+        mock_http(respond(200))
+        info = run(verify_api_token("cl-api-token"))
         assert info == {"user_hash": hmac_hex("cl-api-token")}
 
-    def test_namespace_matches_the_stdio_fallback(self):
+    def test_namespace_matches_the_stdio_fallback(self, mock_http):
         """An API token never rotates, so hashing it directly is stable
         — and it lands a user in the same namespace whether their token
         arrives over HTTP or via COURTLISTENER_API_TOKEN."""
         from courtlistener.mcp.session import user_hash
 
-        client_patch, _ = patch_http(http_response(200))
-        with client_patch:
-            info = run(verify_api_token("cl-api-token"))
+        mock_http(respond(200))
+        info = run(verify_api_token("cl-api-token"))
         client = CourtListener(api_token="cl-api-token")
         with patch(
             "courtlistener.mcp.session.get_access_token",
@@ -202,30 +234,35 @@ class TestVerifyApiToken:
         ):
             assert info["user_hash"] == user_hash(client)
 
-    def test_targets_the_api_root_with_the_token_scheme(self):
-        client_patch, http = patch_http(http_response(200))
-        with client_patch:
-            run(verify_api_token("cl-api-token"))
-        url = http.get.await_args.args[0]
-        headers = http.get.await_args.kwargs["headers"]
+    def test_targets_the_api_root_with_the_token_scheme(self, mock_http):
+        requests = mock_http(respond(200))
+        run(verify_api_token("cl-api-token"))
+        (request,) = requests
         # Trailing slash included: the root 301s without it.
-        assert url == f"{get_api_base_url()}/"
-        assert headers["Authorization"] == "Token cl-api-token"
+        assert str(request.url) == f"{get_api_base_url()}/"
+        assert request.headers["Authorization"] == "Token cl-api-token"
 
-    def test_follows_a_configured_api_base_url(self):
+    def test_uses_the_shared_pool_with_the_verification_timeout(
+        self, mock_http
+    ):
+        """Verification uses its own short timeout on the shared pool."""
+        requests = mock_http(respond(200))
+        run(verify_api_token("cl-api-token"))
+        timeout = requests[0].extensions["timeout"]
+        assert timeout["read"] == VERIFICATION_TIMEOUT_SECONDS
+        assert not get_transport().pool.closed
+
+    def test_follows_a_configured_api_base_url(self, mock_http):
         """A deployment pointed at staging must verify against staging,
         or a staging token would 401 at the door while working fine for
         every tool call."""
         staging = "https://staging.courtlistener.com/api/rest/v4"
-        client_patch, http = patch_http(http_response(200))
-        with (
-            patch.dict("os.environ", {"COURTLISTENER_API_BASE_URL": staging}),
-            client_patch,
-        ):
+        requests = mock_http(respond(200))
+        with patch.dict("os.environ", {"COURTLISTENER_API_BASE_URL": staging}):
             run(verify_api_token("cl-api-token"))
-        assert http.get.await_args.args[0] == f"{staging}/"
+        assert str(requests[0].url) == f"{staging}/"
 
-    def test_a_throttle_is_not_a_successful_authentication(self):
+    def test_a_throttle_is_not_a_successful_authentication(self, mock_http):
         """Tempting to accept: DRF authenticates before it throttles, so
         a 429 *from Django* would prove the token is good. But CloudFront
         rate-limits in front of Django and those 429s never reach it —
@@ -234,36 +271,56 @@ class TestVerifyApiToken:
         string at all, and `resolve_token` would cache that for the
         token TTL, long outliving the blip.
         """
-        client_patch, _ = patch_http(http_response(429))
-        with client_patch:
-            assert run(verify_api_token("cl-api-token")) is None
+        mock_http(respond(429))
+        assert run(verify_api_token("cl-api-token")) is None
 
     @pytest.mark.parametrize("status", [401, 403])
-    def test_rejected_token_returns_none(self, status):
-        client_patch, _ = patch_http(http_response(status))
-        with client_patch:
-            assert run(verify_api_token("bad-token")) is None
+    def test_rejected_token_returns_none(self, mock_http, status):
+        mock_http(respond(status))
+        assert run(verify_api_token("bad-token")) is None
 
     @pytest.mark.parametrize("status", [301, 302, 307])
-    def test_a_redirect_is_not_a_successful_authentication(self, status):
+    def test_a_redirect_is_not_a_successful_authentication(
+        self, mock_http, status
+    ):
         """The API root 301s without a trailing slash. If the success
         check were "anything below 400", a misconfigured URL would
         validate every token including garbage."""
-        client_patch, _ = patch_http(http_response(status))
-        with client_patch:
-            assert run(verify_api_token("bad-token")) is None
+        mock_http(respond(status))
+        assert run(verify_api_token("bad-token")) is None
 
     @pytest.mark.parametrize("status", [500, 502, 503])
-    def test_server_error_fails_closed(self, status):
+    def test_server_error_fails_closed(self, mock_http, status):
         """A CL blip must not mint a session for an unverified token."""
-        client_patch, _ = patch_http(http_response(status))
-        with client_patch:
-            assert run(verify_api_token("cl-api-token")) is None
+        mock_http(respond(status))
+        assert run(verify_api_token("cl-api-token")) is None
 
-    def test_network_error_returns_none(self):
-        client_patch, _ = patch_http(side_effect=httpx.ConnectError("boom"))
-        with client_patch:
-            assert run(verify_api_token("cl-api-token")) is None
+    def test_network_error_returns_none(self, mock_http):
+        def refuse(request):
+            raise httpx.ConnectError("boom")
+
+        mock_http(refuse)
+        assert run(verify_api_token("cl-api-token")) is None
+
+
+class TestVerifyOAuthToken:
+    """``verify_oauth_token`` asks OIDC userinfo, over the shared pool."""
+
+    def test_valid_token_resolves_to_the_sub_hmac(self, mock_http):
+        requests = mock_http(
+            lambda request: httpx.Response(200, json={"sub": "42"})
+        )
+        info = run(verify_oauth_token("oauth-jwt"))
+        assert info == {"user_hash": hmac_hex("42")}
+        (request,) = requests
+        assert str(request.url) == OAUTH_USERINFO_URL
+        assert request.headers["Authorization"] == "Bearer oauth-jwt"
+        timeout = request.extensions["timeout"]
+        assert timeout["read"] == VERIFICATION_TIMEOUT_SECONDS
+
+    def test_rejected_token_returns_none(self, mock_http):
+        mock_http(respond(401))
+        assert run(verify_oauth_token("revoked")) is None
 
 
 class TestResolveToken:

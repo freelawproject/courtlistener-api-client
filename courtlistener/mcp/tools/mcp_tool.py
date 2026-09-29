@@ -24,6 +24,7 @@ from courtlistener.mcp.exceptions import (
     UpstreamCourtListenerError,
 )
 from courtlistener.mcp.session import get_session, json_default
+from courtlistener.mcp.transport import get_transport
 
 
 def schema_allows_type(schema: Mapping[str, Any], type_name: str) -> bool:
@@ -101,13 +102,20 @@ class MCPTool(Tool):
         stdio mode: there is no HTTP layer, so no access token exists;
         the credential is the ``COURTLISTENER_API_TOKEN`` env var,
         resolved by the ``AsyncCourtListener`` constructor.
+
+        Either way, requests go through the process-wide connection pool.
         """
+        transport = get_transport()
         access_token = get_access_token()
         if access_token is not None:
             if access_token.claims.get("token_kind") == TokenKind.API:
-                return AsyncCourtListener(api_token=access_token.token)
-            return AsyncCourtListener(access_token=access_token.token)
-        return AsyncCourtListener()
+                return AsyncCourtListener(
+                    api_token=access_token.token, transport=transport
+                )
+            return AsyncCourtListener(
+                access_token=access_token.token, transport=transport
+            )
+        return AsyncCourtListener(transport=transport)
 
     @cached_property
     def input_validator(self) -> Draft202012Validator:

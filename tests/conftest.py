@@ -2,10 +2,12 @@ import os
 import sys
 from unittest.mock import MagicMock
 
+import httpx
 import pytest
 from dotenv import load_dotenv
 
 from courtlistener import CourtListener
+from courtlistener.mcp.transport import set_pool
 
 # Stub native-build MCP deps only when they are not installed, so
 # tests that don't need them (e.g. test_auth) can still be collected.
@@ -55,6 +57,43 @@ def client():
         pytest.skip("COURTLISTENER_API_TOKEN not set")
     with CourtListener(api_token=token) as cl:
         yield cl
+
+
+class RecordingTransport(httpx.MockTransport):
+    """A mock pool that remembers whether it was closed."""
+
+    closed = False
+
+    async def aclose(self):
+        self.closed = True
+
+
+@pytest.fixture(autouse=True)
+def reset_mcp_pool():
+    """Drop the MCP server's shared connection pool after each test."""
+    yield
+    set_pool(None)
+
+
+@pytest.fixture
+def mock_http():
+    """Route the MCP server's shared connection pool to a handler.
+
+    Call it with ``handler(request) -> httpx.Response``; it returns the
+    list the sent requests are recorded in.
+    """
+
+    def install(handler):
+        requests: list[httpx.Request] = []
+
+        def record(request):
+            requests.append(request)
+            return handler(request)
+
+        set_pool(RecordingTransport(record))
+        return requests
+
+    return install
 
 
 def first_result_id(results):

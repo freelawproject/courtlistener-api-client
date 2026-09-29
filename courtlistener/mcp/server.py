@@ -1,4 +1,6 @@
 import base64
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
 from fastmcp.server.auth import AuthProvider
@@ -28,6 +30,16 @@ from courtlistener.mcp.settings import (
     REDIS_URL,
 )
 from courtlistener.mcp.tools import MCP_TOOLS
+from courtlistener.mcp.transport import close_pool
+
+
+@asynccontextmanager
+async def lifespan(server: FastMCP) -> AsyncIterator[dict]:
+    """Close the shared connection pool when the server shuts down."""
+    try:
+        yield {}
+    finally:
+        await close_pool()
 
 
 def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
@@ -63,6 +75,7 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         ],
         tools=list(MCP_TOOLS.values()),
         auth=auth,
+        lifespan=lifespan,
         # Tools validate their own arguments; see MCPTool.validate_arguments.
         strict_input_validation=False,
     )

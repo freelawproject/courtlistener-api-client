@@ -1,7 +1,6 @@
 """Tests for the get_api_usage MCP tool."""
 
-from unittest.mock import AsyncMock, MagicMock
-
+import httpx
 import pytest
 
 from courtlistener.mcp.tools.get_api_usage_tool import (
@@ -37,28 +36,28 @@ PAYLOAD = {
 }
 
 
-def _client_cm(client):
-    cm = MagicMock()
-    cm.__aenter__.return_value = client
-    cm.__aexit__.return_value = False
-    return cm
-
-
-def _tool(monkeypatch, payload=PAYLOAD):
-    client = AsyncMock()
-    client.api_usage.get.return_value = payload
-    tool = GetApiUsageTool()
-    monkeypatch.setattr(
-        type(tool), "get_client", lambda self: _client_cm(client)
-    )
-    return tool
+def _serve(monkeypatch, mock_http, payload=PAYLOAD):
+    """Answer the usage endpoint with *payload*; return sent requests."""
+    monkeypatch.setenv("COURTLISTENER_API_TOKEN", "tok")
+    return mock_http(lambda request: httpx.Response(200, json=payload))
 
 
 class TestGetApiUsage:
     pytestmark = pytest.mark.asyncio
 
-    async def test_groups_scopes_with_user_first(self, monkeypatch):
-        result = await _tool(monkeypatch).call({})
+    async def test_fetches_usage_with_the_credential(
+        self, monkeypatch, mock_http
+    ):
+        requests = _serve(monkeypatch, mock_http)
+        await GetApiUsageTool().call({})
+
+        (request,) = requests
+        assert request.url.path.endswith("/api-usage/")
+        assert request.headers["Authorization"] == "Token tok"
+
+    async def test_groups_scopes_with_user_first(self, monkeypatch, mock_http):
+        _serve(monkeypatch, mock_http)
+        result = await GetApiUsageTool().call({})
 
         assert list(result["current_usage"]) == [
             "user",
@@ -71,25 +70,30 @@ class TestGetApiUsage:
         assert "main API quota" in user["description"]
         assert "ignore" in result["current_usage"]["api_usage"]["description"]
 
-    async def test_summary_reads_from_user_scope(self, monkeypatch):
-        result = await _tool(monkeypatch).call({})
+    async def test_summary_reads_from_user_scope(self, monkeypatch, mock_http):
+        _serve(monkeypatch, mock_http)
+        result = await GetApiUsageTool().call({})
 
         assert result["summary"].startswith("4988 of 5000 API requests")
         assert "5000/hour" in result["summary"]
         assert "10/min" not in result["summary"]
 
-    async def test_passes_history_and_membership_through(self, monkeypatch):
-        result = await _tool(monkeypatch).call({})
+    async def test_passes_history_and_membership_through(
+        self, monkeypatch, mock_http
+    ):
+        _serve(monkeypatch, mock_http)
+        result = await GetApiUsageTool().call({})
 
         assert result["historical_usage"] == PAYLOAD["historical_usage"]
         assert result["membership"] is None
 
-    async def test_unknown_scope_is_kept(self, monkeypatch):
+    async def test_unknown_scope_is_kept(self, monkeypatch, mock_http):
         payload = {
             **PAYLOAD,
             "current_usage": [_row("future", "1/min", 0, 1)],
         }
-        result = await _tool(monkeypatch, payload).call({})
+        _serve(monkeypatch, mock_http, payload)
+        result = await GetApiUsageTool().call({})
 
         assert list(result["current_usage"]) == ["future"]
         assert result["summary"].startswith("No main API quota")
