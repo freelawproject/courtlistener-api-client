@@ -20,6 +20,7 @@ import pytest
 from fastmcp.exceptions import ToolError
 from jsonschema import Draft202012Validator
 
+from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools import MCP_TOOLS
 from courtlistener.mcp.tools.utils import endpoint_id_choices
 from courtlistener.models import ENDPOINTS
@@ -175,6 +176,80 @@ class TestExplicitNullArguments:
                 {"opinion_id": "not-an-integer"}
             )
         assert "is not of type 'integer'" in str(excinfo.value)
+
+
+class TestArgumentAliases:
+    """`search` takes `q`, `search_document` takes `query`; models swap
+    them (Sentry, issue #267), so each tolerates the other's name.
+    """
+
+    @pytest.mark.parametrize(
+        "tool,arguments,expected",
+        [
+            ("search", {"query": "privacy"}, {"q": "privacy"}),
+            (
+                "search_document",
+                {"opinion_id": 1, "q": "privacy"},
+                {"opinion_id": 1, "query": "privacy"},
+            ),
+        ],
+    )
+    def test_alias_renamed_and_validates(self, tool, arguments, expected):
+        resolved = MCP_TOOLS[tool].resolve_argument_aliases(arguments)
+        assert resolved == expected
+        MCP_TOOLS[tool].validate_arguments(resolved)
+
+    def test_alias_not_advertised(self):
+        search = MCP_TOOLS["search"].parameters["properties"]
+        search_document = MCP_TOOLS["search_document"].parameters["properties"]
+        assert "query" not in search
+        assert "q" not in search_document
+
+    @pytest.mark.parametrize(
+        "tool,arguments",
+        [
+            ("search", {"type": "o", "q": "privacy", "court": "scotus"}),
+            ("search_document", {"opinion_id": 1, "query": "privacy"}),
+            ("call_endpoint", {"endpoint_id": "dockets", "query": {}}),
+            ("create_search_alert", {"name": "x", "query": "q=test"}),
+        ],
+    )
+    def test_canonical_arguments_untouched(self, tool, arguments):
+        resolved = MCP_TOOLS[tool].resolve_argument_aliases(arguments)
+        assert resolved == arguments
+
+    def test_conflicting_values_rejected(self):
+        with pytest.raises(ToolArgumentValidationError) as excinfo:
+            MCP_TOOLS["search"].resolve_argument_aliases(
+                {"q": "privacy", "query": "speech"}
+            )
+        assert "`query` is an alias for `q`" in str(excinfo.value)
+        assert excinfo.value.argument_names == ["q", "query"]
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            {"q": "privacy", "query": "privacy"},
+            {"q": None, "query": "privacy"},
+            {"q": "privacy", "query": None},
+        ],
+    )
+    def test_identical_or_null_double_supply_accepted(self, arguments):
+        resolved = MCP_TOOLS["search"].resolve_argument_aliases(arguments)
+        assert resolved == {"q": "privacy"}
+
+    @pytest.mark.asyncio
+    async def test_run_passes_renamed_arguments(self, monkeypatch):
+        tool = MCP_TOOLS["search_document"]
+        seen = {}
+
+        async def fake_call(self, arguments):
+            seen.update(arguments)
+            return {}
+
+        monkeypatch.setattr(type(tool), "call", fake_call)
+        await tool.run({"opinion_id": 1, "q": "privacy"})
+        assert seen == {"opinion_id": 1, "query": "privacy"}
 
 
 class TestValidatorCaching:

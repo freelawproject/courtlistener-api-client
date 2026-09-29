@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Mapping
 from functools import cached_property
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 from fastmcp.exceptions import ToolError
@@ -43,6 +43,7 @@ class MCPTool(Tool):
 
     annotations: ToolAnnotations
     parameters: dict[str, Any] = Field(default_factory=dict)
+    argument_aliases: ClassVar[dict[str, str]] = {}
 
     def model_post_init(self, context: Any, /) -> None:
         super().model_post_init(context)
@@ -165,8 +166,30 @@ class MCPTool(Tool):
             argument_names=sorted(argument_names),
         )
 
+    def resolve_argument_aliases(self, arguments: dict) -> dict:
+        """Rename aliased arguments to their canonical names."""
+        resolved = dict(arguments)
+        for alias, canonical in self.argument_aliases.items():
+            if alias not in resolved:
+                continue
+            value = resolved.pop(alias)
+            if value is None:
+                continue
+            existing = resolved.get(canonical)
+            if existing is not None and existing != value:
+                raise ToolArgumentValidationError(
+                    f"Invalid arguments for tool '{self.name}':\n- "
+                    f"`{alias}` is an alias for `{canonical}` and they "
+                    f"differ; pass only `{canonical}`.",
+                    tool_name=self.name,
+                    argument_names=sorted([alias, canonical]),
+                )
+            resolved[canonical] = value
+        return resolved
+
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
         """FastMCP's entry point for a tool call."""
+        arguments = self.resolve_argument_aliases(arguments)
         arguments = self.decode_json_arguments(arguments)
         self.validate_arguments(arguments)
         try:

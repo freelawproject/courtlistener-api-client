@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from mcp.types import ToolAnnotations
 
@@ -28,6 +28,7 @@ class SearchTool(MCPTool):
     """
 
     name: str = "search"
+    argument_aliases: ClassVar[dict[str, str]] = {"query": "q"}
     annotations: ToolAnnotations = ToolAnnotations(
         title="Search",
         readOnlyHint=True,
