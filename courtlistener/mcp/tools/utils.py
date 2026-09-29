@@ -189,18 +189,10 @@ def prepare_count(count: int | str | None, query_id: str) -> int | str | None:
     return None
 
 
-async def has_more_results(response: AsyncResourceIterator) -> bool:
-    """Check whether an AsyncResourceIterator has unconsumed results."""
-    page = await response.get_current_page()
-    if response._page_result_index < len(page.results):
-        return True
-    return await response.has_next()
-
-
 async def prepare_has_more_str(
     response: AsyncResourceIterator, query_id: str
 ) -> str | None:
-    if await has_more_results(response):
+    if await response.has_more():
         return (
             f"More results are available. Use the `get_more_results` "
             f'tool with query_id="{query_id}" to retrieve them.'

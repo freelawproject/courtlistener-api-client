@@ -53,6 +53,11 @@ class FakeIterator:
     async def has_next(self):
         return False
 
+    async def has_more(self):
+        return self._page_result_index < len(self._results) or (
+            await self.has_next()
+        )
+
     async def dump(self):
         return {}
 

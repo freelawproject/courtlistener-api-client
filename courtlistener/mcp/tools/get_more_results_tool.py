@@ -12,7 +12,6 @@ from courtlistener.mcp.tools.utils import (
     add_opinion_ids,
     collect_results,
     filter_results_by_fields,
-    has_more_results,
     normalize_fields,
     prepare_has_more_str,
 )
@@ -76,7 +75,7 @@ class GetMoreResultsTool(MCPTool):
 
             response = AsyncResourceIterator.load(client, query["response"])
 
-            if not await has_more_results(response):
+            if not await response.has_more():
                 return f"No more results available for query {query_id!r}."
 
             results = await collect_results(response, num_results)
