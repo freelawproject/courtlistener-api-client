@@ -125,6 +125,7 @@ class TestSyncAsyncParity:
             AsyncResourceIterator.previous,
             AsyncResourceIterator.has_next,
             AsyncResourceIterator.has_previous,
+            AsyncResourceIterator.has_more,
             AsyncSearchAlerts.create,
             AsyncDocketAlerts.subscribe,
             AsyncPrayers.create,

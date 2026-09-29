@@ -66,6 +66,13 @@ class ResourceIterator:
         current_page = self.get_current_page()
         return current_page.previous is not None
 
+    def has_more(self) -> bool:
+        """Whether unconsumed results remain on this page or a next page exists."""
+        current_page = self.get_current_page()
+        if self._page_result_index < len(current_page.results):
+            return True
+        return current_page.next is not None
+
     def next(self) -> None:
         """Get the next page."""
         if not self.has_next():

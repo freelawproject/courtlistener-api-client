@@ -61,6 +61,13 @@ class AsyncResourceIterator:
         current_page = await self.get_current_page()
         return current_page.previous is not None
 
+    async def has_more(self) -> bool:
+        """Whether unconsumed results remain on this page or a next page exists."""
+        current_page = await self.get_current_page()
+        if self._page_result_index < len(current_page.results):
+            return True
+        return current_page.next is not None
+
     async def next(self) -> None:
         """Get the next page."""
         if not await self.has_next():

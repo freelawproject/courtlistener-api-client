@@ -79,6 +79,43 @@ class TestNavigation:
             await it.previous()
 
 
+class TestHasMore:
+    async def test_fetches_first_page(self):
+        it = _iterator([_page([{"id": 1}])])
+        assert await it.has_more()
+        assert it._client._request.await_count == 1
+
+    async def test_empty_page(self):
+        it = _iterator([_page([])])
+        assert not await it.has_more()
+
+    async def test_false_once_consumed(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        async for _ in it:
+            pass
+        assert not await it.has_more()
+
+    async def test_true_while_unconsumed(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        async for _ in it:
+            break
+        assert await it.has_more()
+
+    async def test_next_page_counts_as_more(self):
+        it = _iterator([_page([{"id": 1}], next=NEXT_URL)])
+        async for _ in it:
+            break
+        assert await it.has_more()
+        assert it._client._request.await_count == 1
+
+    async def test_restored_position(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        async for _ in it:
+            break
+        restored = AsyncResourceIterator.load(it._client, await it.dump())
+        assert await restored.has_more()
+
+
 class TestIteration:
     async def test_iterates_across_pages(self):
         it = _iterator(
