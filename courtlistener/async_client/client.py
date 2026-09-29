@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import httpx
@@ -15,7 +14,7 @@ from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import AsyncResource
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
-from courtlistener.settings import get_api_base_url
+from courtlistener.settings import get_api_base_url, get_api_token
 
 
 class AsyncCourtListener:
@@ -42,7 +41,7 @@ class AsyncCourtListener:
             timeout: Request timeout in seconds.
         """
         self.api_token = api_token or (
-            None if access_token else os.environ.get("COURTLISTENER_API_TOKEN")
+            None if access_token else get_api_token()
         )
         self.access_token = access_token
         if not self.api_token and not self.access_token:
