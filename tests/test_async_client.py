@@ -1,7 +1,9 @@
 """Tests for AsyncCourtListener and sync/async API parity."""
 
+import asyncio
 import inspect
 
+import httpx
 import pytest
 
 from courtlistener import AsyncCourtListener, CourtListener
@@ -264,3 +266,54 @@ class TestAsyncClientConstruction:
         cl = AsyncCourtListener(api_token="tok")
         await cl.aclose()
         assert cl._http_client is None
+
+
+class TestTransport:
+    """An ``httpx`` transport passed as ``transport``."""
+
+    pytestmark = pytest.mark.asyncio
+
+    def _transport(self):
+        requests: list[httpx.Request] = []
+
+        def handler(request):
+            requests.append(request)
+            return httpx.Response(200, json={})
+
+        return httpx.MockTransport(handler), requests
+
+    async def test_requests_go_through_it(self):
+        transport, requests = self._transport()
+        cl = AsyncCourtListener(
+            api_token="tok",
+            base_url="https://example.test/api/rest/v4",
+            transport=transport,
+        )
+
+        await cl._request("GET", "/dockets/", params={"court": "scotus"})
+
+        assert cl.client._transport is transport
+        (request,) = requests
+        assert (
+            str(request.url)
+            == "https://example.test/api/rest/v4/dockets/?court=scotus"
+        )
+        assert request.headers["Authorization"] == "Token tok"
+
+    async def test_sharing_clients_keep_their_own_credential(self):
+        transport, requests = self._transport()
+        alice = AsyncCourtListener(
+            access_token="alice-jwt", transport=transport
+        )
+        bob = AsyncCourtListener(api_token="bob-token", transport=transport)
+
+        await asyncio.gather(
+            alice._request("GET", "/courts/?who=alice"),
+            bob._request("GET", "/courts/?who=bob"),
+        )
+
+        assert alice.client is not bob.client
+        sent = {
+            r.url.params["who"]: r.headers["Authorization"] for r in requests
+        }
+        assert sent == {"alice": "Bearer alice-jwt", "bob": "Token bob-token"}

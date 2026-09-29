@@ -33,6 +33,7 @@ class CourtListener:
         access_token: str | None = None,
         base_url: str | None = None,
         timeout: float = 300.0,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         """Initialize the CourtListener client.
 
@@ -46,6 +47,8 @@ class CourtListener:
                 takes precedence over ``api_token`` and the env var.
             base_url: Base URL for the CourtListener API.
             timeout: Request timeout in seconds.
+            transport: An ``httpx`` transport to send requests through,
+                e.g. a connection pool shared between clients.
         """
         self.api_token = api_token or (
             None if access_token else os.environ.get("COURTLISTENER_API_TOKEN")
@@ -63,6 +66,7 @@ class CourtListener:
 
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._transport = transport
         self._http_client: httpx.Client | None = None
         self._resources: dict[str, Resource] = {}
 
@@ -101,6 +105,7 @@ class CourtListener:
                     "Authorization": auth_header,
                 },
                 timeout=self.timeout,
+                transport=self._transport,
             )
         return self._http_client
 

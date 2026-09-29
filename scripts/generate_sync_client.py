@@ -18,6 +18,7 @@ REPLACEMENTS = {
     "AsyncCitationLookup": "CitationLookup",
     "AsyncApiUsage": "ApiUsage",
     "AsyncClient": "Client",
+    "AsyncBaseTransport": "BaseTransport",
     "aclose": "close",
     "asyncio": "time",
 }
