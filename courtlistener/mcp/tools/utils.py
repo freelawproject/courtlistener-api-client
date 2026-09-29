@@ -59,16 +59,14 @@ async def collect_results(
 
 
 async def prepare_query_id(
-    response: AsyncResourceIterator,
-    client: AsyncCourtListener,
-    fields: list[str] | None = None,
+    response: AsyncResourceIterator, fields: list[str] | None = None
 ) -> str:
     """Store the query response and return a short UUID query ID."""
     query_id = make_id()
     data: dict = {"response": await response.dump()}
     if fields is not None:
         data["fields"] = fields
-    await get_session().store_query(query_id, data, client)
+    await get_session().store_query(query_id, data)
     return query_id
 
 

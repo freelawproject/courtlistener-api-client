@@ -66,7 +66,7 @@ class ResumeCitationAnalysisTool(MCPTool):
         job_id = arguments["job_id"]
         wait = bool(arguments.get("wait", False))
         async with self.get_client() as client:
-            job = await get_session().get_citation_analysis(job_id, client)
+            job = await get_session().get_citation_analysis(job_id)
             if job is None:
                 raise SessionDataNotFoundError(
                     f"Job ID {job_id!r} not found. The session may have "
@@ -104,6 +104,6 @@ class ResumeCitationAnalysisTool(MCPTool):
             )
             newly_verified = set(job["verified"].keys()) - previously_verified
 
-            await get_session().store_citation_analysis(job_id, job, client)
+            await get_session().store_citation_analysis(job_id, job)
 
             return format_resume(job_id, job, newly_verified)

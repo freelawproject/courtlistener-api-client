@@ -40,7 +40,7 @@ class GetCountsTool(MCPTool):
     async def call(self, arguments: dict) -> dict[str, int]:
         query_id = arguments["query_id"]
         async with self.get_client() as client:
-            data = await get_session().get_query(query_id, client)
+            data = await get_session().get_query(query_id)
             if data is None:
                 raise SessionDataNotFoundError(
                     f"Query ID {query_id!r} not found. The session may have "

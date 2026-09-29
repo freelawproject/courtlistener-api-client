@@ -21,6 +21,7 @@ from courtlistener.mcp.session import (
     RedisSession,
     Session,
     get_session,
+    hmac_hex,
     set_session,
     token_info_key,
 )
@@ -88,29 +89,36 @@ class TestSessionDomainMethods:
     """Domain methods run against the in-memory backend, exercising the
     shared key layout and JSON round-trip on the base class."""
 
-    def test_query_roundtrip(self, client):
-        session = InMemorySession()
-        run(session.store_query("abc123", {"response": {"x": 1}}, client))
-        assert run(session.get_query("abc123", client)) == {
-            "response": {"x": 1}
-        }
+    @pytest.fixture(autouse=True)
+    def stdio_credential(self, monkeypatch):
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
 
-    def test_query_missing_returns_none(self, client):
+    def test_query_roundtrip(self):
         session = InMemorySession()
-        assert run(session.get_query("nope", client)) is None
+        run(session.store_query("abc123", {"response": {"x": 1}}))
+        assert run(session.get_query("abc123")) == {"response": {"x": 1}}
 
-    def test_queries_are_user_scoped(self, client):
+    def test_query_missing_returns_none(self):
         session = InMemorySession()
-        other = AsyncCourtListener(api_token="other-token")
-        run(session.store_query("abc123", {"response": 1}, client))
-        assert run(session.get_query("abc123", other)) is None
+        assert run(session.get_query("nope")) is None
 
-    def test_citation_analysis_roundtrip(self, client):
+    def test_queries_are_user_scoped(self, monkeypatch):
         session = InMemorySession()
-        run(session.store_citation_analysis("job1", {"pending": []}, client))
-        assert run(session.get_citation_analysis("job1", client)) == {
-            "pending": []
-        }
+        run(session.store_query("abc123", {"response": 1}))
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "other-token")
+        assert run(session.get_query("abc123")) is None
+
+    def test_user_scoped_key_layout_is_unchanged(self):
+        session = InMemorySession()
+        run(session.store_query("abc123", {"response": 1}))
+        assert list(session._data) == [
+            f"mcp:{hmac_hex('test-token')}:query:abc123"
+        ]
+
+    def test_citation_analysis_roundtrip(self):
+        session = InMemorySession()
+        run(session.store_citation_analysis("job1", {"pending": []}))
+        assert run(session.get_citation_analysis("job1")) == {"pending": []}
 
     def test_document_cache_roundtrip(self):
         session = InMemorySession()
@@ -191,12 +199,12 @@ class TestSessionDomainMethods:
 
         run(ExplodingSession().invalidate_token("tok", "oauth"))
 
-    def test_values_must_be_json_serializable(self, client):
+    def test_values_must_be_json_serializable(self):
         """Both backends JSON-round-trip, so non-serializable session
         data fails in memory exactly as it would against Redis."""
         session = InMemorySession()
         with pytest.raises(TypeError):
-            run(session.store_query("abc", {"bad": object()}, client))
+            run(session.store_query("abc", {"bad": object()}))
 
 
 class TestGetSessionFallback:
@@ -268,13 +276,14 @@ class TestRedisSessionDegradation:
         run(session._set("key", "value", 60))
         run(session._delete("key"))
 
-    def test_domain_methods_degrade_end_to_end(self, client):
+    def test_domain_methods_degrade_end_to_end(self, monkeypatch):
         """A blip mid-tool-call surfaces as "not found" (each reader
         already turns ``None`` into a clean retry message) instead of
         an unhandled error."""
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
         session = self._failing_session(RedisConnectionError("dns"))
-        assert run(session.get_query("abc", client)) is None
-        run(session.store_query("abc", {"response": 1}, client))
+        assert run(session.get_query("abc")) is None
+        run(session.store_query("abc", {"response": 1}))
         assert run(session.get_document("opinion", 42)) is None
         assert run(session.get_token_info("tok", "oauth")) is None
 

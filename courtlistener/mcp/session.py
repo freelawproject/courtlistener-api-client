@@ -13,7 +13,6 @@ from typing import Any, cast
 import redis.asyncio as redis
 from fastmcp.server.dependencies import get_access_token
 
-from courtlistener import AsyncCourtListener
 from courtlistener.mcp import settings
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.settings import (
@@ -22,6 +21,7 @@ from courtlistener.mcp.settings import (
     SESSION_TTL_SECONDS,
     TOKEN_CACHE_TTL_SECONDS,
 )
+from courtlistener.settings import get_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -43,21 +43,20 @@ def token_info_key(token: str, kind: TokenKind) -> str:
     return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
 
-def user_hash(client: AsyncCourtListener) -> str:
-    """Return the stable per-user key prefix for the current request."""
-    try:
-        access_token = get_access_token()
-    except RuntimeError:
-        access_token = None
+def user_key() -> str:
+    """The per-user key prefix for the current request.
 
+    HTTP mode: the verified token's ``user_hash`` claim, else an HMAC of
+    the token. stdio mode: an HMAC of the env var credential.
+    """
+    access_token = get_access_token()
     if access_token is not None:
-        uh = access_token.claims.get("user_hash")
-        if uh:
-            return uh
-
-    token = client.api_token or client.access_token
+        return access_token.claims.get("user_hash") or hmac_hex(
+            access_token.token
+        )
+    token = get_api_token()
     if not token:
-        raise ValueError("Client has no credential; cannot derive user hash.")
+        raise ValueError("No credential; cannot derive the user key.")
     return hmac_hex(token)
 
 
@@ -73,42 +72,30 @@ class Session:
     async def _delete(self, key: str) -> None:
         raise NotImplementedError("_delete must be implemented by subclass")
 
-    async def _get_user_scoped(
-        self, client: AsyncCourtListener, suffix: str
-    ) -> Any:
-        raw = await self._get(f"mcp:{user_hash(client)}:{suffix}")
+    async def _get_user_scoped(self, suffix: str) -> Any:
+        raw = await self._get(f"mcp:{user_key()}:{suffix}")
         if raw is None:
             return None
         return json.loads(raw)
 
-    async def _set_user_scoped(
-        self, client: AsyncCourtListener, suffix: str, value: Any
-    ) -> None:
+    async def _set_user_scoped(self, suffix: str, value: Any) -> None:
         await self._set(
-            f"mcp:{user_hash(client)}:{suffix}",
+            f"mcp:{user_key()}:{suffix}",
             json.dumps(value, default=json_default),
             SESSION_TTL_SECONDS,
         )
 
-    async def get_query(
-        self, query_id: str, client: AsyncCourtListener
-    ) -> dict | None:
-        return await self._get_user_scoped(client, f"query:{query_id}")
+    async def get_query(self, query_id: str) -> dict | None:
+        return await self._get_user_scoped(f"query:{query_id}")
 
-    async def store_query(
-        self, query_id: str, data: dict, client: AsyncCourtListener
-    ) -> None:
-        await self._set_user_scoped(client, f"query:{query_id}", data)
+    async def store_query(self, query_id: str, data: dict) -> None:
+        await self._set_user_scoped(f"query:{query_id}", data)
 
-    async def get_citation_analysis(
-        self, job_id: str, client: AsyncCourtListener
-    ) -> dict | None:
-        return await self._get_user_scoped(client, f"citation:{job_id}")
+    async def get_citation_analysis(self, job_id: str) -> dict | None:
+        return await self._get_user_scoped(f"citation:{job_id}")
 
-    async def store_citation_analysis(
-        self, job_id: str, data: dict, client: AsyncCourtListener
-    ) -> None:
-        await self._set_user_scoped(client, f"citation:{job_id}", data)
+    async def store_citation_analysis(self, job_id: str, data: dict) -> None:
+        await self._set_user_scoped(f"citation:{job_id}", data)
 
     async def get_document(self, doc_type: str, doc_id: int) -> str | None:
         return await self._get(f"mcp:doc:{doc_type}:{doc_id}")

@@ -186,21 +186,20 @@ class TestVerifyApiToken:
             info = run(verify_api_token("cl-api-token"))
         assert info == {"user_hash": hmac_hex("cl-api-token")}
 
-    def test_namespace_matches_the_stdio_fallback(self):
+    def test_namespace_matches_the_stdio_fallback(self, monkeypatch):
         """An API token never rotates, so hashing it directly is stable
         — and it lands a user in the same namespace whether their token
         arrives over HTTP or via COURTLISTENER_API_TOKEN."""
-        from courtlistener.mcp.session import user_hash
+        from courtlistener.mcp.session import user_key
 
         client_patch, _ = patch_http(http_response(200))
         with client_patch:
             info = run(verify_api_token("cl-api-token"))
-        client = CourtListener(api_token="cl-api-token")
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "cl-api-token")
         with patch(
-            "courtlistener.mcp.session.get_access_token",
-            side_effect=RuntimeError("no HTTP request"),
+            "courtlistener.mcp.session.get_access_token", return_value=None
         ):
-            assert info["user_hash"] == user_hash(client)
+            assert info["user_hash"] == user_key()
 
     def test_targets_the_api_root_with_the_token_scheme(self):
         client_patch, http = patch_http(http_response(200))
@@ -563,58 +562,55 @@ class TestServerAuthWiring:
         assert not auth
 
 
-class TestUserHash:
-    """``user_hash`` picks between OAuth claims (new, stable across token
-    rotation) and a direct HMAC of the legacy API token (old behavior).
-    """
+class TestUserKey:
+    """``user_key`` prefers the OAuth ``user_hash`` claim (stable across
+    token rotation) and falls back to an HMAC of the credential."""
 
     def test_reads_claim_from_oauth_context(self):
-        """With a FastMCP access token in scope carrying a ``user_hash``
-        claim (populated by ``CourtListenerTokenVerifier``), ``user_hash``
-        returns the claim verbatim. Rotating the access token doesn't
-        change the hash because the claim is derived from the stable
-        OIDC ``sub``.
-        """
-        from courtlistener.mcp.session import user_hash
+        from courtlistener.mcp.session import user_key
 
-        client = CourtListener(access_token="any-token")
         fake_token = MagicMock()
         fake_token.claims = {"user_hash": "claim-derived-hash"}
         with patch(
             "courtlistener.mcp.session.get_access_token",
             return_value=fake_token,
         ):
-            assert user_hash(client) == "claim-derived-hash"
+            assert user_key() == "claim-derived-hash"
 
-    def test_falls_back_to_api_token_hmac_outside_oauth_context(self):
-        """Legacy / stdio path: no FastMCP context → HMAC the API token
-        directly, matching pre-OAuth behavior.
-        """
-        from courtlistener.mcp.session import hmac_hex, user_hash
+    def test_hashes_the_access_token_without_a_claim(self):
+        from courtlistener.mcp.session import hmac_hex, user_key
 
-        client = CourtListener(api_token="legacy-token")
+        fake_token = MagicMock()
+        fake_token.token = "bare-jwt"
+        fake_token.claims = {}
         with patch(
             "courtlistener.mcp.session.get_access_token",
-            side_effect=RuntimeError("no HTTP request"),
+            return_value=fake_token,
         ):
-            assert user_hash(client) == hmac_hex("legacy-token")
+            assert user_key() == hmac_hex("bare-jwt")
 
-    def test_raises_when_client_has_no_credential(self):
-        """Defensive: a client with neither an access token nor an API
-        token should never reach the session store."""
-        from courtlistener.mcp.session import user_hash
+    def test_stdio_hashes_the_env_var_credential(self, monkeypatch):
+        """No FastMCP access token (stdio) → HMAC the API token env var."""
+        from courtlistener.mcp.session import hmac_hex, user_key
 
-        client = CourtListener.__new__(CourtListener)
-        client.api_token = None
-        client.access_token = None
+        monkeypatch.setenv("COURTLISTENER_API_TOKEN", "legacy-token")
+        with patch(
+            "courtlistener.mcp.session.get_access_token", return_value=None
+        ):
+            assert user_key() == hmac_hex("legacy-token")
+
+    def test_raises_without_a_credential(self, monkeypatch):
+        from courtlistener.mcp.session import user_key
+
+        monkeypatch.delenv("COURTLISTENER_API_TOKEN", raising=False)
         with (
             patch(
                 "courtlistener.mcp.session.get_access_token",
-                side_effect=RuntimeError("no HTTP request"),
+                return_value=None,
             ),
-            pytest.raises(ValueError, match="no credential"),
+            pytest.raises(ValueError, match="[Nn]o credential"),
         ):
-            user_hash(client)
+            user_key()
 
 
 class TestTokenKindScheme:

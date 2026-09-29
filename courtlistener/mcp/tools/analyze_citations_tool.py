@@ -244,7 +244,6 @@ class AnalyzeCitationsTool(MCPTool):
                     "verified": verified,
                     "pending": pending,
                 },
-                client,
             )
 
             # Step 5: Format output

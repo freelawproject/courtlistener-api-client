@@ -66,6 +66,11 @@ def ids(opinions):
 
 
 @pytest.fixture(autouse=True)
+def stdio_credential(monkeypatch):
+    monkeypatch.setenv("COURTLISTENER_API_TOKEN", "test-token")
+
+
+@pytest.fixture(autouse=True)
 def in_memory_session():
     set_session(InMemorySession())
     yield
@@ -224,7 +229,6 @@ class TestAddOpinionIds:
         """The added id must survive `fields` — the recommended usage."""
         tool = SearchTool()
         client = make_client()
-        client.api_token = "test-token"
         client.search.list.return_value = FakeIterator(
             [
                 {
@@ -248,8 +252,7 @@ class TestAddOpinionIds:
     def test_get_more_results_adds_opinion_id(self):
         tool = GetMoreResultsTool()
         client = make_client()
-        client.api_token = "test-token"
-        run(get_session().store_query("qid12345", {"response": {}}, client))
+        run(get_session().store_query("qid12345", {"response": {}}))
         fake = FakeIterator([{"cluster_id": 1, "opinions": [{"id": 42}]}])
         fake._page_result_index = 0  # unconsumed results remain
         with (
