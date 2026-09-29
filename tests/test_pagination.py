@@ -140,6 +140,43 @@ class TestNavigation:
             it.previous()
 
 
+class TestHasMore:
+    def test_fetches_first_page(self):
+        it = _iterator([_page([{"id": 1}])])
+        assert it.has_more()
+        assert it._client._request.call_count == 1
+
+    def test_empty_page(self):
+        it = _iterator([_page([])])
+        assert not it.has_more()
+
+    def test_false_once_consumed(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        for _ in it:
+            pass
+        assert not it.has_more()
+
+    def test_true_while_unconsumed(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        for _ in it:
+            break
+        assert it.has_more()
+
+    def test_next_page_counts_as_more(self):
+        it = _iterator([_page([{"id": 1}], next=NEXT_URL)])
+        for _ in it:
+            break
+        assert it.has_more()
+        assert it._client._request.call_count == 1
+
+    def test_restored_position(self):
+        it = _iterator([_page([{"id": 1}, {"id": 2}])])
+        for _ in it:
+            break
+        restored = ResourceIterator.load(it._client, it.dump())
+        assert restored.has_more()
+
+
 class TestIteration:
     def test_iterates_across_pages(self):
         it = _iterator(
