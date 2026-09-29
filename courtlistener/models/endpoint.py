@@ -12,7 +12,7 @@ class Endpoint(BaseModel):
     endpoint_id: ClassVar[str]
     endpoint_name: ClassVar[str]
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
 
     @model_validator(mode="before")
     @classmethod
