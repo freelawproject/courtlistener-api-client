@@ -46,6 +46,7 @@ mcp = [
     "fastmcp==3.4.0",
     "gunicorn>=25.3.0",
     "jsonschema>=4.0.0",
+    "prometheus-client>=0.20.0",
     "redis>=5.0.0",
     "sentry-sdk>=2.0.0",
     "tiktoken>=0.12.0",
