@@ -23,6 +23,7 @@ from courtlistener.mcp.exceptions import (
     UnauthorizedToolError,
     UpstreamCourtListenerError,
 )
+from courtlistener.mcp.metrics import error_outcome, tool_calls_total
 from courtlistener.mcp.session import get_session, json_default
 
 
@@ -221,6 +222,18 @@ class MCPTool(Tool):
 
     async def run(self, arguments: dict[str, Any]) -> ToolResult:
         """FastMCP's entry point for a tool call."""
+        try:
+            result = await self._handle(arguments)
+        except Exception as exc:
+            tool_calls_total.labels(
+                tool=self.name, outcome=error_outcome(exc)
+            ).inc()
+            raise
+        tool_calls_total.labels(tool=self.name, outcome="ok").inc()
+        return result
+
+    async def _handle(self, arguments: dict[str, Any]) -> ToolResult:
+        """Validate, call, translate errors, and serialize."""
         arguments = self.resolve_argument_aliases(arguments)
         arguments = self.decode_json_arguments(arguments)
         arguments = self.coerce_integral_float_arguments(arguments)
