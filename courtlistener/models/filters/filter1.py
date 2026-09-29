@@ -13,5 +13,5 @@ class Filter1(BaseModel):
     and lookup types: ['startswith']
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     startswith: None | str = None

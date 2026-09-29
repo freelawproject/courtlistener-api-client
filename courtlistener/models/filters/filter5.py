@@ -13,7 +13,7 @@ class Filter5(BaseModel):
     and lookup types: ['gt', 'gte', 'isnull', 'lt', 'lte', 'range']
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     gt: None | int = None
     gte: None | int = None
     isnull: None | bool = None

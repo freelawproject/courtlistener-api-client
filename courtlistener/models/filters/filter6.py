@@ -15,7 +15,7 @@ class Filter6(BaseModel):
     and lookup types: ['day', 'gt', 'gte', 'lt', 'lte', 'month', 'range', 'year']
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     day: None | int = None
     gt: None | date = None
     gte: None | date = None

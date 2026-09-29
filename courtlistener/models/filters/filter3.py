@@ -13,7 +13,7 @@ class Filter3(BaseModel):
     and lookup types: ['gt', 'gte', 'lt', 'lte']
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     gt: None | int = None
     gte: None | int = None
     lt: None | int = None

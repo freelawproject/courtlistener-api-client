@@ -25,6 +25,10 @@ class TestNumberToStringCoercion:
         params = _params("dockets", docket_number=123)
         assert params == {"docket_number": "123"}
 
+    def test_int_in_string_lookup(self):
+        params = _params("dockets", docket_number_core={"startswith": 734})
+        assert params == {"docket_number_core__startswith": "734"}
+
     def test_int_search_query(self):
         assert _params("search", q=1983)["q"] == "1983"
 

@@ -13,7 +13,7 @@ class Filter2(BaseModel):
     and lookup types: ['iexact', 'istartswith', 'startswith']
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     iexact: None | str = None
     istartswith: None | str = None
     startswith: None | str = None

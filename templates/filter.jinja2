@@ -15,7 +15,7 @@ class {{ filter.class_name }}(BaseModel):
     and lookup types: {{ filter.lookup_types }}
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
     {% for lookup_type in filter.lookup_types %}
     {% if lookup_type == "range" %}
     range: None | tuple[{{ filter.types_str }}, {{ filter.types_str }}] = None
