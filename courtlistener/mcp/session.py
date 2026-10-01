@@ -7,15 +7,17 @@ import logging
 import time
 from collections.abc import Awaitable, Iterator
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, cast
 
 import redis.asyncio as redis
+from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.dependencies import get_access_token
 
 from courtlistener.mcp import settings
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.settings import (
+    ACTIVE_USERS_TTL_SECONDS,
     DOCUMENT_TTL_SECONDS,
     MCP_SECRET_BYTES,
     SESSION_TTL_SECONDS,
@@ -43,17 +45,38 @@ def token_info_key(token: str, kind: TokenKind) -> str:
     return f"mcp:token_info:{kind}:{hmac_hex(token)}"
 
 
+def active_users_key(credential: str, day: date) -> str:
+    """Key of the set of users active on *day* under *credential*."""
+    return f"mcp:active:{credential}:{day.isoformat()}"
+
+
+def active_users_keys(credential: str, days: int, today: date) -> list[str]:
+    """Keys of the *days* days ending on *today*, newest first."""
+    return [
+        active_users_key(credential, today - timedelta(days=offset))
+        for offset in range(days)
+    ]
+
+
+def utc_today() -> date:
+    """The current UTC date, which activity is bucketed by."""
+    return datetime.now(timezone.utc).date()
+
+
+def token_user_key(access_token: AccessToken) -> str:
+    """A verified token's ``user_hash`` claim, else an HMAC of the token."""
+    return access_token.claims.get("user_hash") or hmac_hex(access_token.token)
+
+
 def user_key() -> str:
     """The per-user key prefix for the current request.
 
-    HTTP mode: the verified token's ``user_hash`` claim, else an HMAC of
-    the token. stdio mode: an HMAC of the env var credential.
+    HTTP mode: see ``token_user_key``. stdio mode: an HMAC of the env var
+    credential.
     """
     access_token = get_access_token()
     if access_token is not None:
-        return access_token.claims.get("user_hash") or hmac_hex(
-            access_token.token
-        )
+        return token_user_key(access_token)
     token = get_api_token()
     if not token:
         raise ValueError("No credential; cannot derive the user key.")
@@ -133,6 +156,25 @@ class Session:
         except Exception as exc:
             logger.warning("failed to invalidate token cache: %s", exc)
 
+    async def mark_active(
+        self, user_hash: str, credential: str, day: date
+    ) -> bool:
+        """Record *user_hash* as active on *day*; ``False`` if not stored."""
+        raise NotImplementedError(
+            "mark_active must be implemented by subclass"
+        )
+
+    async def active_users(
+        self, credential: str, days: int, today: date
+    ) -> int | None:
+        """Distinct users active in the *days* days ending on *today*.
+
+        ``None`` when the store is unavailable.
+        """
+        raise NotImplementedError(
+            "active_users must be implemented by subclass"
+        )
+
 
 @contextmanager
 def degrade_on_connection_error(op: str) -> Iterator[None]:
@@ -171,6 +213,26 @@ class RedisSession(Session):
         with degrade_on_connection_error("delete"):
             await self.client.delete(key)
 
+    async def mark_active(
+        self, user_hash: str, credential: str, day: date
+    ) -> bool:
+        key = active_users_key(credential, day)
+        with degrade_on_connection_error("pfadd"):
+            async with self.client.pipeline(transaction=True) as pipe:
+                pipe.pfadd(key, user_hash)
+                pipe.expire(key, ACTIVE_USERS_TTL_SECONDS)
+                await pipe.execute()
+            return True
+        return False
+
+    async def active_users(
+        self, credential: str, days: int, today: date
+    ) -> int | None:
+        keys = active_users_keys(credential, days, today)
+        with degrade_on_connection_error("pfcount"):
+            return int(await self.client.pfcount(*keys))
+        return None
+
     async def ping(self) -> bool:
         with degrade_on_connection_error("ping"):
             return bool(await cast("Awaitable[bool]", self.client.ping()))
@@ -182,6 +244,7 @@ class InMemorySession(Session):
 
     def __init__(self) -> None:
         self._data: dict[str, tuple[str, float]] = {}
+        self._active: dict[str, set[str]] = {}
 
     async def _get(self, key: str) -> str | None:
         entry = self._data.get(key)
@@ -198,6 +261,21 @@ class InMemorySession(Session):
 
     async def _delete(self, key: str) -> None:
         self._data.pop(key, None)
+
+    async def mark_active(
+        self, user_hash: str, credential: str, day: date
+    ) -> bool:
+        key = active_users_key(credential, day)
+        self._active.setdefault(key, set()).add(user_hash)
+        return True
+
+    async def active_users(
+        self, credential: str, days: int, today: date
+    ) -> int:
+        active: set[str] = set()
+        for key in active_users_keys(credential, days, today):
+            active |= self._active.get(key, set())
+        return len(active)
 
 
 _session: Session | None = None

@@ -81,6 +81,7 @@ class TestRunErrorClassification:
         )
         session = MagicMock()
         session.invalidate_token = AsyncMock()
+        session.mark_active = AsyncMock()
         monkeypatch.setattr(
             "courtlistener.mcp.tools.mcp_tool.get_session", lambda: session
         )
