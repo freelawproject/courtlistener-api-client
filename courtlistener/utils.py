@@ -205,7 +205,8 @@ def invalid_choice_error(
     return ValueError(
         f"Invalid {noun} {named}{context} for {field_name}."
         f"{suggestions}{hint} "
-        "MCP clients can use the `get_choices` tool to list valid values."
+        "The field's schema lists the valid values; MCP clients can use "
+        "the `get_choices` tool for long lists such as court IDs."
     )
 
 

@@ -2,8 +2,7 @@ import json
 import logging
 import re
 import uuid
-
-import tiktoken
+from typing import cast
 
 from courtlistener import AsyncCourtListener
 from courtlistener.async_client.resource import AsyncResourceIterator
@@ -21,27 +20,58 @@ def normalize_fields(fields):
     return fields
 
 
-def endpoint_id_choices(include_search: bool = False) -> list[str]:
-    """Valid endpoint_id values."""
-    choices = []
-    for endpoint in ENDPOINTS.values():
-        endpoint_id = endpoint.endpoint_id
-        is_search = endpoint_id == "search" or endpoint_id.endswith("-search")
-        if is_search and not include_search:
-            continue
-        choices.append(endpoint_id)
-    return choices
+def is_search_endpoint_id(endpoint_id: object) -> bool:
+    """Whether *endpoint_id* names the search API (the `search` tool)."""
+    return isinstance(endpoint_id, str) and (
+        endpoint_id == "search" or endpoint_id.endswith("-search")
+    )
 
 
-def endpoint_id_property(
-    description: str, include_search: bool = False
-) -> dict:
+def endpoint_ids() -> list[str]:
+    """Valid endpoint_id values: the REST endpoints, not search."""
+    return [
+        endpoint.endpoint_id
+        for endpoint in ENDPOINTS.values()
+        if not is_search_endpoint_id(endpoint.endpoint_id)
+    ]
+
+
+def endpoint_id_property(description: str) -> dict:
     """Build the endpoint_id schema property."""
     return {
         "type": "string",
-        "enum": endpoint_id_choices(include_search=include_search),
-        "description": description,
+        "enum": endpoint_ids(),
+        "description": (
+            f"{description} Search is not an endpoint here; use the "
+            "`search` tool."
+        ),
     }
+
+
+# Choice lists too long to enumerate in schemas, by field name and the
+# endpoints where the field carries that list; `get_choices` serves them.
+LONG_CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
+    "court": ("search",),
+    "dob_state": ("people", "search"),
+    "dod_state": ("people",),
+    "location_state": ("positions",),
+    "position_type": ("positions",),
+    "source": ("dockets",),
+}
+
+
+def is_long_choice_field(endpoint_id: str, field_name: str) -> bool:
+    """Whether this field's choices are listed by `get_choices` instead."""
+    return endpoint_id in LONG_CHOICE_FIELDS.get(field_name, ())
+
+
+def long_choices(field_name: str) -> list[dict]:
+    """The full choice list behind a `LONG_CHOICE_FIELDS` entry."""
+    endpoint_id = LONG_CHOICE_FIELDS[field_name][0]
+    model = next(m for m in ENDPOINTS.values() if m.endpoint_id == endpoint_id)
+    extra = model.model_fields[field_name].json_schema_extra
+    assert isinstance(extra, dict)  # for mypy
+    return cast("list[dict]", extra["choices"])
 
 
 async def collect_results(
@@ -94,18 +124,12 @@ def filter_results_by_fields(
 
 
 def prepare_choices_str(
-    choices,
-    endpoint_id: str = "",
-    field_name: str = "",
-    max_tokens=1000,
-    snippet_count=5,
+    choices, endpoint_id: str = "", field_name: str = "", snippet_count=5
 ):
+    """Describe a field's choices: in full, or by example for long lists."""
     if not choices:
         return ""
-
-    choices_str = json.dumps(choices, indent=2)
-    num_tokens = len(tiktoken.get_encoding("cl100k_base").encode(choices_str))
-    if num_tokens > max_tokens:
+    if is_long_choice_field(endpoint_id, field_name):
         snippet = ", ".join(
             f"{c['value']} ({c['display_name']})"
             for c in choices[:snippet_count]
@@ -114,12 +138,9 @@ def prepare_choices_str(
             f"This field has {len(choices)} valid choices. "
             f"Examples: {snippet}, ...\n\n"
             f"Use the `get_choices` tool with "
-            f'endpoint_id="{endpoint_id}" and '
             f'field_name="{field_name}" to see all choices.'
         )
-
-    choices_str = "Valid choices:\n\n" + choices_str
-    return choices_str
+    return "Valid choices:\n\n" + json.dumps(choices, indent=2)
 
 
 def inline_refs(node, defs, seen=None):
