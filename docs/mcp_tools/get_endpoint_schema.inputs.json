@@ -46,7 +46,7 @@
         "alerts",
         "docket-alerts"
       ],
-      "description": "The endpoint to get the schema for."
+      "description": "The endpoint to get the schema for. Search is not an endpoint here; use the `search` tool."
     }
   },
   "required": [

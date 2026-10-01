@@ -46,7 +46,7 @@
         "alerts",
         "docket-alerts"
       ],
-      "description": "The endpoint to call."
+      "description": "The endpoint to call. Search is not an endpoint here; use the `search` tool."
     },
     "query": {
       "type": "object",

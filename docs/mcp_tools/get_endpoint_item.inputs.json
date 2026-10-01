@@ -46,7 +46,7 @@
         "alerts",
         "docket-alerts"
       ],
-      "description": "The endpoint to get an item from."
+      "description": "The endpoint to get an item from. Search is not an endpoint here; use the `search` tool."
     },
     "item_id": {
       "anyOf": [

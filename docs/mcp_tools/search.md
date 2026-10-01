@@ -5,7 +5,7 @@
 **Search**
 
 - **Source:** `courtlistener/mcp/tools/search_tool.py`
-- **Estimated definition size:** ~3340 tokens (description ~46, input schema ~3220; cl100k_base)
+- **Estimated definition size:** ~3328 tokens (description ~46, input schema ~3208; cl100k_base)
 - **Parameters:** 46 (0 required)
 - **Raw input schema:** [`search.inputs.json`](./search.inputs.json)
 
@@ -85,7 +85,7 @@ Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']
 
 This field has 470 valid choices. Examples: scotus (Supreme Court of the United States), ca1 (Court of Appeals for the First Circuit), ca2 (Court of Appeals for the Second Circuit), ca3 (Court of Appeals for the Third Circuit), ca4 (Court of Appeals for the Fourth Circuit), ...
 
-Use the `get_choices` tool with endpoint_id="search" and field_name="court" to see all choices.
+Use the `get_choices` tool with field_name="court" to see all choices.
 
 ### `q`
 
@@ -303,7 +303,7 @@ Valid when type in: ['p']
 
 This field has 59 valid choices. Examples: AL (Alabama), AK (Alaska), AS (American Samoa), AZ (Arizona), AR (Arkansas), ...
 
-Use the `get_choices` tool with endpoint_id="search" and field_name="dob_state" to see all choices.
+Use the `get_choices` tool with field_name="dob_state" to see all choices.
 
 ### `school`
 
