@@ -63,6 +63,7 @@ def validation_error_fields(exc: ValidationError) -> list[str]:
 def before_send(event, hint):
     """Sentry `before_send` hook.
 
+    - Drops FastMCP's message-only "Error calling tool" log events.
     - Drops exempt-marked tool errors.
     - ToolArgumentValidationErrors tagged by tool and arguments.
     - ValidationErrors tagged by model and fields.
@@ -70,6 +71,15 @@ def before_send(event, hint):
     - UpstreamCourtListenerErrors keyed by status, tagged by tool and status.
     - SessionDataNotFoundErrors tagged by tool and field.
     """
+    # Message-only: always a duplicate of an exception event grouped below.
+    if (
+        event.get("logger") == "fastmcp.server.server"
+        and "exception" not in event
+        and (event.get("logentry") or {})
+        .get("message", "")
+        .startswith("Error calling tool")
+    ):
+        return None
     exc_info = hint.get("exc_info")
     exc = exc_info[1] if exc_info is not None else None
     if isinstance(exc, SentryExemptToolError):

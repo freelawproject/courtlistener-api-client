@@ -194,6 +194,39 @@ class TestBeforeSend:
         event = {"event_id": "abc"}
         assert before_send(event, {}) is event
 
+    def test_drops_message_only_error_calling_tool_events(self):
+        event = {
+            "event_id": "abc",
+            "logger": "fastmcp.server.server",
+            "logentry": {"message": "Error calling tool 'search': boom"},
+        }
+        assert before_send(event, {}) is None
+
+    def test_keeps_error_calling_tool_events_with_exception(self):
+        event = {
+            "event_id": "abc",
+            "logger": "fastmcp.server.server",
+            "logentry": {"message": "Error calling tool 'search': boom"},
+            "exception": {"values": [{"type": "RuntimeError"}]},
+        }
+        assert before_send(event, {}) is event
+
+    def test_keeps_message_only_events_from_other_loggers(self):
+        event = {
+            "event_id": "abc",
+            "logger": "courtlistener.mcp.session",
+            "logentry": {"message": "Error calling tool 'search': boom"},
+        }
+        assert before_send(event, {}) is event
+
+    def test_keeps_other_fastmcp_messages(self):
+        event = {
+            "event_id": "abc",
+            "logger": "fastmcp.server.server",
+            "logentry": {"message": "Server started"},
+        }
+        assert before_send(event, {}) is event
+
 
 class TestValidationErrorFingerprint:
     """All ValidationErrors share one issue; `model` and `field` tags
