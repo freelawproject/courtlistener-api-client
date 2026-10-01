@@ -412,5 +412,5 @@ class TestRedisActiveUsers:
             execute=AsyncMock(side_effect=exc),
             pfcount=AsyncMock(side_effect=exc),
         )
-        run(session.mark_active("u1", "oauth", TODAY))
+        assert run(session.mark_active("u1", "oauth", TODAY)) is False
         assert run(session.active_users("oauth", 7, TODAY)) is None

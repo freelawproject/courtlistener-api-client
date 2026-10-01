@@ -158,8 +158,8 @@ class Session:
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date
-    ) -> None:
-        """Record *user_hash* as active on *day* under *credential*."""
+    ) -> bool:
+        """Record *user_hash* as active on *day*; ``False`` if not stored."""
         raise NotImplementedError(
             "mark_active must be implemented by subclass"
         )
@@ -215,13 +215,15 @@ class RedisSession(Session):
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date
-    ) -> None:
+    ) -> bool:
         key = active_users_key(credential, day)
         with degrade_on_connection_error("pfadd"):
             async with self.client.pipeline(transaction=True) as pipe:
                 pipe.pfadd(key, user_hash)
                 pipe.expire(key, ACTIVE_USERS_TTL_SECONDS)
                 await pipe.execute()
+            return True
+        return False
 
     async def active_users(
         self, credential: str, days: int, today: date
@@ -262,9 +264,10 @@ class InMemorySession(Session):
 
     async def mark_active(
         self, user_hash: str, credential: str, day: date
-    ) -> None:
+    ) -> bool:
         key = active_users_key(credential, day)
         self._active.setdefault(key, set()).add(user_hash)
+        return True
 
     async def active_users(
         self, credential: str, days: int, today: date

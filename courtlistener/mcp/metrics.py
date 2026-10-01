@@ -140,8 +140,8 @@ class ActiveUserMarker:
         entry = (today, credential, user_hash)
         if entry in self._marked:
             return
-        await get_session().mark_active(user_hash, credential, today)
-        self._marked.add(entry)
+        if await get_session().mark_active(user_hash, credential, today):
+            self._marked.add(entry)
 
 
 active_user_marker = ActiveUserMarker()

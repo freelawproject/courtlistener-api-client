@@ -201,7 +201,7 @@ class TestActiveUserMarking:
 
     @pytest.fixture
     def session(self, monkeypatch):
-        session = MagicMock(mark_active=AsyncMock())
+        session = MagicMock(mark_active=AsyncMock(return_value=True))
         monkeypatch.setattr(metrics_mod, "get_session", lambda: session)
         return session
 
@@ -260,6 +260,14 @@ class TestActiveUserMarking:
             call("uh", "oauth", today),
             call("uh", "oauth", tomorrow),
         ]
+
+    @pytest.mark.asyncio
+    async def test_a_degraded_write_is_retried(self, monkeypatch, session):
+        session.mark_active.side_effect = [False, True, True]
+        self._authenticate(monkeypatch, _access_token())
+        for _ in range(3):
+            await _call_tool("metrics_active_tool", lambda: {"a": 1})
+        assert session.mark_active.await_count == 2
 
     @pytest.mark.asyncio
     async def test_no_access_token_is_a_noop(self, monkeypatch, session):
