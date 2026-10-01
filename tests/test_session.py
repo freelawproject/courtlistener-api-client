@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,6 +21,7 @@ from courtlistener.mcp.session import (
     InMemorySession,
     RedisSession,
     Session,
+    active_users_key,
     get_session,
     hmac_hex,
     set_session,
@@ -42,6 +44,13 @@ def client():
 
 def run(coro):
     return asyncio.run(coro)
+
+
+TODAY = date(2026, 9, 30)
+
+
+def days_ago(days: int) -> date:
+    return TODAY - timedelta(days=days)
 
 
 class TestInMemorySession:
@@ -304,6 +313,10 @@ class TestBaseSessionIsAbstract:
             run(session._set("k", "v", 1))
         with pytest.raises(NotImplementedError):
             run(session._delete("k"))
+        with pytest.raises(NotImplementedError):
+            run(session.mark_active("u", "oauth", TODAY))
+        with pytest.raises(NotImplementedError):
+            run(session.active_users("oauth", 7, TODAY))
 
 
 class TestRedisSessionPing:
@@ -318,3 +331,86 @@ class TestRedisSessionPing:
     def test_connection_failure_reads_as_unhealthy(self):
         session = self._session(side_effect=RedisConnectionError("dns"))
         assert run(session.ping()) is False
+
+
+class TestActiveUsers:
+    """Daily active users: one set per credential kind and UTC day,
+    counted by unioning the days of the requested window."""
+
+    def test_missing_days_count_as_empty(self):
+        session = InMemorySession()
+        assert run(session.active_users("oauth", 30, TODAY)) == 0
+
+    def test_counts_distinct_users_across_the_window(self):
+        session = InMemorySession()
+        run(session.mark_active("u1", "oauth", TODAY))
+        run(session.mark_active("u1", "oauth", TODAY))
+        run(session.mark_active("u1", "oauth", days_ago(1)))
+        run(session.mark_active("u2", "oauth", days_ago(6)))
+        run(session.mark_active("u3", "oauth", days_ago(7)))
+        assert run(session.active_users("oauth", 1, TODAY)) == 1
+        assert run(session.active_users("oauth", 7, TODAY)) == 2
+        assert run(session.active_users("oauth", 30, TODAY)) == 3
+
+    def test_credentials_are_counted_separately(self):
+        session = InMemorySession()
+        run(session.mark_active("u1", "oauth", TODAY))
+        run(session.mark_active("u1", "api_token", TODAY))
+        run(session.mark_active("u2", "api_token", TODAY))
+        assert run(session.active_users("oauth", 1, TODAY)) == 1
+        assert run(session.active_users("api_token", 1, TODAY)) == 2
+
+    def test_key_layout(self):
+        assert (
+            active_users_key("oauth", TODAY) == "mcp:active:oauth:2026-09-30"
+        )
+        assert (
+            active_users_key(TokenKind.API, TODAY)
+            == "mcp:active:api_token:2026-09-30"
+        )
+        session = InMemorySession()
+        run(session.mark_active("u1", TokenKind.OAUTH, TODAY))
+        assert list(session._active) == ["mcp:active:oauth:2026-09-30"]
+
+
+class TestRedisActiveUsers:
+    def _session(self, execute=None, **commands) -> RedisSession:
+        session = RedisSession("redis://example.test:6379")
+        pipe = MagicMock(execute=execute or AsyncMock(return_value=[1, True]))
+        pipeline = MagicMock()
+        pipeline.__aenter__.return_value = pipe
+        session._client = MagicMock(
+            pipeline=MagicMock(return_value=pipeline), **commands
+        )
+        session._client.pipe = pipe
+        return session
+
+    def test_mark_adds_to_the_day_key_and_refreshes_its_ttl(self):
+        """One transaction, so a crash can't leave the key without a TTL."""
+        session = self._session()
+        run(session.mark_active("u1", "oauth", TODAY))
+        session._client.pipeline.assert_called_once_with(transaction=True)
+        pipe = session._client.pipe
+        pipe.pfadd.assert_called_once_with("mcp:active:oauth:2026-09-30", "u1")
+        pipe.expire.assert_called_once_with(
+            "mcp:active:oauth:2026-09-30", 60 * 86400
+        )
+        pipe.execute.assert_awaited_once()
+
+    def test_count_unions_the_window_keys(self):
+        session = self._session(pfcount=AsyncMock(return_value=5))
+        assert run(session.active_users("api_token", 3, TODAY)) == 5
+        session._client.pfcount.assert_awaited_once_with(
+            "mcp:active:api_token:2026-09-30",
+            "mcp:active:api_token:2026-09-29",
+            "mcp:active:api_token:2026-09-28",
+        )
+
+    def test_connection_errors_degrade(self):
+        exc = RedisConnectionError("dns")
+        session = self._session(
+            execute=AsyncMock(side_effect=exc),
+            pfcount=AsyncMock(side_effect=exc),
+        )
+        run(session.mark_active("u1", "oauth", TODAY))
+        assert run(session.active_users("oauth", 7, TODAY)) is None
