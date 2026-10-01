@@ -5,15 +5,17 @@
 **Get Field Choices**
 
 - **Source:** `courtlistener/mcp/tools/get_choices_tool.py`
-- **Estimated definition size:** ~407 tokens (description ~30, input schema ~298; cl100k_base)
-- **Parameters:** 2 (2 required)
+- **Estimated definition size:** ~240 tokens (description ~46, input schema ~115; cl100k_base)
+- **Parameters:** 1 (1 required)
 - **Raw input schema:** [`get_choices.inputs.json`](./get_choices.inputs.json)
 
 ## Description
 
-Get the valid choices for a field on a CourtListener API endpoint.
+List every valid value for a field whose choices are too long to
+include in its schema.
 
-Use this when a field's schema says to look up choices with this tool.
+Only the fields named in `field_name` need this; every other choice
+field lists its values in the schema where it appears.
 
 ## Annotations
 
@@ -27,14 +29,8 @@ Use this when a field's schema says to look up choices with this tool.
 
 ## Parameters
 
-### `endpoint_id`
-
-enum · **required** · one of: `"search"`, `"dockets"`, `"bankruptcy-information"`, `"originating-court-information"`, `"docket-entries"`, `"recap-documents"`, `"courts"`, `"audio"`, `"clusters"`, `"opinions"`, `"opinions-cited"`, `"tag"`, `"people"`, `"positions"`, `"retention-events"`, `"educations"`, `"schools"`, `"political-affiliations"`, `"sources"`, `"aba-ratings"`, `"parties"`, `"attorneys"`, `"recap-fetch"`, `"recap-query"`, `"fjc-integrated-database"`, `"tags"`, `"docket-tags"`, `"prayers"`, `"increment-event"`, `"visualizations/json"`, `"visualizations"`, `"agreements"`, `"debts"`, `"financial-disclosures"`, `"gifts"`, `"investments"`, `"non-investment-incomes"`, `"disclosure-positions"`, `"reimbursements"`, `"spouse-incomes"`, `"alerts"`, `"docket-alerts"`, `"opinion-search"`, `"recap-search"`, `"recap-document-search"`, `"recap-docket-search"`, `"judge-search"`, `"oral-argument-search"`
-
-The endpoint the field belongs to.
-
 ### `field_name`
 
-string · **required**
+enum · **required** · one of: `"court"`, `"dob_state"`, `"dod_state"`, `"location_state"`, `"position_type"`, `"source"`
 
-The field name to get choices for.
+The field to list choices for: `court` (search), `dob_state` (people, search), `dod_state` (people), `location_state` (positions), `position_type` (positions), `source` (dockets).

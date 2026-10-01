@@ -26,7 +26,7 @@ from courtlistener.mcp.exceptions import ToolArgumentValidationError
 from courtlistener.mcp.tools import MCP_TOOLS
 from courtlistener.mcp.tools.mcp_tool import coerce_integral_floats
 from courtlistener.mcp.tools.read_document_tool import ReadDocumentTool
-from courtlistener.mcp.tools.utils import endpoint_id_choices
+from courtlistener.mcp.tools.utils import endpoint_ids
 from courtlistener.models import ENDPOINTS
 from courtlistener.utils import did_you_mean, validate_model_fields
 
@@ -34,7 +34,6 @@ ENDPOINT_ID_TOOLS = [
     "get_endpoint_schema",
     "get_endpoint_item",
     "call_endpoint",
-    "get_choices",
 ]
 
 
@@ -59,24 +58,22 @@ class TestToolSchemas:
         assert "opinions" in prop["enum"]
         assert "opinion" not in prop["enum"]
 
-    def test_only_get_choices_accepts_search_endpoints(self):
-        for name in ENDPOINT_ID_TOOLS:
-            schema = MCP_TOOLS[name].get_input_schema()
-            enum = schema["properties"]["endpoint_id"]["enum"]
-            if name == "get_choices":
-                assert "search" in enum
-            else:
-                assert "search" not in enum
-                assert not [e for e in enum if e.endswith("-search")]
+    @pytest.mark.parametrize("name", ENDPOINT_ID_TOOLS)
+    def test_search_is_never_an_endpoint_id(self, name):
+        enum = MCP_TOOLS[name].get_input_schema()["properties"]["endpoint_id"][
+            "enum"
+        ]
+        assert "search" not in enum
+        assert not [e for e in enum if e.endswith("-search")]
 
     def test_call_endpoint_query_stays_open(self):
         """`query` is free-form; Pydantic validates its contents."""
         schema = MCP_TOOLS["call_endpoint"].get_input_schema()
         assert schema["properties"]["query"]["additionalProperties"] is True
 
-    def test_search_endpoints_only_offered_when_included(self):
-        assert "search" not in endpoint_id_choices()
-        assert "search" in endpoint_id_choices(include_search=True)
+    def test_endpoint_ids_exclude_search(self):
+        assert "search" not in endpoint_ids()
+        assert "opinion-search" not in endpoint_ids()
 
 
 class TestValidateArguments:
@@ -124,10 +121,10 @@ class TestValidateArguments:
             {"endpoint_id": "opinions", "item_id": 217512, "fields": ["id"]},
         )
 
-    def test_get_choices_accepts_search(self):
-        MCP_TOOLS["get_choices"].validate_arguments(
-            {"endpoint_id": "search", "field_name": "court"},
-        )
+    @pytest.mark.parametrize("name", ENDPOINT_ID_TOOLS)
+    def test_endpoint_id_description_points_at_the_search_tool(self, name):
+        prop = MCP_TOOLS[name].get_input_schema()["properties"]["endpoint_id"]
+        assert "use the `search` tool" in prop["description"]
 
     def test_search_type_is_optional_and_defaults_to_opinions(self):
         schema = MCP_TOOLS["search"].get_input_schema()

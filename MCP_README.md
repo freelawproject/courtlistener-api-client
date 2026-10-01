@@ -152,7 +152,7 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 | --- | --- |
 | `call_endpoint` | Call any CourtListener API endpoint with custom query parameters. |
 | `get_endpoint_schema` | Retrieve the JSON schema (filters, response fields) for a given endpoint. |
-| `get_choices` | Look up the valid values for an enum field (e.g. court IDs, case statuses). |
+| `get_choices` | List the full set of values for the few fields whose choice lists are too long for their schemas (court IDs, docket sources, position types, US states). Every other choice field lists its values inline. |
 
 ### Citation analysis
 
