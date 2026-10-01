@@ -188,7 +188,7 @@ These tools modify your CourtListener account state. Your client should prompt y
 - **Citation analysis batching.** `analyze_citations` verifies up to ~250 unique citations per call to stay under request budgets. Anything larger returns a `job_id`; call `resume_citation_analysis` to continue.
 - **Field filtering.** Most read tools accept a `fields` parameter to return only the columns you need, which keeps tool output compact and helps the model focus on what matters.
 - **Health check.** `https://mcp.courtlistener.com/health` returns JSON with server status and the deployed Git SHA — useful for incident reports.
-- **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome). On the hosted deployment this path is not reachable from the public internet.
+- **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome, and distinct active users over the trailing 1, 7, and 30 days per credential type). On the hosted deployment this path is not reachable from the public internet.
 
 ---
 
