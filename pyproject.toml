@@ -42,6 +42,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = [
+    "asyncpg>=0.32.0",
     "eyecite>=2.6.0",
     "fastmcp==3.4.0",
     "gunicorn>=25.3.0",
