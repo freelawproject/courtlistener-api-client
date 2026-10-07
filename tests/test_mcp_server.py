@@ -6,6 +6,7 @@ validation, error translation, and serialization. These tests drive
 the server through a real client session.
 """
 
+import base64
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -177,3 +178,74 @@ class TestHttpApp:
         body = response.json()
         assert body["status"] == "healthy"
         assert body["services"] == {"mcp": True, "redis": True}
+
+    async def test_health_reports_storage_settings_without_affecting_status(
+        self, app, monkeypatch
+    ):
+        for name in (
+            "DATABASE_URL",
+            "MCP_STORAGE_ENCRYPTION_KEY",
+            "MCP_JWT_SIGNING_KEY",
+        ):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("MCP_JWT_SIGNING_KEY", "k")
+
+        async with app.router.lifespan_context(app), self._http(app) as http:
+            response = await http.get("/health")
+
+        body = response.json()
+        assert body["status"] == "healthy"
+        assert body["storage"] == {
+            "DATABASE_URL": False,
+            "MCP_STORAGE_ENCRYPTION_KEY": False,
+            "MCP_JWT_SIGNING_KEY": True,
+        }
+
+    async def test_health_checks_the_encryption_key_shape(
+        self, app, monkeypatch
+    ):
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        fernet_key = base64.urlsafe_b64encode(b"\x01" * 32).decode()
+        results = {}
+        for label, key in (("fernet", fernet_key), ("invalid", "hunter2")):
+            monkeypatch.setenv("MCP_STORAGE_ENCRYPTION_KEY", key)
+            async with (
+                app.router.lifespan_context(app),
+                self._http(app) as http,
+            ):
+                results[label] = (await http.get("/health")).json()
+
+        for label, body in results.items():
+            assert body["storage"]["encryption_key_format"] == label
+            assert body["status"] == "healthy"
+
+    async def test_health_pings_the_database_when_configured(
+        self, app, monkeypatch
+    ):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://db.test/mcp")
+        conn = MagicMock(execute=AsyncMock(), close=AsyncMock())
+
+        with patch.object(
+            server_mod.asyncpg, "connect", new=AsyncMock(return_value=conn)
+        ):
+            async with (
+                app.router.lifespan_context(app),
+                self._http(app) as http,
+            ):
+                ok = (await http.get("/health")).json()
+        with patch.object(
+            server_mod.asyncpg,
+            "connect",
+            new=AsyncMock(side_effect=OSError("refused")),
+        ):
+            async with (
+                app.router.lifespan_context(app),
+                self._http(app) as http,
+            ):
+                failed = (await http.get("/health")).json()
+
+        conn.execute.assert_awaited_once_with("SELECT 1")
+        conn.close.assert_awaited_once()
+        assert ok["storage"]["database_ping"] == "ok"
+        assert failed["storage"]["database_ping"] == "error: OSError"
+        assert failed["status"] == "healthy"
