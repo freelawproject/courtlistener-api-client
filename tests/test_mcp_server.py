@@ -6,6 +6,7 @@ validation, error translation, and serialization. These tests drive
 the server through a real client session.
 """
 
+import asyncio
 import base64
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -244,8 +245,37 @@ class TestHttpApp:
             ):
                 failed = (await http.get("/health")).json()
 
-        conn.execute.assert_awaited_once_with("SELECT 1")
+        conn.execute.assert_awaited_once_with("SELECT 1", timeout=5)
         conn.close.assert_awaited_once()
         assert ok["storage"]["database_ping"] == "ok"
         assert failed["storage"]["database_ping"] == "error: OSError"
         assert failed["status"] == "healthy"
+
+    async def test_database_ping_bounds_the_query_and_survives_close_errors(
+        self, app, monkeypatch
+    ):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://db.test/mcp")
+        slow = MagicMock(
+            execute=AsyncMock(side_effect=asyncio.TimeoutError()),
+            close=AsyncMock(),
+        )
+        flaky_close = MagicMock(
+            execute=AsyncMock(), close=AsyncMock(side_effect=OSError("reset"))
+        )
+        results = {}
+        for label, conn in (("slow", slow), ("flaky_close", flaky_close)):
+            with patch.object(
+                server_mod.asyncpg, "connect", new=AsyncMock(return_value=conn)
+            ):
+                async with (
+                    app.router.lifespan_context(app),
+                    self._http(app) as http,
+                ):
+                    results[label] = (await http.get("/health")).json()
+
+        assert (
+            results["slow"]["storage"]["database_ping"]
+            == "error: TimeoutError"
+        )
+        slow.close.assert_awaited_once()
+        assert results["flaky_close"]["storage"]["database_ping"] == "ok"

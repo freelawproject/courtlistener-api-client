@@ -1,4 +1,6 @@
+import asyncio
 import base64
+import contextlib
 import os
 from typing import Any
 
@@ -155,13 +157,17 @@ async def storage_readiness() -> dict[str, Any]:
     if url := os.getenv("DATABASE_URL"):
         try:
             conn = await asyncpg.connect(url, timeout=5)
-            try:
-                await conn.execute("SELECT 1")
-            finally:
-                await conn.close()
+        except Exception as exc:
+            report["database_ping"] = f"error: {type(exc).__name__}"
+            return report
+        try:
+            await conn.execute("SELECT 1", timeout=5)
             report["database_ping"] = "ok"
         except Exception as exc:
             report["database_ping"] = f"error: {type(exc).__name__}"
+        finally:
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(conn.close(), 5)
     return report
 
 
