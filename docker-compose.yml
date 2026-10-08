@@ -37,7 +37,7 @@ services:
       start_period: 10s
 
   redis:
-    container_name: redis
+    container_name: courtlistener-mcp-redis
     image: redis:latest
     volumes:
       - redis-data:/data
