@@ -177,3 +177,29 @@ class TestHttpApp:
         body = response.json()
         assert body["status"] == "healthy"
         assert body["services"] == {"mcp": True, "redis": True}
+
+    async def test_health_reports_postgres_when_configured(self, app):
+        session = RedisSession("redis://example.test:6379")
+        session._client = MagicMock(ping=AsyncMock(return_value=True))
+        set_session(session)
+        conn = MagicMock(execute=AsyncMock(), close=AsyncMock())
+
+        bodies = {}
+        for label, connect in (
+            ("up", AsyncMock(return_value=conn)),
+            ("down", AsyncMock(side_effect=OSError("refused"))),
+        ):
+            with (
+                patch.object(server_mod, "POSTGRES_CONFIGURED", True),
+                patch.object(server_mod.asyncpg, "connect", new=connect),
+            ):
+                async with (
+                    app.router.lifespan_context(app),
+                    self._http(app) as http,
+                ):
+                    bodies[label] = (await http.get("/health")).json()
+
+        assert bodies["up"]["status"] == "healthy"
+        assert bodies["up"]["services"]["postgres"] is True
+        assert bodies["down"]["status"] == "unhealthy"
+        assert bodies["down"]["services"]["postgres"] is False

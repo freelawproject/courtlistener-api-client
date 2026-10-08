@@ -1,8 +1,6 @@
 import asyncio
 import base64
 import contextlib
-import os
-from typing import Any
 
 import asyncpg
 from fastmcp import FastMCP
@@ -32,6 +30,7 @@ from courtlistener.mcp.settings import (
     MCP_BASE_URL,
     OAUTH_ISSUER,
     OPENAI_APPS_CHALLENGE_TOKEN,
+    POSTGRES_CONFIGURED,
     REDIS_URL,
 )
 from courtlistener.mcp.tools import MCP_TOOLS
@@ -118,12 +117,23 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         if isinstance(session, RedisSession):
             services["redis"] = await session.ping()
 
+        if POSTGRES_CONFIGURED:
+            try:
+                conn = await asyncpg.connect(timeout=5)
+                try:
+                    await conn.execute("SELECT 1", timeout=5)
+                finally:
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(conn.close(), 5)
+                services["postgres"] = True
+            except Exception:
+                services["postgres"] = False
+
         return JSONResponse(
             {
                 "status": "healthy" if all(services.values()) else "unhealthy",
                 "version": GIT_SHA,
                 "services": services,
-                "storage": await storage_readiness(),
             }
         )
 
@@ -133,45 +143,6 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         return Response(body, media_type=content_type)
 
     return mcp
-
-
-async def storage_readiness() -> dict[str, Any]:
-    """Whether the token-store settings are present and usable.
-
-    Informational only: reported by ``/health`` but never part of its status.
-    """
-    report: dict[str, Any] = {
-        name: bool(os.getenv(name))
-        for name in (
-            "PGHOST",
-            "PGUSER",
-            "PGPASSWORD",
-            "PGDATABASE",
-            "MCP_STORAGE_ENCRYPTION_KEY",
-            "MCP_JWT_SIGNING_KEY",
-        )
-    }
-    if key := os.getenv("MCP_STORAGE_ENCRYPTION_KEY"):
-        try:
-            is_fernet = len(base64.urlsafe_b64decode(key)) == 32
-        except ValueError:
-            is_fernet = False
-        report["encryption_key_format"] = "fernet" if is_fernet else "invalid"
-    if os.getenv("PGHOST"):
-        try:
-            conn = await asyncpg.connect(timeout=5)
-        except Exception as exc:
-            report["database_ping"] = f"error: {type(exc).__name__}"
-            return report
-        try:
-            await conn.execute("SELECT 1", timeout=5)
-            report["database_ping"] = "ok"
-        except Exception as exc:
-            report["database_ping"] = f"error: {type(exc).__name__}"
-        finally:
-            with contextlib.suppress(Exception):
-                await asyncio.wait_for(conn.close(), 5)
-    return report
 
 
 async def protected_resource_metadata(request):

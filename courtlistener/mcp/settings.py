@@ -9,6 +9,9 @@ BASE_DIR = Path(__file__).parents[1]
 # Redis connection URL. In-memory storage is used when unset.
 REDIS_URL = os.getenv("REDIS_URL")
 
+# Whether Postgres vars are configured for the OAuth token store.
+POSTGRES_CONFIGURED = bool(os.getenv("PGHOST"))
+
 # Deployed git SHA, reported by /health.
 GIT_SHA = os.getenv("GIT_SHA", "unknown")
 
