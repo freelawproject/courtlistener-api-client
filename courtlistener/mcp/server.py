@@ -143,7 +143,10 @@ async def storage_readiness() -> dict[str, Any]:
     report: dict[str, Any] = {
         name: bool(os.getenv(name))
         for name in (
-            "DATABASE_URL",
+            "PGHOST",
+            "PGUSER",
+            "PGPASSWORD",
+            "PGDATABASE",
             "MCP_STORAGE_ENCRYPTION_KEY",
             "MCP_JWT_SIGNING_KEY",
         )
@@ -154,9 +157,9 @@ async def storage_readiness() -> dict[str, Any]:
         except ValueError:
             is_fernet = False
         report["encryption_key_format"] = "fernet" if is_fernet else "invalid"
-    if url := os.getenv("DATABASE_URL"):
+    if os.getenv("PGHOST"):
         try:
-            conn = await asyncpg.connect(url, timeout=5)
+            conn = await asyncpg.connect(timeout=5)
         except Exception as exc:
             report["database_ping"] = f"error: {type(exc).__name__}"
             return report

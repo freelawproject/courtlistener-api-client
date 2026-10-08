@@ -11,9 +11,17 @@ services:
       - .:/app
     depends_on:
       - redis
+      - postgres
     environment:
       TARGET_ENV: dev
       REDIS_URL: redis://redis:6379
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: mcp
+      PGPASSWORD: mcp
+      PGDATABASE: mcp
+      MCP_STORAGE_ENCRYPTION_KEY: ${MCP_STORAGE_ENCRYPTION_KEY:-}
+      MCP_JWT_SIGNING_KEY: ${MCP_JWT_SIGNING_KEY:-}
       COURTLISTENER_API_BASE_URL: ${COURTLISTENER_API_BASE_URL:-}
       MCP_SECRET_KEY: dev-insecure-do-not-use-in-production
       MCP_BASE_URL: ${MCP_BASE_URL:-http://localhost:8080}
@@ -29,10 +37,21 @@ services:
       start_period: 10s
 
   redis:
-    container_name: redis
+    container_name: courtlistener-mcp-redis
     image: redis:latest
     volumes:
       - redis-data:/data
 
+  postgres:
+    container_name: courtlistener-mcp-postgres
+    image: postgres:17
+    environment:
+      POSTGRES_DB: mcp
+      POSTGRES_USER: mcp
+      POSTGRES_PASSWORD: mcp
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
   redis-data:
+  postgres-data:
