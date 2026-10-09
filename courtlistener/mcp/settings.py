@@ -9,8 +9,12 @@ BASE_DIR = Path(__file__).parents[1]
 # Redis connection URL. In-memory storage is used when unset.
 REDIS_URL = os.getenv("REDIS_URL")
 
-# Whether Postgres vars are configured for the OAuth token store.
-POSTGRES_CONFIGURED = bool(os.getenv("PGHOST"))
+# Postgres for the OAuth token store, as libpq-style component variables.
+PGHOST = os.getenv("PGHOST")
+PGPORT = int(os.getenv("PGPORT") or 5432)
+PGUSER = os.getenv("PGUSER")
+PGPASSWORD = os.getenv("PGPASSWORD")
+PGDATABASE = os.getenv("PGDATABASE")
 
 # Deployed git SHA, reported by /health.
 GIT_SHA = os.getenv("GIT_SHA", "unknown")
@@ -27,6 +31,10 @@ OAUTH_USERINFO_URL = os.getenv(
     "COURTLISTENER_OAUTH_USERINFO_URL",
     f"{OAUTH_ISSUER.rstrip('/')}/o/userinfo/",
 )
+
+# This server's own (confidential) OAuth application at CourtListener.
+OAUTH_CLIENT_ID = os.getenv("COURTLISTENER_OAUTH_CLIENT_ID")
+OAUTH_CLIENT_SECRET = os.getenv("COURTLISTENER_OAUTH_CLIENT_SECRET")
 
 # HMAC key for hashing tokens and user identifiers into storage keys.
 MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")

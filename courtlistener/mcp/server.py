@@ -28,9 +28,15 @@ from courtlistener.mcp.settings import (
     BASE_DIR,
     GIT_SHA,
     MCP_BASE_URL,
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
     OAUTH_ISSUER,
     OPENAI_APPS_CHALLENGE_TOKEN,
-    POSTGRES_CONFIGURED,
+    PGDATABASE,
+    PGHOST,
+    PGPASSWORD,
+    PGPORT,
+    PGUSER,
     REDIS_URL,
 )
 from courtlistener.mcp.tools import MCP_TOOLS
@@ -117,9 +123,16 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         if isinstance(session, RedisSession):
             services["redis"] = await session.ping()
 
-        if POSTGRES_CONFIGURED:
+        if PGHOST:
             try:
-                conn = await asyncpg.connect(timeout=5)
+                conn = await asyncpg.connect(
+                    host=PGHOST,
+                    port=PGPORT,
+                    user=PGUSER,
+                    password=PGPASSWORD,
+                    database=PGDATABASE,
+                    timeout=5,
+                )
                 try:
                     await conn.execute("SELECT 1", timeout=5)
                 finally:
@@ -134,6 +147,11 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
                 "status": "healthy" if all(services.values()) else "unhealthy",
                 "version": GIT_SHA,
                 "services": services,
+                "config": {
+                    "oauth_client": bool(
+                        OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET
+                    )
+                },
             }
         )
 

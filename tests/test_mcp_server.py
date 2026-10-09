@@ -190,7 +190,8 @@ class TestHttpApp:
             ("down", AsyncMock(side_effect=OSError("refused"))),
         ):
             with (
-                patch.object(server_mod, "POSTGRES_CONFIGURED", True),
+                patch.object(server_mod, "PGHOST", "db.example.test"),
+                patch.object(server_mod, "PGPASSWORD", "pa%41ss"),
                 patch.object(server_mod.asyncpg, "connect", new=connect),
             ):
                 async with (
@@ -203,3 +204,27 @@ class TestHttpApp:
         assert bodies["up"]["services"]["postgres"] is True
         assert bodies["down"]["status"] == "unhealthy"
         assert bodies["down"]["services"]["postgres"] is False
+        assert connect.await_args.kwargs["host"] == "db.example.test"
+        assert connect.await_args.kwargs["password"] == "pa%41ss"
+
+    async def test_health_reports_whether_the_oauth_client_is_configured(
+        self, app
+    ):
+        bodies = {}
+        for label, client_id in (
+            ("set", "7djcaiT8" + "x" * 32),
+            ("unset", None),
+        ):
+            with (
+                patch.object(server_mod, "OAUTH_CLIENT_ID", client_id),
+                patch.object(server_mod, "OAUTH_CLIENT_SECRET", "s3cret"),
+            ):
+                async with (
+                    app.router.lifespan_context(app),
+                    self._http(app) as http,
+                ):
+                    bodies[label] = (await http.get("/health")).json()
+
+        assert bodies["set"]["config"] == {"oauth_client": True}
+        assert bodies["unset"]["config"] == {"oauth_client": False}
+        assert bodies["unset"]["status"] == "healthy"
