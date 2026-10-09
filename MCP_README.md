@@ -105,7 +105,7 @@ The server uses OAuth 2.0 with [Dynamic Client Registration](https://datatracker
 - **Authorization server**: `https://www.courtlistener.com/`
 - **Required scopes**: `openid`, `api`
 - **Token format**: opaque bearer tokens issued by CourtListener's OIDC provider
-- **Verification**: the MCP server validates each token against CourtListener's `/o/userinfo/` endpoint
+- **Verification**: the MCP server introspects each token at CourtListener's `/o/introspect/` endpoint ([RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662)), authenticating with its own client credentials, and rejects tokens that lack the `api` scope
 
 Tokens are short-lived; clients refresh them automatically. If a token is revoked or expires, the next request returns HTTP 401 with a `WWW-Authenticate` header and the client transparently re-runs the OAuth flow.
 
@@ -261,7 +261,7 @@ This launches the MCP server on `http://localhost:8080` with Redis and Postgres.
 | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` | yes (HTTP mode) | Postgres for the OAuth token store, as libpq-style component variables read natively by asyncpg, so passwords need no URL encoding. The Compose stack wires them to its own `postgres` service. |
 | `MCP_STORAGE_ENCRYPTION_KEY` | yes (HTTP mode) | Fernet key (32 url-safe base64 bytes) that encrypts stored OAuth tokens. Derived from `MCP_SECRET_KEY` when unset, for development only. |
 | `MCP_JWT_SIGNING_KEY` | yes (HTTP mode) | Key that signs the access tokens the MCP server issues to clients. |
-| `COURTLISTENER_OAUTH_CLIENT_ID`, `COURTLISTENER_OAUTH_CLIENT_SECRET` | yes (HTTP mode) | Credentials of the MCP server's own confidential OAuth application at CourtListener. `/health` reports whether both are set under `config.oauth_client`. |
+| `COURTLISTENER_OAUTH_CLIENT_ID`, `COURTLISTENER_OAUTH_CLIENT_SECRET` | yes (HTTP mode) | Credentials of the MCP server's own confidential OAuth application at CourtListener, used to introspect bearer tokens; without them every OAuth token is rejected. `/health` reports whether both are set under `config.oauth_client`. |
 | `COURTLISTENER_OAUTH_ISSUER` | no | OAuth issuer; defaults to `https://www.courtlistener.com`. |
 | `COURTLISTENER_API_BASE_URL` | no | Override for the upstream CourtListener API (useful when pointing at a staging instance). |
 | `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
