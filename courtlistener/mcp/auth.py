@@ -21,7 +21,10 @@ from starlette.requests import HTTPConnection
 from courtlistener.mcp.auth_types import ResolvedToken, TokenInfo, TokenKind
 from courtlistener.mcp.session import get_session, hmac_hex
 from courtlistener.mcp.settings import (
-    OAUTH_USERINFO_URL,
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
+    OAUTH_INTROSPECTION_URL,
+    TOKEN_CACHE_TTL_SECONDS,
     VERIFICATION_TIMEOUT_SECONDS,
 )
 from courtlistener.settings import get_api_base_url
@@ -35,26 +38,42 @@ def _assert_unhandled_token_kind(value: NoReturn) -> NoReturn:
 
 
 async def verify_oauth_token(token: str) -> TokenInfo | None:
-    """Return token info if *token* is a valid OAuth access token."""
+    """Return token info if CourtListener reports *token* as an active
+    access token issued to a user."""
+    if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
+        logger.error(
+            "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
+            "are required to introspect tokens"
+        )
+        return None
     try:
         async with httpx.AsyncClient(
             timeout=VERIFICATION_TIMEOUT_SECONDS
         ) as http:
-            resp = await http.get(
-                OAUTH_USERINFO_URL,
-                headers={"Authorization": f"Bearer {token}"},
+            resp = await http.post(
+                OAUTH_INTROSPECTION_URL,
+                data={"token": token, "token_type_hint": "access_token"},
+                auth=(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET),
             )
     except httpx.HTTPError as exc:
-        logger.warning("userinfo call failed: %s", exc)
+        logger.warning("introspection call failed: %s", exc)
         return None
     if resp.status_code != 200:
-        # 401 from userinfo == revoked/expired/invalid. Don't cache.
+        logger.warning("introspection returned HTTP %s", resp.status_code)
         return None
-    sub = resp.json().get("sub")
+    data = resp.json()
+    if not data.get("active"):
+        return None
+    sub = data.get("sub")
     if not sub:
-        logger.warning("userinfo response missing `sub` claim")
+        logger.warning("introspection response has no `sub`")
         return None
-    return TokenInfo(user_hash=hmac_hex(str(sub)))
+    exp = data.get("exp")
+    return TokenInfo(
+        user_hash=hmac_hex(str(sub)),
+        scopes=str(data.get("scope") or "").split(),
+        expires_at=int(exp) if exp else None,
+    )
 
 
 async def verify_api_token(token: str) -> TokenInfo | None:
@@ -73,6 +92,14 @@ async def verify_api_token(token: str) -> TokenInfo | None:
     if 200 <= resp.status_code < 300:
         return TokenInfo(user_hash=hmac_hex(token))
     return None
+
+
+def cache_ttl(info: TokenInfo) -> int:
+    """How long to cache *info*: the configured TTL, cut at the token's expiry."""
+    expires_at = info.get("expires_at")
+    if expires_at is None:
+        return TOKEN_CACHE_TTL_SECONDS
+    return max(1, min(TOKEN_CACHE_TTL_SECONDS, expires_at - int(time.time())))
 
 
 async def resolve_token(
@@ -94,18 +121,16 @@ async def resolve_token(
         return None
 
     logger.info("verified %s credential", kind)
-    await session.store_token_info(token, kind, info)
+    await session.store_token_info(token, kind, info, cache_ttl(info))
     return ResolvedToken(**info, kind=kind, cached=False)
 
 
 class CourtListenerTokenVerifier(TokenVerifier):
-    """Verify CourtListener tokens."""
+    """Verify CourtListener credentials: OAuth tokens by introspection,
+    API tokens by a call to the API."""
 
     def __init__(self, *, base_url: str) -> None:
-        super().__init__(
-            base_url=base_url,
-            required_scopes=["openid", "api"],
-        )
+        super().__init__(base_url=base_url, required_scopes=["api"])
 
     async def verify_token(
         self, token: str, kind: TokenKind = TokenKind.OAUTH
@@ -120,7 +145,8 @@ class CourtListenerTokenVerifier(TokenVerifier):
             token=token,
             client_id="courtlistener-mcp",
             # API tokens lack OAuth scopes; echo the required set.
-            scopes=list(self.required_scopes),
+            scopes=info.get("scopes") or list(self.required_scopes),
+            expires_at=info.get("expires_at"),
             claims={
                 "user_hash": info["user_hash"],
                 "token_kind": info["kind"],

@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import TypedDict
 
+from typing_extensions import NotRequired
+
 
 class TokenKind(str, Enum):
     """A kind of credential the server knows how to verify."""
@@ -33,6 +35,8 @@ class TokenInfo(TypedDict):
     """A verified credential, as persisted in the session store."""
 
     user_hash: str
+    scopes: NotRequired[list[str]]
+    expires_at: NotRequired[int | None]
 
 
 class ResolvedToken(TokenInfo):

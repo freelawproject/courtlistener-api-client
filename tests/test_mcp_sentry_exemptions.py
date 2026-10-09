@@ -117,7 +117,7 @@ class TestRunErrorClassification:
 
     @pytest.mark.asyncio
     async def test_401_on_freshly_verified_token_reports(self, monkeypatch):
-        """Fresh userinfo said valid, CL said invalid: AS/API disagree.
+        """Fresh introspection said valid, CL said invalid: AS/API disagree.
         This is the outage signature and must keep reporting."""
         self._fake_access_token(monkeypatch, cached=False)
         error = _api_error(401, {"detail": "Invalid token."})
