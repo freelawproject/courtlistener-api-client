@@ -2,7 +2,6 @@ import asyncio
 import base64
 import contextlib
 
-import asyncpg
 from fastmcp import FastMCP
 from fastmcp.server.auth import AuthProvider
 from mcp.types import Icon
@@ -32,13 +31,10 @@ from courtlistener.mcp.settings import (
     OAUTH_CLIENT_SECRET,
     OAUTH_ISSUER,
     OPENAI_APPS_CHALLENGE_TOKEN,
-    PGDATABASE,
-    PGHOST,
-    PGPASSWORD,
-    PGPORT,
-    PGUSER,
+    POSTGRES_CONFIGURED,
     REDIS_URL,
 )
+from courtlistener.mcp.storage import oauth_store_ready, postgres_connect
 from courtlistener.mcp.tools import MCP_TOOLS
 
 
@@ -123,16 +119,9 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         if isinstance(session, RedisSession):
             services["redis"] = await session.ping()
 
-        if PGHOST:
+        if POSTGRES_CONFIGURED:
             try:
-                conn = await asyncpg.connect(
-                    host=PGHOST,
-                    port=PGPORT,
-                    user=PGUSER,
-                    password=PGPASSWORD,
-                    database=PGDATABASE,
-                    timeout=5,
-                )
+                conn = await postgres_connect(timeout=5)
                 try:
                     await conn.execute("SELECT 1", timeout=5)
                 finally:
@@ -142,16 +131,24 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
             except Exception:
                 services["postgres"] = False
 
+        # Temporary sanity check
+        config = {
+            "oauth_client": bool(OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET)
+        }
+        if POSTGRES_CONFIGURED:
+            try:
+                config["oauth_store"] = await asyncio.wait_for(
+                    oauth_store_ready(), 5
+                )
+            except asyncio.TimeoutError:
+                config["oauth_store"] = False
+
         return JSONResponse(
             {
                 "status": "healthy" if all(services.values()) else "unhealthy",
                 "version": GIT_SHA,
                 "services": services,
-                "config": {
-                    "oauth_client": bool(
-                        OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET
-                    )
-                },
+                "config": config,
             }
         )
 

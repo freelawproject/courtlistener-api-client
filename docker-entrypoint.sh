@@ -6,6 +6,10 @@ export PROMETHEUS_MULTIPROC_DIR="${PROMETHEUS_MULTIPROC_DIR:-/tmp/prometheus}"
 mkdir -p "$PROMETHEUS_MULTIPROC_DIR"
 find "$PROMETHEUS_MULTIPROC_DIR" -maxdepth 1 -type f -name '*.db' -delete
 
+if [ -n "${PGHOST:-}" ]; then
+    python -m courtlistener.mcp.storage init
+fi
+
 if [ "$TARGET_ENV" = "prod" ]; then
     # Production command
     exec gunicorn \

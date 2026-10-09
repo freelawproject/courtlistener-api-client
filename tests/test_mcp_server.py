@@ -15,6 +15,7 @@ from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
 import courtlistener.mcp.server as server_mod
+import courtlistener.mcp.storage as storage_mod
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.mcp.server import create_mcp_server
 from courtlistener.mcp.session import (
@@ -183,16 +184,24 @@ class TestHttpApp:
         session._client = MagicMock(ping=AsyncMock(return_value=True))
         set_session(session)
         conn = MagicMock(execute=AsyncMock(), close=AsyncMock())
+        probe = AsyncMock(return_value=None)
 
         bodies = {}
         for label, connect in (
             ("up", AsyncMock(return_value=conn)),
             ("down", AsyncMock(side_effect=OSError("refused"))),
         ):
+            probe.side_effect = None if label == "up" else OSError("refused")
             with (
-                patch.object(server_mod, "PGHOST", "db.example.test"),
-                patch.object(server_mod, "PGPASSWORD", "pa%41ss"),
-                patch.object(server_mod.asyncpg, "connect", new=connect),
+                patch.object(server_mod, "POSTGRES_CONFIGURED", True),
+                patch.object(storage_mod, "PGHOST", "db.example.test"),
+                patch.object(storage_mod, "PGPASSWORD", "pa%41ss"),
+                patch.object(storage_mod.asyncpg, "connect", new=connect),
+                patch.object(
+                    storage_mod,
+                    "get_oauth_store",
+                    return_value=MagicMock(get=probe),
+                ),
             ):
                 async with (
                     app.router.lifespan_context(app),
@@ -202,10 +211,47 @@ class TestHttpApp:
 
         assert bodies["up"]["status"] == "healthy"
         assert bodies["up"]["services"]["postgres"] is True
+        assert bodies["up"]["config"]["oauth_store"] is True
         assert bodies["down"]["status"] == "unhealthy"
         assert bodies["down"]["services"]["postgres"] is False
+        assert bodies["down"]["config"]["oauth_store"] is False
         assert connect.await_args.kwargs["host"] == "db.example.test"
         assert connect.await_args.kwargs["password"] == "pa%41ss"
+        assert probe.await_args.kwargs == {
+            "key": "probe",
+            "collection": "health",
+        }
+
+    async def test_health_reports_a_missing_store_schema(self, app):
+        session = RedisSession("redis://example.test:6379")
+        session._client = MagicMock(ping=AsyncMock(return_value=True))
+        set_session(session)
+        conn = MagicMock(execute=AsyncMock(), close=AsyncMock())
+        store = MagicMock(
+            get=AsyncMock(side_effect=ValueError("Table does not exist"))
+        )
+        with (
+            patch.object(server_mod, "POSTGRES_CONFIGURED", True),
+            patch.object(
+                storage_mod.asyncpg,
+                "connect",
+                new=AsyncMock(return_value=conn),
+            ),
+            patch.object(storage_mod, "get_oauth_store", return_value=store),
+        ):
+            async with (
+                app.router.lifespan_context(app),
+                self._http(app) as http,
+            ):
+                body = (await http.get("/health")).json()
+
+        assert body["status"] == "healthy"
+        assert body["services"] == {
+            "mcp": True,
+            "redis": True,
+            "postgres": True,
+        }
+        assert body["config"]["oauth_store"] is False
 
     async def test_health_reports_whether_the_oauth_client_is_configured(
         self, app
