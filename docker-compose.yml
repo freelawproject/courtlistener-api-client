@@ -26,6 +26,8 @@ services:
       MCP_SECRET_KEY: dev-insecure-do-not-use-in-production
       MCP_BASE_URL: ${MCP_BASE_URL:-http://localhost:8080}
       COURTLISTENER_OAUTH_ISSUER: ${COURTLISTENER_OAUTH_ISSUER:-https://www.courtlistener.com}
+      COURTLISTENER_OAUTH_CLIENT_ID: ${COURTLISTENER_OAUTH_CLIENT_ID:-}
+      COURTLISTENER_OAUTH_CLIENT_SECRET: ${COURTLISTENER_OAUTH_CLIENT_SECRET:-}
     healthcheck:
       test: [
         "CMD", "python", "-c",

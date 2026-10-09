@@ -470,6 +470,7 @@ dev = [
     { name = "python-dotenv" },
     { name = "ruff" },
     { name = "tox-uv" },
+    { name = "types-authlib" },
     { name = "types-jsonschema" },
     { name = "unasync" },
 ]
@@ -480,6 +481,7 @@ mcp = [
     { name = "gunicorn" },
     { name = "jsonschema" },
     { name = "prometheus-client" },
+    { name = "py-key-value-aio", extra = ["postgresql", "redis", "wrappers-encryption"] },
     { name = "redis" },
     { name = "sentry-sdk" },
     { name = "tiktoken" },
@@ -500,6 +502,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5.1" },
     { name = "prometheus-client", marker = "extra == 'mcp'", specifier = ">=0.20.0" },
     { name = "py-key-value-aio", extras = ["disk"], marker = "extra == 'dev'" },
+    { name = "py-key-value-aio", extras = ["postgresql", "redis", "wrappers-encryption"], marker = "extra == 'mcp'", specifier = ">=0.4.4,<0.5.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
@@ -509,6 +512,7 @@ requires-dist = [
     { name = "sentry-sdk", marker = "extra == 'mcp'", specifier = ">=2.0.0" },
     { name = "tiktoken", marker = "extra == 'mcp'", specifier = ">=0.12.0" },
     { name = "tox-uv", marker = "extra == 'dev'", specifier = ">=1.29.0" },
+    { name = "types-authlib", marker = "extra == 'dev'", specifier = ">=1.8.0.20260911" },
     { name = "types-jsonschema", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "unasync", marker = "extra == 'dev'", specifier = ">=0.6.0" },
 ]
@@ -1572,6 +1576,15 @@ keyring = [
 memory = [
     { name = "cachetools" },
 ]
+postgresql = [
+    { name = "asyncpg" },
+]
+redis = [
+    { name = "redis" },
+]
+wrappers-encryption = [
+    { name = "cryptography" },
+]
 
 [[package]]
 name = "pyahocorasick"
@@ -2522,6 +2535,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4f/90/06752775b8cfadba8856190f5beae9f552547e0f287e0246677972107375/tox_uv-1.29.0.tar.gz", hash = "sha256:30fa9e6ad507df49d3c6a2f88894256bcf90f18e240a00764da6ecab1db24895", size = 23427, upload-time = "2025-10-09T20:40:27.384Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/17/221d62937c4130b044bb437caac4181e7e13d5536bbede65264db1f0ac9f/tox_uv-1.29.0-py3-none-any.whl", hash = "sha256:b1d251286edeeb4bc4af1e24c8acfdd9404700143c2199ccdbb4ea195f7de6cc", size = 17254, upload-time = "2025-10-09T20:40:25.885Z" },
+]
+
+[[package]]
+name = "types-authlib"
+version = "1.8.0.20260911"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/d8/e78ecbe9a5a077f5ccfec1f284ace4e8ae55ce204ec8bd1b00d86a83974a/types_authlib-1.8.0.20260911.tar.gz", hash = "sha256:cde5e55bca5e908438facc8fc701197bf540af880dff7b8ca8cf40a08258a62a", size = 51835, upload-time = "2026-09-11T06:45:26.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/65/d9206c38d65602867f15bda7836b1248295b31f3187a09cc1f6195539ebe/types_authlib-1.8.0.20260911-py3-none-any.whl", hash = "sha256:0617c4a2361a605144bae0850f70c18edd5265abec11af66235a02a1b415444e", size = 111525, upload-time = "2026-09-11T06:45:25.033Z" },
 ]
 
 [[package]]

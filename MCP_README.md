@@ -86,7 +86,7 @@ The first time you call a CourtListener tool, Claude Code will open a browser wi
 
 ### Other MCP clients
 
-Any client that supports **Streamable HTTP transport** with **OAuth 2.0** can connect. The server publishes [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata that points clients at CourtListener as the authorization server, so most well-behaved clients can discover everything they need from the URL alone.
+Any client that supports **Streamable HTTP transport** with **OAuth 2.0** can connect. The server publishes [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata naming itself as the authorization server and [RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414) server metadata at `/.well-known/oauth-authorization-server`, so most well-behaved clients can discover everything they need from the URL alone. Signing in happens at CourtListener.
 
 Clients that can't run an interactive OAuth flow can send a CourtListener API token instead — see [Authentication](#authentication).
 
@@ -100,14 +100,15 @@ The server accepts two kinds of credential. Interactive clients should use OAuth
 
 ### OAuth 2.0
 
-The server uses OAuth 2.0 with [Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591), so individual users do not need to pre-register their MCP client with CourtListener. The flow is standard:
+The MCP server is the OAuth 2.1 authorization server your client talks to, and CourtListener is the identity provider behind it. Clients register with the MCP server through [Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591) (or a [Client ID Metadata Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)), so nobody pre-registers anything with CourtListener. When a client authorizes, the MCP server sends you to CourtListener to sign in and approve access once, exchanges the resulting CourtListener tokens itself, and issues the client tokens of its own. The flow is standard:
 
-- **Authorization server**: `https://www.courtlistener.com/`
-- **Required scopes**: `openid`, `api`
-- **Token format**: opaque bearer tokens issued by CourtListener's OIDC provider
-- **Verification**: the MCP server validates each token against CourtListener's `/o/userinfo/` endpoint
+- **Authorization server**: `https://mcp.courtlistener.com/` (metadata at `/.well-known/oauth-authorization-server`)
+- **Scopes**: `openid`, `api`, `wiki`, `email`
+- **Consent**: one screen, at CourtListener, naming the MCP server
+- **Token format**: JWTs signed by the MCP server and bound to it as audience. The CourtListener tokens behind them never leave the server.
+- **Verification**: each request's JWT is checked locally, then the CourtListener token behind it is introspected ([RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662)); results are cached briefly.
 
-Tokens are short-lived; clients refresh them automatically. If a token is revoked or expires, the next request returns HTTP 401 with a `WWW-Authenticate` header and the client transparently re-runs the OAuth flow.
+Tokens are short-lived; clients refresh them automatically, and the MCP server refreshes the CourtListener tokens behind them. If access is revoked or expires, the next request returns HTTP 401 with a `WWW-Authenticate` header and the client transparently re-runs the OAuth flow.
 
 ### CourtListener API token
 
@@ -127,7 +128,7 @@ Three things to know:
 
 ### What the server stores
 
-The server is a thin proxy: it never stores your CourtListener credentials, and your credential is forwarded directly to the CourtListener REST API on each tool call. If you revoke the connection from your [CourtListener profile](https://www.courtlistener.com/profile/), all access stops immediately.
+For OAuth connections the server keeps the CourtListener access and refresh tokens it obtained for you, encrypted at rest in Postgres and cached in Redis, along with your client's registration. Tool calls use those tokens against the CourtListener REST API; your client only ever holds tokens the MCP server issued. API tokens are never stored, only verified and cached briefly. If you revoke the connection from your [CourtListener profile](https://www.courtlistener.com/profile/), access stops at the next verification, within the cache lifetime (ten minutes by default).
 
 ---
 
@@ -203,8 +204,8 @@ Check the scheme: an API token goes out as `Authorization: Token <api_token>`, n
 **Tools return "CourtListener rejected the request as unauthorized."**
 Your access token was revoked or expired mid-session. The next tool call will surface a clean 401 and your client should refresh automatically. If it doesn't, disconnect and reconnect the server in your client's settings.
 
-**"This app does not have an associated client_id" or similar OAuth errors.**
-Your client may have cached stale OAuth metadata. Remove and re-add the connector.
+**"This app does not have an associated client_id", "Client ID ... is not registered", or similar OAuth errors.**
+Your client is presenting a client ID this server does not know, usually cached metadata from an earlier setup. Remove and re-add the connector so it registers again.
 
 **Search results look wrong or empty.**
 The `search` tool maps to the same engine as [courtlistener.com/search](https://www.courtlistener.com/?type=o). Try the same query in the web UI to confirm whether it's a query issue or an MCP issue. The web UI also surfaces helpful hints about syntax and available filters.
@@ -251,7 +252,7 @@ cd courtlistener-api-client
 docker compose up
 ```
 
-This launches the MCP server on `http://localhost:8080` with Redis and Postgres. Environment variables:
+This launches the MCP server on `http://localhost:8080` with Redis and Postgres. HTTP mode needs an OAuth application at the CourtListener instance it fronts: create a confidential, authorization-code application with redirect URI `<MCP_BASE_URL>/auth/callback` (on a CourtListener dev server, through the Django admin or shell) and pass its credentials as `COURTLISTENER_OAUTH_CLIENT_ID` and `COURTLISTENER_OAUTH_CLIENT_SECRET`; the server refuses to start without them. Environment variables:
 
 | Variable | Required? | Description |
 | --- | --- | --- |
@@ -259,11 +260,14 @@ This launches the MCP server on `http://localhost:8080` with Redis and Postgres.
 | `MCP_SECRET_KEY` | yes (HTTP mode) | Strong random string used as the HMAC key for namespacing user state. |
 | `MCP_BASE_URL` | yes (HTTP mode) | Public URL of your MCP deployment (e.g. `https://mcp.example.com`). |
 | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` | yes (HTTP mode) | Postgres for the OAuth token store, as libpq-style component variables read natively by asyncpg, so passwords need no URL encoding. The Compose stack wires them to its own `postgres` service. |
-| `MCP_STORAGE_ENCRYPTION_KEY` | yes (HTTP mode) | Fernet key (32 url-safe base64 bytes) that encrypts stored OAuth tokens. |
-| `MCP_JWT_SIGNING_KEY` | yes (HTTP mode) | Key that signs the access tokens the MCP server issues to clients. |
-| `COURTLISTENER_OAUTH_ISSUER` | no | OAuth issuer; defaults to `https://www.courtlistener.com`. |
+| `MCP_STORAGE_ENCRYPTION_KEY` | yes (HTTP mode) | Fernet key (32 url-safe base64 bytes) that encrypts the stored CourtListener tokens. Derived from `MCP_SECRET_KEY` when unset, for development only. |
+| `MCP_JWT_SIGNING_KEY` | yes (HTTP mode) | Key that signs the access tokens the MCP server issues to clients. Derived from `MCP_SECRET_KEY` when unset, for development only. |
+| `COURTLISTENER_OAUTH_CLIENT_ID`, `COURTLISTENER_OAUTH_CLIENT_SECRET` | yes (HTTP mode) | Credentials of the MCP server's own confidential OAuth application at CourtListener, used to sign users in, exchange and refresh their tokens, and introspect them. |
+| `COURTLISTENER_OAUTH_ISSUER` | no | The CourtListener instance to sign in through; defaults to `https://www.courtlistener.com`. |
+| `COURTLISTENER_OAUTH_SCOPES` | no | Space-separated scopes requested from CourtListener on the user's behalf; defaults to `openid api wiki email`. |
+| `COURTLISTENER_OAUTH_RESOURCES` | no | Space-separated RFC 8707 resource indicators the CourtListener tokens are requested for; defaults to the CourtListener API root and `https://wiki.free.law`. |
 | `COURTLISTENER_API_BASE_URL` | no | Override for the upstream CourtListener API (useful when pointing at a staging instance). |
-| `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
+| `MCP_TOKEN_CACHE_TTL` | no | How long a verified credential (introspection result or API token check) is cached, in seconds; defaults to `600`. Never longer than the token's own lifetime. |
 | `PROMETHEUS_MULTIPROC_DIR` | no | Directory for per-worker Prometheus metric files, merged by `/metrics`. The Docker entrypoint sets it; needed whenever more than one worker process serves the app. |
 
 Source code: [github.com/freelawproject/courtlistener-api-client](https://github.com/freelawproject/courtlistener-api-client)
