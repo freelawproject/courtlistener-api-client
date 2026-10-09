@@ -67,7 +67,7 @@ for docket in results:
 
 # Or navigate pages manually
 results = client.dockets.list(court="scotus")
-print(results.get_results())   # current page results
+print(results.get_results())  # current page results
 
 if results.has_next():
     results.next()
