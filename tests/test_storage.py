@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import asyncpg
 import pytest
+from key_value.aio.errors import StoreSetupError
 from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.stores.postgresql import PostgreSQLStore
 from key_value.aio.stores.redis import RedisStore
@@ -59,10 +60,19 @@ class TestBuildClientStorage:
         assert isinstance(_build().key_value, MemoryStore)
 
 
+def _setup_error(cause):
+    """The wrapped error the library raises when a store's setup fails."""
+    error = StoreSetupError(message=str(cause), extra_info={})
+    error.__cause__ = cause
+    return error
+
+
 def _creating_store(*errors):
     """A stand-in ``PostgreSQLStore`` whose setup fails *errors* times first."""
     store = MagicMock()
-    store.__aenter__ = AsyncMock(side_effect=[*errors, store])
+    store.__aenter__ = AsyncMock(
+        side_effect=[*map(_setup_error, errors), store]
+    )
     store.__aexit__ = AsyncMock(return_value=False)
     return store
 
@@ -96,15 +106,29 @@ class TestInitSchema:
         with (
             patch.object(storage_mod, "PostgreSQLStore", return_value=store),
             patch.object(storage_mod.asyncio, "sleep", new=AsyncMock()),
-            pytest.raises(asyncpg.exceptions.DuplicateTableError),
+            pytest.raises(StoreSetupError),
         ):
             await storage_mod.postgres_init_schema(attempts=2)
 
-    async def test_other_errors_are_not_retried(self):
-        store = _creating_store(OSError("refused"))
+    async def test_retries_while_postgres_is_unreachable(self):
+        store = _creating_store(
+            OSError("refused"),
+            asyncpg.exceptions.CannotConnectNowError("starting up"),
+        )
         with (
             patch.object(storage_mod, "PostgreSQLStore", return_value=store),
-            pytest.raises(OSError),
+            patch.object(storage_mod.asyncio, "sleep", new=AsyncMock()),
+        ):
+            await storage_mod.postgres_init_schema()
+        assert store.__aenter__.await_count == 3
+
+    async def test_other_errors_are_not_retried(self):
+        store = _creating_store(
+            asyncpg.exceptions.InsufficientPrivilegeError("denied")
+        )
+        with (
+            patch.object(storage_mod, "PostgreSQLStore", return_value=store),
+            pytest.raises(StoreSetupError),
         ):
             await storage_mod.postgres_init_schema()
         store.__aenter__.assert_awaited_once()

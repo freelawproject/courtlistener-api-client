@@ -5,6 +5,7 @@ from typing import Any
 
 import asyncpg
 from cryptography.fernet import Fernet
+from key_value.aio.errors import StoreSetupError
 from key_value.aio.protocols import AsyncKeyValue
 from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.stores.postgresql import PostgreSQLStore
@@ -30,6 +31,13 @@ SCHEMA_RACE_ERRORS = (
     asyncpg.exceptions.DuplicateTableError,
     asyncpg.exceptions.DuplicateObjectError,
 )
+TRANSIENT_ERRORS = (
+    OSError,
+    TimeoutError,
+    asyncpg.exceptions.PostgresConnectionError,
+    asyncpg.exceptions.CannotConnectNowError,
+)
+RETRYABLE_ERRORS = SCHEMA_RACE_ERRORS + TRANSIENT_ERRORS
 
 
 def postgres_connect(**kwargs: Any) -> Any:
@@ -56,16 +64,19 @@ def postgres_store(*, auto_create: bool) -> PostgreSQLStore:
     )
 
 
-async def postgres_init_schema(attempts: int = 5) -> None:
-    """Have the store create its own table; concurrent runs retry past each other."""
+async def postgres_init_schema(attempts: int = 10) -> None:
+    """Have the store create its own table, retrying past concurrent runs and
+    a Postgres that is still coming up."""
     for attempt in range(1, attempts + 1):
         try:
             async with postgres_store(auto_create=True):
                 return
-        except SCHEMA_RACE_ERRORS as exc:
-            if attempt == attempts:
+        except StoreSetupError as exc:
+            if attempt == attempts or not isinstance(
+                exc.__cause__, RETRYABLE_ERRORS
+            ):
                 raise
-            logger.info("schema creation raced (%s); retrying", exc)
+            logger.info("schema creation failed (%r); retrying", exc.__cause__)
             await asyncio.sleep(0.5 * attempt)
 
 
@@ -125,8 +136,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Maintain the OAuth store.")
     parser.add_argument("command", choices=["init"])
     parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(postgres_init_schema())
-    print("OAuth store schema ready")
+    logger.info("OAuth store schema ready")
 
 
 if __name__ == "__main__":
