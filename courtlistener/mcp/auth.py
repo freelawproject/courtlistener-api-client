@@ -58,6 +58,11 @@ async def verify_oauth_token(token: str) -> TokenInfo | None:
     except httpx.HTTPError as exc:
         logger.warning("introspection call failed: %s", exc)
         return None
+    if resp.status_code in (401, 403):
+        logger.error(
+            "CourtListener rejected the introspection client credentials"
+        )
+        return None
     if resp.status_code != 200:
         logger.warning("introspection returned HTTP %s", resp.status_code)
         return None
@@ -145,7 +150,11 @@ class CourtListenerTokenVerifier(TokenVerifier):
             token=token,
             client_id="courtlistener-mcp",
             # API tokens lack OAuth scopes; echo the required set.
-            scopes=info.get("scopes") or list(self.required_scopes),
+            scopes=(
+                info["scopes"]
+                if "scopes" in info
+                else list(self.required_scopes)
+            ),
             expires_at=info.get("expires_at"),
             claims={
                 "user_hash": info["user_hash"],

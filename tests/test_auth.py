@@ -254,11 +254,30 @@ class TestVerifyOauthToken:
 
     @pytest.mark.parametrize("status", [401, 403, 500, 503])
     def test_non_200_fails_closed(self, status):
-        """401/403 here mean *our* credentials are wrong, not the
-        user's; that is an outage, not a login failure."""
         client_patch, _ = patch_http(http_response(status, ACTIVE))
         with client_patch:
             assert run(verify_oauth_token("tok")) is None
+
+    @pytest.mark.parametrize("status", [401, 403])
+    def test_rejected_client_credentials_log_an_error(self, status, caplog):
+        """401/403 here mean *our* credentials are wrong, not the
+        user's: every OAuth login is failing, so it must reach Sentry."""
+        client_patch, _ = patch_http(http_response(status, ACTIVE))
+        with client_patch, caplog.at_level("ERROR", "courtlistener.mcp.auth"):
+            run(verify_oauth_token("tok"))
+        assert any(r.levelname == "ERROR" for r in caplog.records)
+
+    def test_an_empty_scope_stays_empty(self):
+        """``scope: ""`` must not read as "no scopes recorded"; the
+        verifier only falls back to its required scopes for API tokens,
+        which carry no ``scopes`` key at all."""
+        client_patch, _ = patch_http(
+            http_response(200, {**ACTIVE, "scope": ""})
+        )
+        with client_patch:
+            info = run(verify_oauth_token("tok"))
+        assert info is not None
+        assert info["scopes"] == []
 
     def test_network_error_returns_none(self):
         client_patch, _ = patch_http(side_effect=httpx.ConnectError("boom"))
@@ -647,6 +666,29 @@ class TestServerAuthWiring:
         assert token is not None
         assert token.scopes == ["openid", "api", "wiki"]
         assert token.expires_at == 1_900_000_000
+
+    def test_verifier_does_not_grant_scopes_an_oauth_token_lacks(self):
+        """An OAuth token introspected with no scope keeps none, so the
+        middleware's ``api`` check rejects it; only a ``TokenInfo`` with
+        no ``scopes`` key (an API token) gets the required set."""
+        verifier = CourtListenerTokenVerifier(
+            base_url="https://mcp.example.test"
+        )
+        with patch(
+            "courtlistener.mcp.auth.resolve_token",
+            new=AsyncMock(
+                return_value={
+                    "user_hash": "fake-user-hash",
+                    "scopes": [],
+                    "expires_at": None,
+                    "kind": TokenKind.OAUTH,
+                    "cached": False,
+                }
+            ),
+        ):
+            token = run(verifier.verify_token("tok"))
+        assert token is not None
+        assert token.scopes == []
 
     def test_verifier_asks_for_an_oauth_credential(self):
         """Bearer is the only scheme the SDK lets through today, so the
