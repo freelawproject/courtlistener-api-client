@@ -141,12 +141,15 @@ class Session:
         return json.loads(raw)
 
     async def store_token_info(
-        self, token: str, kind: TokenKind, info: TokenInfo
+        self,
+        token: str,
+        kind: TokenKind,
+        info: TokenInfo,
+        ttl_seconds: int = TOKEN_CACHE_TTL_SECONDS,
     ) -> None:
+        """Cache the verification of *token* for *ttl_seconds*."""
         await self._set(
-            token_info_key(token, kind),
-            json.dumps(info),
-            TOKEN_CACHE_TTL_SECONDS,
+            token_info_key(token, kind), json.dumps(info), ttl_seconds
         )
 
     async def invalidate_token(self, token: str, kind: TokenKind) -> None:

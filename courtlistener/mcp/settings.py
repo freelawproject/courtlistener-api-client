@@ -52,9 +52,9 @@ OAUTH_ISSUER = os.getenv(
     "COURTLISTENER_OAUTH_ISSUER", "https://www.courtlistener.com"
 )
 
-OAUTH_USERINFO_URL = os.getenv(
-    "COURTLISTENER_OAUTH_USERINFO_URL",
-    f"{OAUTH_ISSUER.rstrip('/')}/o/userinfo/",
+OAUTH_INTROSPECTION_URL = os.getenv(
+    "COURTLISTENER_OAUTH_INTROSPECTION_URL",
+    f"{OAUTH_ISSUER.rstrip('/')}/o/introspect/",
 )
 
 # This server's own (confidential) OAuth application at CourtListener.
