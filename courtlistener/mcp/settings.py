@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import logging
 import os
 from pathlib import Path
@@ -9,18 +11,41 @@ BASE_DIR = Path(__file__).parents[1]
 # Redis connection URL. In-memory storage is used when unset.
 REDIS_URL = os.getenv("REDIS_URL")
 
-# Postgres for the OAuth token store, as libpq-style component variables.
-PGHOST = os.getenv("PGHOST")
+# Postgres for the OAuth token store.
+POSTGRES_CONFIGURED = bool(os.getenv("PGHOST"))
+PGHOST = os.getenv("PGHOST") or "localhost"
 PGPORT = int(os.getenv("PGPORT") or 5432)
 PGUSER = os.getenv("PGUSER")
 PGPASSWORD = os.getenv("PGPASSWORD")
-PGDATABASE = os.getenv("PGDATABASE")
+PGDATABASE = os.getenv("PGDATABASE") or "postgres"
 
 # Deployed git SHA, reported by /health.
 GIT_SHA = os.getenv("GIT_SHA", "unknown")
 
 # Public base URL of this MCP server (the OAuth resource identifier).
 MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
+
+# HMAC key for hashing tokens and user identifiers into storage keys.
+MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
+if not MCP_SECRET_KEY:
+    MCP_SECRET_KEY = "insecure-do-not-use-in-production"
+    logger.warning(
+        "MCP_SECRET_KEY is not set; falling back to an insecure default. "
+        "Set a strong random value before going to production."
+    )
+MCP_SECRET_BYTES = MCP_SECRET_KEY.encode("utf-8")
+
+# Fernet key encrypting the OAuth store's values.
+MCP_STORAGE_ENCRYPTION_KEY = os.getenv(
+    "MCP_STORAGE_ENCRYPTION_KEY", ""
+).encode()
+if not MCP_STORAGE_ENCRYPTION_KEY:
+    logger.warning(
+        "MCP_STORAGE_ENCRYPTION_KEY is not set; deriving it from MCP_SECRET_KEY."
+    )
+    MCP_STORAGE_ENCRYPTION_KEY = base64.urlsafe_b64encode(
+        hashlib.sha256(MCP_SECRET_BYTES + b":storage").digest()
+    )
 
 # OAuth authorization server.
 OAUTH_ISSUER = os.getenv(
@@ -35,16 +60,6 @@ OAUTH_USERINFO_URL = os.getenv(
 # This server's own (confidential) OAuth application at CourtListener.
 OAUTH_CLIENT_ID = os.getenv("COURTLISTENER_OAUTH_CLIENT_ID")
 OAUTH_CLIENT_SECRET = os.getenv("COURTLISTENER_OAUTH_CLIENT_SECRET")
-
-# HMAC key for hashing tokens and user identifiers into storage keys.
-MCP_SECRET_KEY = os.getenv("MCP_SECRET_KEY")
-if not MCP_SECRET_KEY:
-    MCP_SECRET_KEY = "insecure-do-not-use-in-production"
-    logger.warning(
-        "MCP_SECRET_KEY is not set; falling back to an insecure default. "
-        "Set a strong random value before going to production."
-    )
-MCP_SECRET_BYTES = MCP_SECRET_KEY.encode("utf-8")
 
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None
