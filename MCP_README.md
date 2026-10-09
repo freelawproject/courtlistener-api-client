@@ -251,7 +251,7 @@ cd courtlistener-api-client
 docker compose up
 ```
 
-This launches the MCP server on `http://localhost:8080` with Redis and Postgres. When `PGHOST` is set, the container entrypoint runs `python -m courtlistener.mcp.storage init` before the server starts, which has the key-value library create the OAuth store's `kv_store` table if it is missing (pods starting at the same time retry past each other). The web workers never create schema, and `/health` probes the store and reports the result as `config.oauth_store`, without affecting `status`. Environment variables:
+This launches the MCP server on `http://localhost:8080` with Redis and Postgres. When `PGHOST` is set, the container entrypoint runs `python -m courtlistener.mcp.storage init` before the server starts, which has the key-value library create the OAuth store's `kv_store` table if it is missing, retrying while Postgres is still coming up and when pods starting at the same time collide. If it still fails, the server starts anyway and `/health` shows it. The web workers never create schema, and `/health` probes the store and reports the result as `config.oauth_store`, without affecting `status`. Environment variables:
 
 | Variable | Required? | Description |
 | --- | --- | --- |
