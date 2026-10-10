@@ -259,6 +259,7 @@ This launches the MCP server on `http://localhost:8080` with Redis and Postgres.
 | `MCP_SECRET_KEY` | yes (HTTP mode) | Strong random string used as the HMAC key for namespacing user state. |
 | `MCP_BASE_URL` | yes (HTTP mode) | Public URL of your MCP deployment (e.g. `https://mcp.example.com`). |
 | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` | yes (HTTP mode) | Postgres for the OAuth token store, as libpq-style component variables read natively by asyncpg, so passwords need no URL encoding. The Compose stack wires them to its own `postgres` service. |
+| `PGPOOL_MAX` | no | Postgres connections each worker process may hold open to the OAuth store; defaults to `4`. |
 | `MCP_STORAGE_ENCRYPTION_KEY` | yes (HTTP mode) | Fernet key (32 url-safe base64 bytes) that encrypts stored OAuth tokens. Derived from `MCP_SECRET_KEY` when unset, for development only. |
 | `MCP_JWT_SIGNING_KEY` | yes (HTTP mode) | Key that signs the access tokens the MCP server issues to clients. |
 | `COURTLISTENER_OAUTH_CLIENT_ID`, `COURTLISTENER_OAUTH_CLIENT_SECRET` | yes (HTTP mode) | Credentials of the MCP server's own confidential OAuth application at CourtListener. Its redirect URI must be `<MCP_BASE_URL>/auth/callback`. `/health` reports whether both are set under `config.oauth_client`. |
