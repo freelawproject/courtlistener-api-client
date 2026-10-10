@@ -67,8 +67,8 @@ class CourtListenerOAuthProxy(OAuthProxy):
     async def register_client(
         self, client_info: OAuthClientInformationFull
     ) -> None:
-        oauth_registrations_total.labels(source="dcr").inc()
         await super().register_client(client_info)
+        oauth_registrations_total.labels(source="dcr").inc()
 
     async def get_client(
         self, client_id: str
@@ -80,7 +80,6 @@ class CourtListenerOAuthProxy(OAuthProxy):
             return client
         if not LEGACY_CLIENT_ID.fullmatch(client_id):
             return None
-        oauth_registrations_total.labels(source="legacy").inc()
         await super().register_client(
             OAuthClientInformationFull(
                 client_id=client_id,
@@ -89,6 +88,7 @@ class CourtListenerOAuthProxy(OAuthProxy):
                 token_endpoint_auth_method="none",
             )
         )
+        oauth_registrations_total.labels(source="legacy").inc()
         return await super().get_client(client_id)
 
 
