@@ -803,6 +803,30 @@ class TestCourtListenerAuthBackend:
         backend, _ = self._backend(api=None)
         assert run(backend.authenticate(self._conn("Token nope"))) is None
 
+    def test_rejections_are_counted_by_scheme(self):
+        from courtlistener.mcp.metrics import auth_rejections_total
+
+        bearer = auth_rejections_total.labels(scheme="bearer")
+        token = auth_rejections_total.labels(scheme="token")
+        before = bearer._value.get(), token._value.get()
+        backend, _ = self._backend(oauth=None, api=None)
+        run(backend.authenticate(self._conn("Bearer stale")))
+        run(backend.authenticate(self._conn("Token nope")))
+        run(backend.authenticate(self._conn("Basic abc")))
+        assert (bearer._value.get(), token._value.get()) == (
+            before[0] + 1,
+            before[1] + 1,
+        )
+
+    def test_accepted_credentials_are_not_counted(self):
+        from courtlistener.mcp.metrics import auth_rejections_total
+
+        bearer = auth_rejections_total.labels(scheme="bearer")
+        before = bearer._value.get()
+        backend, _ = self._backend(oauth=self._accepted())
+        run(backend.authenticate(self._conn("Bearer fine")))
+        assert bearer._value.get() == before
+
     def test_expired_api_token_is_rejected(self):
         expired = self._accepted()
         expired.expires_at = 1

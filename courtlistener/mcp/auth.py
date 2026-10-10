@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -13,12 +14,18 @@ from mcp.server.auth.middleware.bearer_auth import (
     BearerAuthBackend,
 )
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
+from mcp.shared.auth import OAuthClientInformationFull
+from pydantic import AnyUrl
 from starlette.authentication import AuthCredentials
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
 
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
+from courtlistener.mcp.metrics import (
+    auth_rejections_total,
+    oauth_registrations_total,
+)
 from courtlistener.mcp.session import get_session, hmac_hex
 from courtlistener.mcp.settings import (
     OAUTH_CLIENT_ID,
@@ -30,6 +37,10 @@ from courtlistener.mcp.settings import (
 from courtlistener.settings import get_api_base_url
 
 logger = logging.getLogger(__name__)
+
+# The shape of a client id CourtListener issued when it was the authorization
+# server. Clients still holding one are recognised on first use.
+LEGACY_CLIENT_ID = re.compile(r"[A-Za-z0-9]{40}")
 
 
 class CourtListenerOAuthProxy(OAuthProxy):
@@ -52,6 +63,33 @@ class CourtListenerOAuthProxy(OAuthProxy):
             ),
             Middleware(AuthContextMiddleware),
         ]
+
+    async def register_client(
+        self, client_info: OAuthClientInformationFull
+    ) -> None:
+        oauth_registrations_total.labels(source="dcr").inc()
+        await super().register_client(client_info)
+
+    async def get_client(
+        self, client_id: str
+    ) -> OAuthClientInformationFull | None:
+        """Registered clients, plus clients registered with CourtListener
+        before this server became the authorization server, which are
+        registered here the first time they show up."""
+        if (client := await super().get_client(client_id)) is not None:
+            return client
+        if not LEGACY_CLIENT_ID.fullmatch(client_id):
+            return None
+        oauth_registrations_total.labels(source="legacy").inc()
+        await super().register_client(
+            OAuthClientInformationFull(
+                client_id=client_id,
+                redirect_uris=[AnyUrl("http://localhost")],
+                grant_types=["authorization_code", "refresh_token"],
+                token_endpoint_auth_method="none",
+            )
+        )
+        return await super().get_client(client_id)
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):
@@ -80,16 +118,23 @@ class CourtListenerAuthBackend(BearerAuthBackend):
         scheme, _, credential = auth_header.partition(" ")
         kind = TokenKind.from_scheme(scheme)
         if kind is TokenKind.OAUTH:
-            return await super().authenticate(conn)
+            result = await super().authenticate(conn)
+            if result is None:
+                auth_rejections_total.labels(scheme=kind.scheme).inc()
+            return result
         if kind is not TokenKind.API or not (credential := credential.strip()):
             return None
 
         auth_info = await self.api_verifier.verify_token(credential)
-        if not auth_info:
-            return None
-        if auth_info.expires_at and auth_info.expires_at < int(time.time()):
-            return None
-        return AuthCredentials(auth_info.scopes), AuthenticatedUser(auth_info)
+        if auth_info and (
+            not auth_info.expires_at
+            or auth_info.expires_at >= int(time.time())
+        ):
+            return AuthCredentials(auth_info.scopes), AuthenticatedUser(
+                auth_info
+            )
+        auth_rejections_total.labels(scheme=kind.scheme).inc()
+        return None
 
 
 class CachedTokenVerifier(TokenVerifier):
