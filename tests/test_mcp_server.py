@@ -13,6 +13,7 @@ import httpx
 import pytest
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from key_value.aio.stores.memory import MemoryStore
 
 import courtlistener.mcp.server as server_mod
 import courtlistener.mcp.storage as storage_mod
@@ -115,8 +116,11 @@ class TestHttpApp:
     def app(self):
         with (
             patch.object(server_mod, "REDIS_URL", "redis://unused"),
+            patch.object(server_mod, "OAUTH_CLIENT_ID", "mcp-client"),
+            patch.object(server_mod, "OAUTH_CLIENT_SECRET", "mcp-secret"),
+            patch.object(server_mod, "get_oauth_store", MemoryStore),
             patch(
-                "courtlistener.mcp.auth.verify_api_token",
+                "courtlistener.mcp.auth.ApiTokenVerifier.check",
                 new=AsyncMock(return_value={"user_hash": "h"}),
             ),
         ):

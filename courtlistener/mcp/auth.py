@@ -1,24 +1,24 @@
+from __future__ import annotations
+
 import logging
 import time
-from typing import NoReturn
+from typing import Any
 
 import httpx
-from fastmcp.server.auth.auth import (
-    AccessToken,
-    RemoteAuthProvider,
-    TokenVerifier,
-)
+from fastmcp.server.auth.auth import AccessToken, TokenVerifier
+from fastmcp.server.auth.oauth_proxy import OAuthProxy
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
 from mcp.server.auth.middleware.bearer_auth import (
     AuthenticatedUser,
     BearerAuthBackend,
 )
+from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
 from starlette.authentication import AuthCredentials
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
 
-from courtlistener.mcp.auth_types import ResolvedToken, TokenInfo, TokenKind
+from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.session import get_session, hmac_hex
 from courtlistener.mcp.settings import (
     OAUTH_CLIENT_ID,
@@ -32,142 +32,38 @@ from courtlistener.settings import get_api_base_url
 logger = logging.getLogger(__name__)
 
 
-def _assert_unhandled_token_kind(value: NoReturn) -> NoReturn:
-    """Exhaustiveness guard for mypy."""
-    raise AssertionError(f"unhandled token kind: {value!r}")
+class CourtListenerOAuthProxy(OAuthProxy):
+    """Authorization server for MCP clients that brokers CourtListener
+    logins and also accepts CourtListener API tokens."""
 
-
-async def verify_oauth_token(token: str) -> TokenInfo | None:
-    """Return token info if CourtListener reports *token* as an active
-    access token issued to a user."""
-    if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
-        logger.error(
-            "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
-            "are required to introspect tokens"
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(
+            token_verifier=OAuthTokenVerifier(),
+            forward_resource=False,
+            require_authorization_consent="external",
+            **kwargs,
         )
-        return None
-    try:
-        async with httpx.AsyncClient(
-            timeout=VERIFICATION_TIMEOUT_SECONDS
-        ) as http:
-            resp = await http.post(
-                OAUTH_INTROSPECTION_URL,
-                data={"token": token, "token_type_hint": "access_token"},
-                auth=(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET),
-            )
-    except httpx.HTTPError as exc:
-        logger.warning("introspection call failed: %s", exc)
-        return None
-    if resp.status_code in (401, 403):
-        logger.error(
-            "CourtListener rejected the introspection client credentials"
-        )
-        return None
-    if resp.status_code != 200:
-        logger.warning("introspection returned HTTP %s", resp.status_code)
-        return None
-    data = resp.json()
-    if not data.get("active"):
-        return None
-    sub = data.get("sub")
-    if not sub:
-        logger.warning("introspection response has no `sub`")
-        return None
-    exp = data.get("exp")
-    return TokenInfo(
-        user_hash=hmac_hex(str(sub)),
-        scopes=str(data.get("scope") or "").split(),
-        expires_at=int(exp) if exp else None,
-    )
 
-
-async def verify_api_token(token: str) -> TokenInfo | None:
-    """Return token info if *token* is a valid CL API token."""
-    try:
-        async with httpx.AsyncClient(
-            timeout=VERIFICATION_TIMEOUT_SECONDS
-        ) as http:
-            resp = await http.get(
-                f"{get_api_base_url()}/",
-                headers={"Authorization": f"Token {token}"},
-            )
-    except httpx.HTTPError as exc:
-        logger.warning("api-token validation call failed: %s", exc)
-        return None
-    if 200 <= resp.status_code < 300:
-        return TokenInfo(user_hash=hmac_hex(token))
-    return None
-
-
-def cache_ttl(info: TokenInfo) -> int:
-    """How long to cache *info*: the configured TTL, cut at the token's expiry."""
-    expires_at = info.get("expires_at")
-    if expires_at is None:
-        return TOKEN_CACHE_TTL_SECONDS
-    return max(1, min(TOKEN_CACHE_TTL_SECONDS, expires_at - int(time.time())))
-
-
-async def resolve_token(
-    token: str, *, kind: TokenKind
-) -> ResolvedToken | None:
-    """Verify *token* as a credential of *kind*, or return ``None``."""
-    session = get_session()
-    cached = await session.get_token_info(token, kind)
-    if cached:
-        return ResolvedToken(**cached, kind=kind, cached=True)
-
-    if kind == TokenKind.OAUTH:
-        info = await verify_oauth_token(token)
-    elif kind == TokenKind.API:
-        info = await verify_api_token(token)
-    else:
-        _assert_unhandled_token_kind(kind)
-    if info is None:
-        return None
-
-    logger.info("verified %s credential", kind)
-    await session.store_token_info(token, kind, info, cache_ttl(info))
-    return ResolvedToken(**info, kind=kind, cached=False)
-
-
-class CourtListenerTokenVerifier(TokenVerifier):
-    """Verify CourtListener credentials: OAuth tokens by introspection,
-    API tokens by a call to the API."""
-
-    def __init__(self, *, base_url: str) -> None:
-        super().__init__(base_url=base_url, required_scopes=["api"])
-
-    async def verify_token(
-        self, token: str, kind: TokenKind = TokenKind.OAUTH
-    ) -> AccessToken | None:
-        """Verify *token* as a credential of *kind*."""
-        if not token:
-            return None
-        info = await resolve_token(token, kind=kind)
-        if info is None:
-            return None
-        return AccessToken(
-            token=token,
-            client_id="courtlistener-mcp",
-            # API tokens lack OAuth scopes; echo the required set.
-            scopes=(
-                info["scopes"]
-                if "scopes" in info
-                else list(self.required_scopes)
+    def get_middleware(self) -> list:
+        return [
+            Middleware(
+                AuthenticationMiddleware,
+                backend=CourtListenerAuthBackend(self, ApiTokenVerifier()),
             ),
-            expires_at=info.get("expires_at"),
-            claims={
-                "user_hash": info["user_hash"],
-                "token_kind": info["kind"],
-                "cached": info["cached"],
-            },
-        )
+            Middleware(AuthContextMiddleware),
+        ]
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):
-    """Authenticate CL ``Token`` credentials as well as ``Bearer`` ones."""
+    """``Bearer`` is an MCP-issued token, checked by the proxy; ``Token``
+    is a CourtListener API token, checked by *api_verifier*. The scheme
+    is binding."""
 
-    token_verifier: CourtListenerTokenVerifier
+    def __init__(
+        self, proxy: TokenVerifierProtocol, api_verifier: ApiTokenVerifier
+    ) -> None:
+        super().__init__(proxy)
+        self.api_verifier = api_verifier
 
     async def authenticate(self, conn: HTTPConnection):
         auth_header = next(
@@ -183,14 +79,12 @@ class CourtListenerAuthBackend(BearerAuthBackend):
 
         scheme, _, credential = auth_header.partition(" ")
         kind = TokenKind.from_scheme(scheme)
-        # Bearer stays byte-exact via the parent; only Token strips.
-        credential = credential.strip()
-        if kind is None or not credential:
-            return None
         if kind is TokenKind.OAUTH:
             return await super().authenticate(conn)
+        if kind is not TokenKind.API or not (credential := credential.strip()):
+            return None
 
-        auth_info = await self.token_verifier.verify_token(credential, kind)
+        auth_info = await self.api_verifier.verify_token(credential)
         if not auth_info:
             return None
         if auth_info.expires_at and auth_info.expires_at < int(time.time()):
@@ -198,17 +92,126 @@ class CourtListenerAuthBackend(BearerAuthBackend):
         return AuthCredentials(auth_info.scopes), AuthenticatedUser(auth_info)
 
 
-class CourtListenerAuthProvider(RemoteAuthProvider):
-    """``RemoteAuthProvider`` whose HTTP layer accepts both schemes."""
+class CachedTokenVerifier(TokenVerifier):
+    """Verify one kind of CourtListener credential, caching the result in
+    the session store for the token's lifetime or ``TOKEN_CACHE_TTL``."""
 
-    token_verifier: CourtListenerTokenVerifier
+    kind: TokenKind
 
-    def get_middleware(self) -> list:
-        # AuthProvider.get_middleware (fastmcp==3.4.0), backend swapped.
-        return [
-            Middleware(
-                AuthenticationMiddleware,
-                backend=CourtListenerAuthBackend(self.token_verifier),
+    def __init__(self) -> None:
+        super().__init__(required_scopes=["api"])
+
+    async def check(self, token: str) -> TokenInfo | None:
+        """Ask CourtListener about *token*; ``None`` when it is not valid."""
+        raise NotImplementedError
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        if not token:
+            return None
+        session = get_session()
+        info = await session.get_token_info(token, self.kind)
+        cached = info is not None
+        if info is None:
+            info = await self.check(token)
+            if info is None:
+                return None
+            logger.info("verified %s credential", self.kind)
+            await session.store_token_info(
+                token, self.kind, info, cache_ttl(info)
+            )
+        return AccessToken(
+            token=token,
+            client_id="courtlistener-mcp",
+            # API tokens have no scopes of their own; echo the required set.
+            scopes=(
+                info["scopes"]
+                if "scopes" in info
+                else list(self.required_scopes)
             ),
-            Middleware(AuthContextMiddleware),
-        ]
+            expires_at=info.get("expires_at"),
+            claims={
+                "user_hash": info["user_hash"],
+                "token_kind": self.kind,
+                "cached": cached,
+            },
+        )
+
+
+class OAuthTokenVerifier(CachedTokenVerifier):
+    """A CourtListener OAuth access token, checked by introspection. The
+    proxy calls this on the token it holds behind each MCP-issued one."""
+
+    kind = TokenKind.OAUTH
+
+    async def check(self, token: str) -> TokenInfo | None:
+        """Introspect *token* at CourtListener with the server's client credentials."""
+        if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
+            logger.error(
+                "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
+                "are required to introspect tokens"
+            )
+            return None
+        try:
+            async with httpx.AsyncClient(
+                timeout=VERIFICATION_TIMEOUT_SECONDS
+            ) as http:
+                resp = await http.post(
+                    OAUTH_INTROSPECTION_URL,
+                    data={"token": token, "token_type_hint": "access_token"},
+                    auth=(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET),
+                )
+        except httpx.HTTPError as exc:
+            logger.warning("introspection call failed: %s", exc)
+            return None
+        if resp.status_code in (401, 403):
+            logger.error(
+                "CourtListener rejected the introspection client credentials"
+            )
+            return None
+        if resp.status_code != 200:
+            logger.warning("introspection returned HTTP %s", resp.status_code)
+            return None
+        data = resp.json()
+        if not data.get("active"):
+            return None
+        sub = data.get("sub")
+        if not sub:
+            logger.warning("introspection response has no `sub`")
+            return None
+        exp = data.get("exp")
+        return TokenInfo(
+            user_hash=hmac_hex(str(sub)),
+            scopes=str(data.get("scope") or "").split(),
+            expires_at=int(exp) if exp else None,
+        )
+
+
+class ApiTokenVerifier(CachedTokenVerifier):
+    """A CourtListener API token, checked against the API root."""
+
+    kind = TokenKind.API
+
+    async def check(self, token: str) -> TokenInfo | None:
+        """Try *token* against the CourtListener API root."""
+        try:
+            async with httpx.AsyncClient(
+                timeout=VERIFICATION_TIMEOUT_SECONDS
+            ) as http:
+                resp = await http.get(
+                    f"{get_api_base_url()}/",
+                    headers={"Authorization": f"Token {token}"},
+                )
+        except httpx.HTTPError as exc:
+            logger.warning("api-token validation call failed: %s", exc)
+            return None
+        if 200 <= resp.status_code < 300:
+            return TokenInfo(user_hash=hmac_hex(token))
+        return None
+
+
+def cache_ttl(info: TokenInfo) -> int:
+    """How long to cache *info*: the configured TTL, cut at the token's expiry."""
+    expires_at = info.get("expires_at")
+    if expires_at is None:
+        return TOKEN_CACHE_TTL_SECONDS
+    return max(1, min(TOKEN_CACHE_TTL_SECONDS, expires_at - int(time.time())))
