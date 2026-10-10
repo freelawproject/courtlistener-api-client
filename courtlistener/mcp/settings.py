@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parents[1]
 
+GIT_SHA = os.getenv("GIT_SHA", "unknown")
+
 # Redis connection URL. In-memory storage is used when unset.
 REDIS_URL = os.getenv("REDIS_URL")
 
@@ -18,9 +20,6 @@ PGPORT = int(os.getenv("PGPORT") or 5432)
 PGUSER = os.getenv("PGUSER")
 PGPASSWORD = os.getenv("PGPASSWORD")
 PGDATABASE = os.getenv("PGDATABASE") or "postgres"
-
-# Deployed git SHA, reported by /health.
-GIT_SHA = os.getenv("GIT_SHA", "unknown")
 
 # Public base URL of this MCP server (the OAuth resource identifier).
 MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
@@ -47,19 +46,31 @@ if not MCP_STORAGE_ENCRYPTION_KEY:
         hashlib.sha256(MCP_SECRET_BYTES + b":storage").digest()
     )
 
-# OAuth authorization server.
+# Key signing the access tokens this server issues to MCP clients.
+MCP_JWT_SIGNING_KEY: str | bytes = os.getenv("MCP_JWT_SIGNING_KEY", "")
+if not MCP_JWT_SIGNING_KEY:
+    logger.warning(
+        "MCP_JWT_SIGNING_KEY is not set; deriving it from MCP_SECRET_KEY."
+    )
+    MCP_JWT_SIGNING_KEY = hashlib.sha256(MCP_SECRET_BYTES + b":jwt").digest()
+
+# CourtListener, the identity provider this server brokers logins for.
 OAUTH_ISSUER = os.getenv(
     "COURTLISTENER_OAUTH_ISSUER", "https://www.courtlistener.com"
-)
-
+).rstrip("/")
+OAUTH_AUTHORIZATION_URL = f"{OAUTH_ISSUER}/o/authorize/"
+OAUTH_TOKEN_URL = f"{OAUTH_ISSUER}/o/token/"
+OAUTH_REVOCATION_URL = f"{OAUTH_ISSUER}/o/revoke_token/"
 OAUTH_INTROSPECTION_URL = os.getenv(
-    "COURTLISTENER_OAUTH_INTROSPECTION_URL",
-    f"{OAUTH_ISSUER.rstrip('/')}/o/introspect/",
+    "COURTLISTENER_OAUTH_INTROSPECTION_URL", f"{OAUTH_ISSUER}/o/introspect/"
 )
 
-# This server's own (confidential) OAuth application at CourtListener.
+# This server's own confidential OAuth application at CourtListener.
 OAUTH_CLIENT_ID = os.getenv("COURTLISTENER_OAUTH_CLIENT_ID")
 OAUTH_CLIENT_SECRET = os.getenv("COURTLISTENER_OAUTH_CLIENT_SECRET")
+OAUTH_SCOPES = os.getenv(
+    "COURTLISTENER_OAUTH_SCOPES", "openid api wiki email profile"
+).split()
 
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None

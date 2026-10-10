@@ -5,7 +5,6 @@ import contextlib
 from fastmcp import FastMCP
 from fastmcp.server.auth import AuthProvider
 from mcp.types import Icon
-from pydantic import AnyHttpUrl
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import (
@@ -14,12 +13,8 @@ from starlette.responses import (
     PlainTextResponse,
     Response,
 )
-from starlette.routing import Route
 
-from courtlistener.mcp.auth import (
-    CourtListenerAuthProvider,
-    CourtListenerTokenVerifier,
-)
+from courtlistener.mcp.auth import CourtListenerOAuthProxy
 from courtlistener.mcp.metrics import render_metrics
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.session import RedisSession, get_session
@@ -27,14 +22,22 @@ from courtlistener.mcp.settings import (
     BASE_DIR,
     GIT_SHA,
     MCP_BASE_URL,
+    MCP_JWT_SIGNING_KEY,
+    OAUTH_AUTHORIZATION_URL,
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
-    OAUTH_ISSUER,
+    OAUTH_REVOCATION_URL,
+    OAUTH_SCOPES,
+    OAUTH_TOKEN_URL,
     OPENAI_APPS_CHALLENGE_TOKEN,
     POSTGRES_CONFIGURED,
     REDIS_URL,
 )
-from courtlistener.mcp.storage import oauth_store_ready, postgres_connect
+from courtlistener.mcp.storage import (
+    get_oauth_store,
+    oauth_store_ready,
+    postgres_connect,
+)
 from courtlistener.mcp.tools import MCP_TOOLS
 
 
@@ -160,36 +163,30 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
     return mcp
 
 
-async def protected_resource_metadata(request):
-    # Hand-rolled override of FastMCP/MCP SDK's auto-generated
-    # /.well-known/oauth-protected-resource. The SDK types
-    # `authorization_servers` as `list[AnyHttpUrl]`, and Pydantic normalizes
-    # naked-host URLs by appending `/`, producing
-    # `https://www.courtlistener.com/`. DOT's authorization-server metadata
-    # advertises `issuer` as `https://www.courtlistener.com` (no slash). RFC
-    # 8414 §3 requires byte-identical match, and strict clients (e.g.
-    # Anthropic's MCP directory connector) abort the OAuth flow on mismatch.
-    return JSONResponse(
-        {
-            "resource": f"{MCP_BASE_URL.rstrip('/')}/",
-            "authorization_servers": [OAUTH_ISSUER.rstrip("/")],
-            "scopes_supported": ["openid", "api"],
-            "bearer_methods_supported": ["header"],
-        },
-        headers={"Cache-Control": "public, max-age=3600"},
+def create_auth_provider() -> CourtListenerOAuthProxy:
+    """The OAuth authorization server fronting CourtListener for MCP clients."""
+    if not (OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET):
+        raise ValueError(
+            "COURTLISTENER_OAUTH_CLIENT_ID and COURTLISTENER_OAUTH_CLIENT_SECRET "
+            "are required for HTTP mode"
+        )
+    return CourtListenerOAuthProxy(
+        upstream_authorization_endpoint=OAUTH_AUTHORIZATION_URL,
+        upstream_token_endpoint=OAUTH_TOKEN_URL,
+        upstream_revocation_endpoint=OAUTH_REVOCATION_URL,
+        upstream_client_id=OAUTH_CLIENT_ID,
+        upstream_client_secret=OAUTH_CLIENT_SECRET,
+        valid_scopes=OAUTH_SCOPES,
+        base_url=MCP_BASE_URL,
+        client_storage=get_oauth_store(),
+        jwt_signing_key=MCP_JWT_SIGNING_KEY,
     )
 
 
 def create_http_app():
     if REDIS_URL is None:
         raise ValueError("REDIS_URL is required for HTTP mode")
-    mcp = create_mcp_server(
-        auth=CourtListenerAuthProvider(
-            token_verifier=CourtListenerTokenVerifier(base_url=MCP_BASE_URL),
-            authorization_servers=[AnyHttpUrl(OAUTH_ISSUER)],
-            base_url=MCP_BASE_URL,
-        ),
-    )
+    mcp = create_mcp_server(auth=create_auth_provider())
     middleware = [
         Middleware(
             CORSMiddleware,
@@ -204,20 +201,7 @@ def create_http_app():
             expose_headers=["mcp-session-id"],
         )
     ]
-    app = mcp.http_app(path="/", stateless_http=True, middleware=middleware)
-    # FastMCP appends `@custom_route` handlers *after* the auth provider's
-    # routes, so we can't intercept the well-known path via `custom_route`.
-    # Prepend directly to the Starlette router (first-match-wins) so our
-    # corrected metadata is served instead of the SDK's default.
-    app.router.routes.insert(
-        0,
-        Route(
-            "/.well-known/oauth-protected-resource",
-            endpoint=protected_resource_metadata,
-            methods=["GET", "OPTIONS"],
-        ),
-    )
-    return app
+    return mcp.http_app(path="/", stateless_http=True, middleware=middleware)
 
 
 def main():

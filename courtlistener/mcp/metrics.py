@@ -44,6 +44,20 @@ Labels:
     outcome: one of OUTCOMES
 """
 
+oauth_registrations_total = Counter(
+    "mcp_oauth_registrations_total",
+    "OAuth clients registered with the MCP server, by source: dcr for a "
+    "registration request, legacy for a CourtListener-issued client id "
+    "recognised on first use",
+    ["source"],
+)
+
+auth_rejections_total = Counter(
+    "mcp_auth_rejections_total",
+    "Requests whose credential the MCP server rejected, by scheme",
+    ["scheme"],
+)
+
 OUTCOMES = (
     "ok",
     "validation_error",

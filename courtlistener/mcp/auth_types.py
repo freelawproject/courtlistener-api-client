@@ -37,10 +37,3 @@ class TokenInfo(TypedDict):
     user_hash: str
     scopes: NotRequired[list[str]]
     expires_at: NotRequired[int | None]
-
-
-class ResolvedToken(TokenInfo):
-    """A stored ``TokenInfo`` plus per-request resolution metadata."""
-
-    kind: TokenKind
-    cached: bool
