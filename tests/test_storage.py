@@ -77,11 +77,29 @@ def _creating_store(*errors):
     return store
 
 
+class TestPostgresStorePool:
+    async def test_each_worker_holds_a_small_pool(self):
+        """asyncpg's default pool is ten connections per process; with
+        four workers per pod that exhausted the database at cutover."""
+        create_pool = AsyncMock(return_value="pool")
+        with (
+            patch.object(storage_mod.asyncpg, "create_pool", new=create_pool),
+            patch.object(storage_mod, "PGPOOL_MAX", 3),
+        ):
+            pool = await storage_mod.postgres_store(
+                auto_create=False
+            )._create_pool()
+        assert pool == "pool"
+        kwargs = create_pool.await_args.kwargs
+        assert (kwargs["min_size"], kwargs["max_size"]) == (1, 3)
+        assert kwargs["host"] == storage_mod.PGHOST
+
+
 class TestInitSchema:
     async def test_lets_the_store_create_its_own_table(self):
         store = _creating_store()
         with patch.object(
-            storage_mod, "PostgreSQLStore", return_value=store
+            storage_mod, "PostgresStore", return_value=store
         ) as cls:
             await storage_mod.postgres_init_schema()
         assert cls.call_args.kwargs["auto_create"] is True
@@ -94,7 +112,7 @@ class TestInitSchema:
             )
         )
         with (
-            patch.object(storage_mod, "PostgreSQLStore", return_value=store),
+            patch.object(storage_mod, "PostgresStore", return_value=store),
             patch.object(storage_mod.asyncio, "sleep", new=AsyncMock()),
         ):
             await storage_mod.postgres_init_schema()
@@ -104,7 +122,7 @@ class TestInitSchema:
         errors = [asyncpg.exceptions.DuplicateTableError("kv_store")] * 2
         store = _creating_store(*errors)
         with (
-            patch.object(storage_mod, "PostgreSQLStore", return_value=store),
+            patch.object(storage_mod, "PostgresStore", return_value=store),
             patch.object(storage_mod.asyncio, "sleep", new=AsyncMock()),
             pytest.raises(StoreSetupError),
         ):
@@ -116,7 +134,7 @@ class TestInitSchema:
             asyncpg.exceptions.CannotConnectNowError("starting up"),
         )
         with (
-            patch.object(storage_mod, "PostgreSQLStore", return_value=store),
+            patch.object(storage_mod, "PostgresStore", return_value=store),
             patch.object(storage_mod.asyncio, "sleep", new=AsyncMock()),
         ):
             await storage_mod.postgres_init_schema()
@@ -127,7 +145,7 @@ class TestInitSchema:
             asyncpg.exceptions.InsufficientPrivilegeError("denied")
         )
         with (
-            patch.object(storage_mod, "PostgreSQLStore", return_value=store),
+            patch.object(storage_mod, "PostgresStore", return_value=store),
             pytest.raises(StoreSetupError),
         ):
             await storage_mod.postgres_init_schema()

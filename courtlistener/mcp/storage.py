@@ -18,6 +18,7 @@ from courtlistener.mcp.settings import (
     PGDATABASE,
     PGHOST,
     PGPASSWORD,
+    PGPOOL_MAX,
     PGPORT,
     PGUSER,
     POSTGRES_CONFIGURED,
@@ -52,9 +53,25 @@ def postgres_connect(**kwargs: Any) -> Any:
     )
 
 
-def postgres_store(*, auto_create: bool) -> PostgreSQLStore:
+class PostgresStore(PostgreSQLStore):
+    """``PostgreSQLStore`` with a small connection pool; the library's
+    default holds ten connections per worker process."""
+
+    async def _create_pool(self) -> Any:
+        return await asyncpg.create_pool(
+            host=PGHOST,
+            port=PGPORT,
+            database=PGDATABASE,
+            user=PGUSER,
+            password=PGPASSWORD,
+            min_size=1,
+            max_size=PGPOOL_MAX,
+        )
+
+
+def postgres_store(*, auto_create: bool) -> PostgresStore:
     """The Postgres tier of the OAuth store."""
-    return PostgreSQLStore(
+    return PostgresStore(
         host=PGHOST,
         port=PGPORT,
         database=PGDATABASE,

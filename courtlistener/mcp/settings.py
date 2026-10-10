@@ -20,6 +20,7 @@ PGPORT = int(os.getenv("PGPORT") or 5432)
 PGUSER = os.getenv("PGUSER")
 PGPASSWORD = os.getenv("PGPASSWORD")
 PGDATABASE = os.getenv("PGDATABASE") or "postgres"
+PGPOOL_MAX = int(os.getenv("PGPOOL_MAX") or 4)
 
 # Public base URL of this MCP server (the OAuth resource identifier).
 MCP_BASE_URL = os.getenv("MCP_BASE_URL", "https://mcp.courtlistener.com")
