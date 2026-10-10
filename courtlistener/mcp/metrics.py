@@ -54,8 +54,10 @@ oauth_registrations_total = Counter(
 
 auth_rejections_total = Counter(
     "mcp_auth_rejections_total",
-    "Requests whose credential the MCP server rejected, by scheme",
-    ["scheme"],
+    "Requests whose credential the MCP server rejected, by scheme and by "
+    "issuer: mcp for this server's own tokens, courtlistener for tokens "
+    "CourtListener issued",
+    ["scheme", "issuer"],
 )
 
 OUTCOMES = (
