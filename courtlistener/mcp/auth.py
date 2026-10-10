@@ -120,7 +120,9 @@ class CourtListenerAuthBackend(BearerAuthBackend):
         if kind is TokenKind.OAUTH:
             result = await super().authenticate(conn)
             if result is None:
-                auth_rejections_total.labels(scheme=kind.scheme).inc()
+                auth_rejections_total.labels(
+                    scheme=kind.scheme, issuer=token_issuer(credential)
+                ).inc()
             return result
         if kind is not TokenKind.API or not (credential := credential.strip()):
             return None
@@ -133,8 +135,15 @@ class CourtListenerAuthBackend(BearerAuthBackend):
             return AuthCredentials(auth_info.scopes), AuthenticatedUser(
                 auth_info
             )
-        auth_rejections_total.labels(scheme=kind.scheme).inc()
+        auth_rejections_total.labels(
+            scheme=kind.scheme, issuer="courtlistener"
+        ).inc()
         return None
+
+
+def token_issuer(credential: str) -> str:
+    """``mcp`` for a token shaped like this server's JWTs, else ``courtlistener``."""
+    return "mcp" if credential.strip().count(".") == 2 else "courtlistener"
 
 
 class CachedTokenVerifier(TokenVerifier):

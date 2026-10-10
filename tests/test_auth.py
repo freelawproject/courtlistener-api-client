@@ -803,29 +803,43 @@ class TestCourtListenerAuthBackend:
         backend, _ = self._backend(api=None)
         assert run(backend.authenticate(self._conn("Token nope"))) is None
 
-    def test_rejections_are_counted_by_scheme(self):
+    def test_rejections_are_counted_by_scheme_and_issuer(self):
+        """A rejected MCP-issued token (JWT-shaped) and a rejected
+        CourtListener token (opaque) must land in different series, or a
+        broken MCP token path would hide inside the legacy-token noise."""
         from courtlistener.mcp.metrics import auth_rejections_total
 
-        bearer = auth_rejections_total.labels(scheme="bearer")
-        token = auth_rejections_total.labels(scheme="token")
-        before = bearer._value.get(), token._value.get()
+        mcp = auth_rejections_total.labels(scheme="bearer", issuer="mcp")
+        legacy = auth_rejections_total.labels(
+            scheme="bearer", issuer="courtlistener"
+        )
+        api = auth_rejections_total.labels(
+            scheme="token", issuer="courtlistener"
+        )
+        before = mcp._value.get(), legacy._value.get(), api._value.get()
         backend, _ = self._backend(oauth=None, api=None)
-        run(backend.authenticate(self._conn("Bearer stale")))
+        run(backend.authenticate(self._conn("Bearer aaa.bbb.ccc")))
+        run(
+            backend.authenticate(
+                self._conn("Bearer kzzpskQh6zphyXclrRWtUnvpjGVjxwjUOJtMGPU0")
+            )
+        )
         run(backend.authenticate(self._conn("Token nope")))
         run(backend.authenticate(self._conn("Basic abc")))
-        assert (bearer._value.get(), token._value.get()) == (
+        assert (mcp._value.get(), legacy._value.get(), api._value.get()) == (
             before[0] + 1,
             before[1] + 1,
+            before[2] + 1,
         )
 
     def test_accepted_credentials_are_not_counted(self):
         from courtlistener.mcp.metrics import auth_rejections_total
 
-        bearer = auth_rejections_total.labels(scheme="bearer")
-        before = bearer._value.get()
+        mcp = auth_rejections_total.labels(scheme="bearer", issuer="mcp")
+        before = mcp._value.get()
         backend, _ = self._backend(oauth=self._accepted())
-        run(backend.authenticate(self._conn("Bearer fine")))
-        assert bearer._value.get() == before
+        run(backend.authenticate(self._conn("Bearer a.b.c")))
+        assert mcp._value.get() == before
 
     def test_expired_api_token_is_rejected(self):
         expired = self._accepted()
