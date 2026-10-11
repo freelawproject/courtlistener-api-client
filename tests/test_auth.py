@@ -902,6 +902,32 @@ class TestCourtListenerOAuthProxy:
             "/revoke",
         } <= paths
 
+    def test_accepts_a_courtlistener_token_the_proxy_did_not_issue(self):
+        """Clients that registered with CourtListener before the cutover
+        keep working on their CourtListener tokens until CourtListener
+        stops issuing them; the proxy verifies those by introspection."""
+        proxy = _auth_provider()
+        with patch(
+            "courtlistener.mcp.auth.OAuthTokenVerifier.check",
+            new=AsyncMock(return_value={"user_hash": "uh", "scopes": ["api"]}),
+        ):
+            access = run(proxy.load_access_token("kzzpskQh6z" * 3))
+        assert access is not None
+        assert access.token == "kzzpskQh6z" * 3
+        assert access.claims["user_hash"] == "uh"
+        assert access.scopes == ["api"]
+
+    def test_does_not_introspect_a_token_shaped_like_its_own(self):
+        """A JWT-shaped bearer that fails the signature or lookup is
+        simply invalid; it is never sent to CourtListener."""
+        proxy = _auth_provider()
+        check = AsyncMock(return_value={"user_hash": "uh"})
+        with patch(
+            "courtlistener.mcp.auth.OAuthTokenVerifier.check", new=check
+        ):
+            assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
+        check.assert_not_awaited()
+
 
 def _auth_provider():
     """The proxy create_http_app attaches, built for tests."""
