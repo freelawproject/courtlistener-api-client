@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
@@ -48,12 +48,22 @@ class CourtListenerOAuthProxy(OAuthProxy):
     logins and also accepts CourtListener API tokens."""
 
     def __init__(self, **kwargs: Any) -> None:
+        self.courtlistener_verifier = OAuthTokenVerifier()
         super().__init__(
-            token_verifier=OAuthTokenVerifier(),
+            token_verifier=self.courtlistener_verifier,
             forward_resource=False,
             require_authorization_consent="external",
             **kwargs,
         )
+
+    async def load_access_token(self, token: str) -> AccessToken | None:
+        """Tokens this server issued, plus, until CourtListener stops issuing
+        to clients directly, CourtListener tokens presented as bearers."""
+        if (access := await super().load_access_token(token)) is not None:
+            return cast(AccessToken, access)
+        if token_issuer(token) == "mcp":
+            return None
+        return await self.courtlistener_verifier.verify_token(token)
 
     def get_middleware(self) -> list:
         return [
