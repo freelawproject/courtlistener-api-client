@@ -82,8 +82,11 @@ class CourtListenerOAuthProxy(OAuthProxy):
             )
         except (ValueError, IndexError) as exc:
             return f"undecodable ({exc.__class__.__name__})"
+        client = await self.get_client(claims.get("client_id") or "")
         who = (
-            f"client={claims.get('client_id')} use={claims.get('token_use', 'access')}"
+            f"client={claims.get('client_id')}"
+            f" name={getattr(client, 'client_name', None)!r}"
+            f" use={claims.get('token_use', 'access')}"
             f" iss={claims.get('iss')} aud={claims.get('aud')}"
         )
         exp = claims.get("exp")
