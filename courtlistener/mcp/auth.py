@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import re
 import time
@@ -16,6 +18,7 @@ from mcp.server.auth.middleware.bearer_auth import (
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
+from sentry_sdk import logger as sentry_logger
 from starlette.authentication import AuthCredentials
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -62,8 +65,40 @@ class CourtListenerOAuthProxy(OAuthProxy):
         if (access := await super().load_access_token(token)) is not None:
             return cast(AccessToken, access)
         if token_issuer(token) == "mcp":
+            reason = await self.diagnose(token)
+            logger.warning("rejected mcp token: %s", reason)
+            sentry_logger.warning(
+                "rejected mcp token: {reason}", reason=reason
+            )
             return None
         return await self.courtlistener_verifier.verify_token(token)
+
+    async def diagnose(self, token: str) -> str:
+        """Why a token shaped like one of ours was rejected."""
+        try:
+            payload = token.split(".")[1]
+            claims = json.loads(
+                base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
+            )
+        except (ValueError, IndexError) as exc:
+            return f"undecodable ({exc.__class__.__name__})"
+        who = (
+            f"client={claims.get('client_id')} use={claims.get('token_use', 'access')}"
+            f" iss={claims.get('iss')} aud={claims.get('aud')}"
+        )
+        exp = claims.get("exp")
+        try:
+            self.jwt_issuer.verify_token(token)
+        except Exception as exc:
+            if isinstance(exp, (int, float)) and exp < time.time():
+                return f"expired {int(time.time() - exp)}s ago; {who}"
+            return f"verification failed ({exc}); {who}"
+        if (
+            await self._jti_mapping_store.get(key=claims.get("jti", ""))
+            is None
+        ):
+            return f"jti mapping missing; {who}"
+        return f"upstream token missing or rejected; {who}"
 
     def get_middleware(self) -> list:
         return [

@@ -942,6 +942,34 @@ class TestCourtListenerOAuthProxy:
         check.assert_not_awaited()
 
 
+class TestRejectionDiagnosis:
+    def test_names_the_reason_a_token_of_ours_was_rejected(self):
+        proxy = _auth_provider()
+        proxy.get_routes(mcp_path="/")
+        expired = proxy.jwt_issuer.issue_access_token(
+            client_id="c1", scopes=["api"], jti="j1", expires_in=-10
+        )
+        unmapped = proxy.jwt_issuer.issue_access_token(
+            client_id="c2", scopes=["api"], jti="j2"
+        )
+        assert run(proxy.diagnose(expired)).startswith("expired 1")
+        assert "client=c1" in run(proxy.diagnose(expired))
+        assert run(proxy.diagnose(unmapped)).startswith(
+            "jti mapping missing; client=c2"
+        )
+        assert run(proxy.diagnose("not.a.jwt")).startswith("undecodable")
+
+    def test_logs_the_diagnosis_when_rejecting(self, caplog):
+        proxy = _auth_provider()
+        proxy.get_routes(mcp_path="/")
+        expired = proxy.jwt_issuer.issue_access_token(
+            client_id="c1", scopes=["api"], jti="j1", expires_in=-10
+        )
+        with caplog.at_level("WARNING", logger="courtlistener.mcp.auth"):
+            assert run(proxy.load_access_token(expired)) is None
+        assert "rejected mcp token: expired" in caplog.text
+
+
 def _auth_provider():
     """The proxy create_http_app attaches, built for tests."""
     from courtlistener.mcp.settings import MCP_BASE_URL
