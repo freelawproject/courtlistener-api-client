@@ -368,16 +368,29 @@ class TestVerifyApiToken:
             run(ApiTokenVerifier().check("cl-api-token"))
         assert http.get.await_args.args[0] == f"{staging}/"
 
-    def test_a_throttle_is_not_a_successful_authentication(self):
-        """Tempting to accept: DRF authenticates before it throttles, so
-        a 429 *from Django* would prove the token is good. But CloudFront
-        rate-limits in front of Django and those 429s never reach it —
-        see #216, where the origin logged zero 429s while clients were
-        getting them. Accepting 429 would let an edge blip verify any
-        string at all, and the verifier would cache that for the
-        token TTL, long outliving the blip.
-        """
-        client_patch, _ = patch_http(http_response(429))
+    def test_a_django_throttle_is_a_successful_authentication(self):
+        """DRF authenticates before it throttles, so its 429 proves the
+        token; the quota error then surfaces on the tool call."""
+        throttled = {
+            "detail": "Request was throttled. Rate limit exceeded: 5000/hour."
+        }
+        client_patch, _ = patch_http(http_response(429, throttled))
+        with client_patch:
+            info = run(ApiTokenVerifier().check("cl-api-token"))
+        assert info == {"user_hash": hmac_hex("cl-api-token")}
+
+    @pytest.mark.parametrize(
+        "payload", [None, "Too Many Requests", {"message": "rate limited"}]
+    )
+    def test_an_edge_throttle_is_not_a_successful_authentication(
+        self, payload
+    ):
+        """CloudFront 429s never reach Django (#216), so they must not
+        verify anything."""
+        resp = http_response(429, payload)
+        if payload is None:
+            resp.json.side_effect = ValueError("not json")
+        client_patch, _ = patch_http(resp)
         with client_patch:
             assert run(ApiTokenVerifier().check("cl-api-token")) is None
 

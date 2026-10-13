@@ -268,9 +268,23 @@ class ApiTokenVerifier(CachedTokenVerifier):
         except httpx.HTTPError as exc:
             logger.warning("api-token validation call failed: %s", exc)
             return None
-        if 200 <= resp.status_code < 300:
+        if 200 <= resp.status_code < 300 or throttled_by_django(resp):
             return TokenInfo(user_hash=hmac_hex(token))
         return None
+
+
+def throttled_by_django(resp: httpx.Response) -> bool:
+    """A 429 carrying DRF's throttle body, which Django only sends after
+    authenticating the token; an edge 429 says nothing about the token."""
+    if resp.status_code != 429:
+        return False
+    try:
+        body = resp.json()
+    except ValueError:
+        return False
+    return isinstance(body, dict) and "throttled" in str(
+        body.get("detail", "")
+    )
 
 
 def cache_ttl(info: TokenInfo) -> int:
