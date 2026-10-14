@@ -16,6 +16,7 @@ Features:
 - Accept a CourtListener API token as an MCP credential alongside OAuth, so clients that can't run an interactive OAuth flow (server-to-server backends, scripts) can connect. Send it as `Authorization: Token <api_token>`, the same scheme CourtListener's REST API uses. The scheme selects the credential type and is binding: `Bearer` is verified against OIDC userinfo only and `Token` against the CourtListener API.
 
 Changes:
+- A repeated request for the OAuth callback from CourtListener, such as a reload or a second request racing the first, now gets the first request's redirect to the client instead of an error page. The redirect is kept in the OAuth store for the five minutes the client's code is valid, keyed by a hash of the callback's code and state.
 - A CourtListener API token whose user is over their API quota now verifies, since Django REST Framework authenticates before it throttles; the quota error reaches the client through the tool call instead of as `invalid_token`. A 429 without DRF's throttle body still fails verification.
 - The MCP server accepts CourtListener-issued bearer tokens again, verified by introspection, alongside the tokens it issues itself. Clients that registered with CourtListener before it became the authorization server keep working until CourtListener stops issuing to them, instead of failing until their user notices and reconnects.
 - Fix the OAuth store exhausting Postgres connections: each worker process now opens at most `PGPOOL_MAX` connections (default 4) instead of asyncpg's default pool of ten.
