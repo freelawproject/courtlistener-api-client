@@ -10,7 +10,6 @@ from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.stores.postgresql import PostgreSQLStore
 from key_value.aio.stores.redis import RedisStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
-from key_value.aio.wrappers.passthrough_cache import PassthroughCacheWrapper
 
 import courtlistener.mcp.storage as storage_mod
 
@@ -27,7 +26,7 @@ class TestBuildClientStorage:
     def test_values_are_always_encrypted(self):
         assert isinstance(_build(), FernetEncryptionWrapper)
 
-    def test_postgres_is_primary_and_redis_the_cache(self):
+    def test_postgres_holds_the_state_even_with_redis_configured(self):
         store = _build(
             POSTGRES_CONFIGURED=True,
             PGHOST="db.example.test",
@@ -37,11 +36,8 @@ class TestBuildClientStorage:
             PGPASSWORD="pa%41ss",
             REDIS_URL="redis://cache.example.test",
         )
-        inner = store.key_value
-        assert isinstance(inner, PassthroughCacheWrapper)
-        primary = inner.primary_key_value
+        primary = store.key_value
         assert isinstance(primary, PostgreSQLStore)
-        assert isinstance(inner.unwrapped_cache_key_value, RedisStore)
         assert primary._host == "db.example.test"
         assert primary._port == 5433
         assert primary._database == "mcp"
