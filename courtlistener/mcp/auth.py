@@ -133,7 +133,9 @@ class CourtListenerOAuthProxy(OAuthProxy):
                     ttl=DEFAULT_AUTH_CODE_EXPIRY_SECONDS,
                 )
             except Exception as exc:
-                logger.warning("failed to remember a finished callback: %s", exc)
+                logger.warning(
+                    "failed to remember a finished callback: %s", exc
+                )
             return response
         if pending is None:
             return response
