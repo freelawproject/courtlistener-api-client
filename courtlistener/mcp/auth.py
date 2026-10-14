@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
 import re
 import time
@@ -8,6 +10,9 @@ from typing import Any, cast
 import httpx
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
+from fastmcp.server.auth.oauth_proxy.models import (
+    DEFAULT_AUTH_CODE_EXPIRY_SECONDS,
+)
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
 from mcp.server.auth.middleware.bearer_auth import (
     AuthenticatedUser,
@@ -19,7 +24,8 @@ from pydantic import AnyUrl
 from starlette.authentication import AuthCredentials
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.requests import HTTPConnection
+from starlette.requests import HTTPConnection, Request
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.metrics import (
@@ -41,6 +47,9 @@ logger = logging.getLogger(__name__)
 # The shape of a client id CourtListener issued when it was the authorization
 # server. Clients still holding one are recognised on first use.
 LEGACY_CLIENT_ID = re.compile(r"[A-Za-z0-9]{40}")
+
+CALLBACK_COLLECTION = "mcp-finished-callbacks"
+CALLBACK_WAIT_SECONDS = 10
 
 
 class CourtListenerOAuthProxy(OAuthProxy):
@@ -100,6 +109,63 @@ class CourtListenerOAuthProxy(OAuthProxy):
         )
         oauth_registrations_total.labels(source="legacy").inc()
         return await super().get_client(client_id)
+
+    async def _handle_idp_callback(
+        self, request: Request
+    ) -> HTMLResponse | RedirectResponse:
+        """FastMCP's callback, answering a repeat of a callback, such as a
+        reload or a second request racing the first, with the first one's
+        redirect."""
+        if (key := callback_key(request)) is None:
+            return await super()._handle_idp_callback(request)
+        if url := await self._finished_callback(key):
+            return RedirectResponse(url, status_code=302)
+        pending = await self._transaction_store.get(
+            key=request.query_params["state"]
+        )
+        response = await super()._handle_idp_callback(request)
+        if isinstance(response, RedirectResponse):
+            try:
+                await self._client_storage.put(
+                    key,
+                    {"url": response.headers["location"]},
+                    collection=CALLBACK_COLLECTION,
+                    ttl=DEFAULT_AUTH_CODE_EXPIRY_SECONDS,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "failed to remember a finished callback: %s", exc
+                )
+            return response
+        if pending is None:
+            return response
+        deadline = time.monotonic() + CALLBACK_WAIT_SECONDS
+        while time.monotonic() < deadline:
+            await asyncio.sleep(0.25)
+            if url := await self._finished_callback(key):
+                return RedirectResponse(url, status_code=302)
+        return response
+
+    async def _finished_callback(self, key: str) -> str | None:
+        """Where an earlier request for the same callback redirected to."""
+        try:
+            stored = await self._client_storage.get(
+                key, collection=CALLBACK_COLLECTION
+            )
+        except Exception as exc:
+            logger.warning("failed to look up a finished callback: %s", exc)
+            return None
+        return stored["url"] if stored else None
+
+
+def callback_key(request: Request) -> str | None:
+    """A storage key for one callback from CourtListener, or None for a
+    callback carrying no code."""
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
+    if not code or not state:
+        return None
+    return hashlib.sha256(f"{state}:{code}".encode()).hexdigest()
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):

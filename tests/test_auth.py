@@ -7,6 +7,7 @@ the cached verifiers, and the server's auth wiring.
 from __future__ import annotations
 
 import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -14,9 +15,11 @@ import pytest
 from fastmcp.server.auth.auth import AccessToken
 from key_value.aio.stores.memory import MemoryStore
 from redis.exceptions import ConnectionError as RedisConnectionError
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import (
+    CALLBACK_COLLECTION,
     ApiTokenVerifier,
     CourtListenerAuthBackend,
     CourtListenerOAuthProxy,
@@ -940,6 +943,149 @@ class TestCourtListenerOAuthProxy:
         ):
             assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
         check.assert_not_awaited()
+
+
+class TestRepeatedCallback:
+    """A second request for the same CourtListener callback, from a reload
+    or a request racing the first, gets the first request's redirect
+    instead of an error."""
+
+    @staticmethod
+    def _callback(query: bytes = b"code=cl-code&state=txn"):
+        from starlette.requests import Request
+
+        return Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/auth/callback",
+                "query_string": query,
+                "headers": [],
+            }
+        )
+
+    @staticmethod
+    def _upstream(*responses, delay: float = 0):
+        """Stands in for FastMCP's callback, answering in turn."""
+        answers = iter(responses)
+
+        async def handle(self, request):
+            answer = next(answers)
+            if answer == "slow":
+                await asyncio.sleep(delay)
+                return RedirectResponse("https://client.test/cb?code=c1", 302)
+            return answer
+
+        return patch(
+            "fastmcp.server.auth.oauth_proxy.OAuthProxy._handle_idp_callback",
+            new=handle,
+        )
+
+    @staticmethod
+    def _pending(proxy):
+        """Makes the callback's transaction exist, as it does until the
+        first request for it finishes."""
+        return patch.object(
+            proxy._transaction_store, "get", AsyncMock(return_value=object())
+        )
+
+    def test_a_reload_gets_the_first_redirect(self):
+        proxy = _auth_provider()
+        first = RedirectResponse("https://client.test/cb?code=c1", 302)
+        with self._upstream(first):
+            r1 = run(proxy._handle_idp_callback(self._callback()))
+            r2 = run(proxy._handle_idp_callback(self._callback()))
+        assert r1.headers["location"] == "https://client.test/cb?code=c1"
+        assert r2.headers["location"] == "https://client.test/cb?code=c1"
+
+    def test_a_racing_request_waits_for_the_first(self):
+        proxy = _auth_provider()
+        failure = HTMLResponse("token exchange failed", status_code=500)
+
+        async def both():
+            first = asyncio.create_task(
+                proxy._handle_idp_callback(self._callback())
+            )
+            await asyncio.sleep(0.05)
+            second = await proxy._handle_idp_callback(self._callback())
+            return await first, second
+
+        with self._pending(proxy), self._upstream("slow", failure, delay=0.5):
+            r1, r2 = run(both())
+        assert r1.headers["location"] == "https://client.test/cb?code=c1"
+        assert r2.status_code == 302
+        assert r2.headers["location"] == "https://client.test/cb?code=c1"
+
+    def test_a_failure_nobody_recovers_from_is_returned(self):
+        proxy = _auth_provider()
+        failure = HTMLResponse("token exchange failed", status_code=500)
+        with (
+            patch("courtlistener.mcp.auth.CALLBACK_WAIT_SECONDS", 0.3),
+            self._pending(proxy),
+            self._upstream(failure),
+        ):
+            r = run(proxy._handle_idp_callback(self._callback()))
+        assert r.status_code == 500
+
+    def test_a_callback_with_no_transaction_fails_without_waiting(self):
+        """A forged, expired or replayed-too-late callback isn't racing
+        anything, so its error comes back at once."""
+        proxy = _auth_provider()
+        failure = HTMLResponse("invalid transaction", status_code=400)
+        with self._upstream(failure):
+            started = time.monotonic()
+            r = run(proxy._handle_idp_callback(self._callback()))
+        assert r.status_code == 400
+        assert time.monotonic() - started < 1
+
+    def test_a_store_failure_never_fails_a_login(self):
+        first = RedirectResponse("https://client.test/cb?code=c1", 302)
+        for method in ("get", "put"):
+            proxy = _auth_provider()
+            original = getattr(proxy._client_storage, method)
+
+            async def broken(*args, original=original, **kwargs):
+                if kwargs.get("collection") == CALLBACK_COLLECTION:
+                    raise OSError("store down")
+                return await original(*args, **kwargs)
+
+            with (
+                patch.object(proxy._client_storage, method, broken),
+                self._upstream(first),
+            ):
+                r = run(proxy._handle_idp_callback(self._callback()))
+            assert r.status_code == 302, method
+            assert r.headers["location"] == "https://client.test/cb?code=c1"
+
+    def test_a_different_code_is_not_answered_from_another_callback(self):
+        proxy = _auth_provider()
+        first = RedirectResponse("https://client.test/cb?code=c1", 302)
+        failure = HTMLResponse("token exchange failed", status_code=500)
+        with (
+            patch("courtlistener.mcp.auth.CALLBACK_WAIT_SECONDS", 0.3),
+            self._pending(proxy),
+            self._upstream(first, failure),
+        ):
+            run(proxy._handle_idp_callback(self._callback()))
+            r = run(
+                proxy._handle_idp_callback(
+                    self._callback(b"code=other-code&state=txn")
+                )
+            )
+        assert r.status_code == 500
+
+    def test_a_refusal_is_returned_without_waiting(self):
+        proxy = _auth_provider()
+        refusal = HTMLResponse("access denied", status_code=400)
+        with self._upstream(refusal):
+            started = time.monotonic()
+            r = run(
+                proxy._handle_idp_callback(
+                    self._callback(b"error=access_denied&state=txn")
+                )
+            )
+        assert r.status_code == 400
+        assert time.monotonic() - started < 1
 
 
 def _auth_provider():
