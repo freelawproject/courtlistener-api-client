@@ -120,14 +120,22 @@ class CourtListenerOAuthProxy(OAuthProxy):
             return await super()._handle_idp_callback(request)
         if url := await self._finished_callback(key):
             return RedirectResponse(url, status_code=302)
+        pending = await self._transaction_store.get(
+            key=request.query_params["state"]
+        )
         response = await super()._handle_idp_callback(request)
         if isinstance(response, RedirectResponse):
-            await self._client_storage.put(
-                key,
-                {"url": response.headers["location"]},
-                collection=CALLBACK_COLLECTION,
-                ttl=DEFAULT_AUTH_CODE_EXPIRY_SECONDS,
-            )
+            try:
+                await self._client_storage.put(
+                    key,
+                    {"url": response.headers["location"]},
+                    collection=CALLBACK_COLLECTION,
+                    ttl=DEFAULT_AUTH_CODE_EXPIRY_SECONDS,
+                )
+            except Exception as exc:
+                logger.warning("failed to remember a finished callback: %s", exc)
+            return response
+        if pending is None:
             return response
         deadline = time.monotonic() + CALLBACK_WAIT_SECONDS
         while time.monotonic() < deadline:
@@ -138,9 +146,13 @@ class CourtListenerOAuthProxy(OAuthProxy):
 
     async def _finished_callback(self, key: str) -> str | None:
         """Where an earlier request for the same callback redirected to."""
-        stored = await self._client_storage.get(
-            key, collection=CALLBACK_COLLECTION
-        )
+        try:
+            stored = await self._client_storage.get(
+                key, collection=CALLBACK_COLLECTION
+            )
+        except Exception as exc:
+            logger.warning("failed to look up a finished callback: %s", exc)
+            return None
         return stored["url"] if stored else None
 
 
