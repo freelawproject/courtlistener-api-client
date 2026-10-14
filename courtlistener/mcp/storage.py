@@ -11,7 +11,6 @@ from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.stores.postgresql import PostgreSQLStore
 from key_value.aio.stores.redis import RedisStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
-from key_value.aio.wrappers.passthrough_cache import PassthroughCacheWrapper
 
 from courtlistener.mcp.settings import (
     MCP_STORAGE_ENCRYPTION_KEY,
@@ -98,12 +97,10 @@ async def postgres_init_schema(attempts: int = 10) -> None:
 
 
 def build_oauth_store() -> AsyncKeyValue:
-    """The OAuth server's state store: encrypted rows in Postgres, read through Redis."""
+    """The OAuth server's state store: encrypted rows in Postgres."""
     store: AsyncKeyValue
     if POSTGRES_CONFIGURED:
         store = postgres_store(auto_create=False)
-        if REDIS_URL:
-            store = PassthroughCacheWrapper(store, RedisStore(url=REDIS_URL))
     elif REDIS_URL:
         logger.warning(
             "PGHOST is not set; OAuth clients and tokens live only in Redis."
