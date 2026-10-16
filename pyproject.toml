@@ -44,7 +44,7 @@ dependencies = [
 mcp = [
     "asyncpg>=0.32.0",
     "eyecite>=2.6.0",
-    "fastmcp==3.4.0",
+    "fastmcp==4.0.11",
     "gunicorn>=25.3.0",
     "jsonschema>=4.0.0",
     "prometheus-client>=0.20.0",
