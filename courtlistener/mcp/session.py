@@ -122,15 +122,19 @@ class Session:
     async def store_citation_analysis(self, job_id: str, data: dict) -> None:
         await self._set_user_scoped(f"citation:{job_id}", data)
 
-    async def get_document(self, doc_type: str, doc_id: int) -> str | None:
-        return await self._get(f"mcp:doc:{doc_type}:{doc_id}")
+    async def get_document(
+        self, document_type: str, document_id: int
+    ) -> str | None:
+        return await self._get(f"mcp:doc:{document_type}:{document_id}")
 
     async def store_document(
-        self, doc_type: str, doc_id: int, text: str
+        self, document_type: str, document_id: int, text: str
     ) -> None:
         # Not user-scoped so that fetched documents are shared across users.
         await self._set(
-            f"mcp:doc:{doc_type}:{doc_id}", text, DOCUMENT_TTL_SECONDS
+            f"mcp:doc:{document_type}:{document_id}",
+            text,
+            DOCUMENT_TTL_SECONDS,
         )
 
     async def get_token_info(

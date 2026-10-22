@@ -135,19 +135,31 @@ class ReadDocumentTool(MCPTool):
 
         cluster_opinions: list[dict] = []
         async with self.get_client() as client:
+            ids: dict  # echoes the input parameter name(s)
             if cluster_id is not None:
                 cluster_opinions = await resolve_cluster_opinions(
                     cluster_id, client
                 )
-                doc_type, doc_id = "opinion", cluster_opinions[0]["id"]
+                document_type, document_id = (
+                    "opinion",
+                    cluster_opinions[0]["id"],
+                )
+                ids = {"cluster_id": cluster_id, "opinion_id": document_id}
             elif opinion_id is not None:
-                doc_type, doc_id = "opinion", opinion_id
+                document_type, document_id = "opinion", opinion_id
+                ids = {"opinion_id": document_id}
             else:
                 assert recap_document_id is not None  # for mypy
-                doc_type, doc_id = "recap_document", recap_document_id
+                document_type, document_id = (
+                    "recap_document",
+                    recap_document_id,
+                )
+                ids = {"recap_document_id": document_id}
 
             try:
-                text = await fetch_document_text(doc_type, doc_id, client)
+                text = await fetch_document_text(
+                    document_type, document_id, client
+                )
             except Exception as exc:
                 # In cluster mode the resolution already succeeded, so
                 # keep the other opinions usable instead of losing them
@@ -155,13 +167,12 @@ class ReadDocumentTool(MCPTool):
                 if cluster_id is None:
                     raise
                 return {
-                    "doc_type": doc_type,
-                    "doc_id": doc_id,
+                    **ids,
                     "error": str(exc),
                     "cluster_opinions": cluster_opinions,
                 }
 
-        result: dict = {"doc_type": doc_type, "doc_id": doc_id}
+        result: dict = dict(ids)
         if cluster_opinions:
             result["cluster_opinions"] = cluster_opinions
 
