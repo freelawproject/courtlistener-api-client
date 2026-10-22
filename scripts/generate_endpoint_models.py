@@ -175,6 +175,12 @@ SEARCH_FILTERS: dict[str, Any] = {
     "court": {
         "type": "MultipleChoiceStringFilter",
         "choices": COURT_CHOICES,
+        "description": (
+            "Court ID or space-separated list of IDs. State intermediate "
+            "appellate courts use a single statewide ID (`texapp`, "
+            "`fladistctapp`, `lactapp`, `calctapp`); never append "
+            "district numbers."
+        ),
         "search_types": ["o", "r", "rd", "d", "p", "oa"],
     },
     "q": {

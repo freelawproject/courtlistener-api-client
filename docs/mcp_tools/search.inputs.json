@@ -52,7 +52,7 @@
           "type": "null"
         }
       ],
-      "description": "Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']\n\nThis field has 470 valid choices. Examples: scotus (Supreme Court of the United States), ca1 (Court of Appeals for the First Circuit), ca2 (Court of Appeals for the Second Circuit), ca3 (Court of Appeals for the Third Circuit), ca4 (Court of Appeals for the Fourth Circuit), ...\n\nUse the `get_choices` tool with field_name=\"court\" to see all choices."
+      "description": "Court ID or space-separated list of IDs. State intermediate appellate courts use a single statewide ID (`texapp`, `fladistctapp`, `lactapp`, `calctapp`); never append district numbers.\n\nValid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']\n\nThis field has 470 valid choices. Examples: scotus (Supreme Court of the United States), ca1 (Court of Appeals for the First Circuit), ca2 (Court of Appeals for the Second Circuit), ca3 (Court of Appeals for the Third Circuit), ca4 (Court of Appeals for the Fourth Circuit), ...\n\nUse the `get_choices` tool with field_name=\"court\" to see all choices."
     },
     "q": {
       "anyOf": [

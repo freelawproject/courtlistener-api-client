@@ -48,6 +48,7 @@ class SearchEndpoint(Endpoint):
         None | str | list[str],
         Field(
             None,
+            description="Court ID or space-separated list of IDs. State intermediate appellate courts use a single statewide ID (`texapp`, `fladistctapp`, `lactapp`, `calctapp`); never append district numbers.",
             json_schema_extra={
                 "choices": [
                     {
