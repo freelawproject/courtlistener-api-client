@@ -39,10 +39,10 @@ class SearchDocumentTool(MCPTool):
     argument_aliases: ClassVar[dict[str, str]] = {"q": "query"}
     annotations: ToolAnnotations = ToolAnnotations(
         title="Search Document",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
     def get_input_schema(self) -> dict:

@@ -14,10 +14,10 @@ class SubscribeToDocketAlertTool(MCPTool):
     name: str = "subscribe_to_docket_alert"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Subscribe to Docket Alert",
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=True,
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=True,
     )
 
     def get_input_schema(self) -> dict:

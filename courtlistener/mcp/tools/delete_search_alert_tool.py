@@ -13,10 +13,10 @@ class DeleteSearchAlertTool(MCPTool):
     name: str = "delete_search_alert"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Delete Search Alert",
-        readOnlyHint=False,
-        destructiveHint=True,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=True,
+        open_world_hint=True,
     )
 
     def get_input_schema(self) -> dict:

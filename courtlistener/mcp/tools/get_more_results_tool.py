@@ -27,10 +27,10 @@ class GetMoreResultsTool(MCPTool):
     name: str = "get_more_results"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Get More Results",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=False,
     )
 
     def get_input_schema(self) -> dict:

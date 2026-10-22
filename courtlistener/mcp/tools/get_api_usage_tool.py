@@ -45,10 +45,10 @@ class GetApiUsageTool(MCPTool):
     name: str = "get_api_usage"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Get API Usage",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
     def get_input_schema(self) -> dict:

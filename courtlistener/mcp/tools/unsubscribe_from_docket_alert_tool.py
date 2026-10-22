@@ -16,10 +16,10 @@ class UnsubscribeFromDocketAlertTool(MCPTool):
     name: str = "unsubscribe_from_docket_alert"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Unsubscribe from Docket Alert",
-        readOnlyHint=False,
-        destructiveHint=True,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=True,
+        open_world_hint=True,
     )
 
     def get_input_schema(self) -> dict:
