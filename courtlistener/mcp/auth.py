@@ -3,13 +3,19 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Any, cast
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
+from functools import wraps
+from typing import Any, TypeVar, cast
 
+import anyio
 import httpx
+import httpx2
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 from fastmcp.server.auth.middleware import RequireAuthMiddleware
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
 from fastmcp.server.auth.oauth_proxy.models import ProxyDCRClient
+from fastmcp.server.auth.oauth_proxy.upstream import AsyncOAuth2Client
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
 from mcp.server.auth.middleware.bearer_auth import (
     AuthenticatedUser,
@@ -18,11 +24,13 @@ from mcp.server.auth.middleware.bearer_auth import (
 from mcp.server.auth.middleware.bearer_auth import (
     RequireAuthMiddleware as SDKRequireAuthMiddleware,
 )
+from mcp.server.auth.provider import RefreshToken
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
-from mcp.shared.auth import OAuthClientInformationFull
+from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyUrl
 from starlette.applications import Starlette
 from starlette.authentication import AuthCredentials
+from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
@@ -49,6 +57,12 @@ logger = logging.getLogger(__name__)
 # The shape of a client id CourtListener issued when it was the authorization
 # server. Clients still holding one are recognised on first use.
 LEGACY_CLIENT_ID = re.compile(r"[A-Za-z0-9]{40}")
+
+UPSTREAM_REFRESH_ATTEMPTS = 3
+UPSTREAM_REFRESH_BACKOFF_SECONDS = 1
+RETRY_AFTER_SECONDS = 5
+
+Refresh = TypeVar("Refresh", bound=Callable[..., Awaitable[dict[str, Any]]])
 
 
 class CourtListenerOAuthProxy(OAuthProxy):
@@ -87,6 +101,38 @@ class CourtListenerOAuthProxy(OAuthProxy):
     ) -> None:
         await super().register_client(client_info)
         oauth_registrations_total.labels(source="dcr").inc()
+
+    @asynccontextmanager
+    async def _upstream_oauth_client(
+        self,
+    ) -> AsyncIterator[AsyncOAuth2Client]:
+        """FastMCP's CourtListener client, retrying a refresh CourtListener
+        is briefly unable to serve."""
+        async with super()._upstream_oauth_client() as oauth_client:
+            oauth_client.refresh_token = retry_on_transient_error(  # type: ignore[method-assign]
+                oauth_client.refresh_token
+            )
+            yield oauth_client
+
+    async def exchange_refresh_token(
+        self,
+        client: OAuthClientInformationFull,
+        refresh_token: RefreshToken,
+        scopes: list[str],
+    ) -> OAuthToken:
+        """FastMCP's refresh, answering 503 when CourtListener was
+        unavailable so the client keeps its tokens and tries later."""
+        try:
+            return await super().exchange_refresh_token(
+                client, refresh_token, scopes
+            )
+        except httpx2.HTTPError as error:
+            if not is_transient(error):
+                raise
+            logger.error("Upstream token refresh unavailable: %s", error)
+            raise HTTPException(
+                503, headers={"Retry-After": str(RETRY_AFTER_SECONDS)}
+            ) from error
 
     def get_routes(self, mcp_path: str | None = None) -> list[Route]:
         """FastMCP 4 registers the OIDC discovery alias only through
@@ -135,6 +181,36 @@ class CourtListenerOAuthProxy(OAuthProxy):
             # client presents, as DCR would have let it register anyway.
             client.allow_unregistered_redirect_uris = True
         return client
+
+
+def is_transient(error: BaseException) -> bool:
+    """A 5xx or a failed connection: CourtListener unavailable, not an
+    answer about the grant."""
+    if isinstance(error, httpx2.HTTPStatusError):
+        return error.response.status_code >= 500
+    return isinstance(error, httpx2.TransportError)
+
+
+def retry_on_transient_error(refresh: Refresh) -> Refresh:
+    """*refresh*, tried again with backoff while CourtListener is
+    unavailable, except after a timeout, which has already waited."""
+
+    @wraps(refresh)
+    async def attempt(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        for retry in range(1, UPSTREAM_REFRESH_ATTEMPTS):
+            try:
+                return await refresh(*args, **kwargs)
+            except httpx2.HTTPError as error:
+                if isinstance(error, httpx2.TimeoutException) or not (
+                    is_transient(error)
+                ):
+                    raise
+            await anyio.sleep(
+                UPSTREAM_REFRESH_BACKOFF_SECONDS * 2 ** (retry - 1)
+            )
+        return await refresh(*args, **kwargs)
+
+    return cast(Refresh, attempt)
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):
