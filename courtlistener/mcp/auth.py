@@ -3,8 +3,12 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
+from functools import wraps
 from typing import Any, cast
 
+import anyio
 import httpx
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
@@ -13,10 +17,15 @@ from mcp.server.auth.middleware.bearer_auth import (
     AuthenticatedUser,
     BearerAuthBackend,
 )
+from mcp.server.auth.provider import (
+    RefreshToken,
+    TokenError,
+)
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
-from mcp.shared.auth import OAuthClientInformationFull
+from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyUrl
 from starlette.authentication import AuthCredentials
+from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
@@ -41,6 +50,9 @@ logger = logging.getLogger(__name__)
 # The shape of a client id CourtListener issued when it was the authorization
 # server. Clients still holding one are recognised on first use.
 LEGACY_CLIENT_ID = re.compile(r"[A-Za-z0-9]{40}")
+
+UPSTREAM_REFRESH_ATTEMPTS = 3
+UPSTREAM_REFRESH_RETRY_SECONDS = 1
 
 
 class CourtListenerOAuthProxy(OAuthProxy):
@@ -80,6 +92,33 @@ class CourtListenerOAuthProxy(OAuthProxy):
         await super().register_client(client_info)
         oauth_registrations_total.labels(source="dcr").inc()
 
+    @asynccontextmanager
+    async def _upstream_oauth_client(self) -> AsyncIterator[Any]:
+        """FastMCP's CourtListener client, retrying a refresh that fails
+        because CourtListener is briefly unavailable."""
+        async with super()._upstream_oauth_client() as oauth_client:
+            oauth_client.refresh_token = retry_on_transient_error(
+                oauth_client.refresh_token
+            )
+            yield oauth_client
+
+    async def exchange_refresh_token(
+        self,
+        client: OAuthClientInformationFull,
+        refresh_token: RefreshToken,
+        scopes: list[str],
+    ) -> OAuthToken:
+        """FastMCP's refresh, answering 503 instead of ``invalid_grant`` when
+        CourtListener was unavailable, so the client keeps its tokens."""
+        try:
+            return await super().exchange_refresh_token(
+                client, refresh_token, scopes
+            )
+        except TokenError as error:
+            if not is_transient(error.__cause__):
+                raise
+            raise HTTPException(503, headers={"Retry-After": "5"}) from error
+
     async def get_client(
         self, client_id: str
     ) -> OAuthClientInformationFull | None:
@@ -100,6 +139,33 @@ class CourtListenerOAuthProxy(OAuthProxy):
         )
         oauth_registrations_total.labels(source="legacy").inc()
         return await super().get_client(client_id)
+
+
+def is_transient(error: BaseException | None) -> bool:
+    """Whether an upstream failure is CourtListener being unreachable or
+    answering 5xx, rather than an answer about the grant."""
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code >= 500
+    return isinstance(error, httpx.TransportError)
+
+
+def retry_on_transient_error(
+    refresh: Callable[..., Awaitable[dict[str, Any]]],
+) -> Callable[..., Awaitable[dict[str, Any]]]:
+    """*refresh*, tried again when CourtListener was briefly unavailable."""
+
+    @wraps(refresh)
+    async def attempt(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        for _ in range(UPSTREAM_REFRESH_ATTEMPTS - 1):
+            try:
+                return await refresh(*args, **kwargs)
+            except Exception as error:
+                if not is_transient(error):
+                    raise
+            await anyio.sleep(UPSTREAM_REFRESH_RETRY_SECONDS)
+        return await refresh(*args, **kwargs)
+
+    return attempt
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):

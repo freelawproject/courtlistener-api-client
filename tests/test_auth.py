@@ -13,10 +13,13 @@ import httpx
 import pytest
 from fastmcp.server.auth.auth import AccessToken
 from key_value.aio.stores.memory import MemoryStore
+from mcp.shared.auth import OAuthClientInformationFull
+from pydantic import AnyUrl
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from courtlistener import CourtListener
 from courtlistener.mcp.auth import (
+    UPSTREAM_REFRESH_ATTEMPTS,
     ApiTokenVerifier,
     CourtListenerAuthBackend,
     CourtListenerOAuthProxy,
@@ -940,6 +943,157 @@ class TestCourtListenerOAuthProxy:
         ):
             assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
         check.assert_not_awaited()
+
+
+class TestUpstreamRefreshOutage:
+    """A refresh that fails because CourtListener is briefly unavailable is
+    retried, and if it keeps failing the client is told to try later rather
+    than that its grant is invalid."""
+
+    @pytest.fixture(autouse=True)
+    def no_sleep(self):
+        with patch("courtlistener.mcp.auth.anyio.sleep", new=AsyncMock()):
+            yield
+
+    def _status_error(self, status):
+        request = httpx.Request("POST", "https://example.test/o/token/")
+        return httpx.HTTPStatusError(
+            "upstream", request=request, response=httpx.Response(status)
+        )
+
+    def _refresh_through(self, proxy, upstream):
+        from authlib.integrations.httpx_client import AsyncOAuth2Client
+
+        async def go():
+            async with proxy._upstream_oauth_client() as client:
+                return await client.refresh_token(url="u", refresh_token="rt")
+
+        with patch.object(AsyncOAuth2Client, "refresh_token", new=upstream):
+            return run(go())
+
+    def test_a_502_is_retried(self):
+        answers = [self._status_error(502), {"access_token": "new"}]
+
+        async def upstream(*args, **kwargs):
+            answer = answers.pop(0)
+            if isinstance(answer, Exception):
+                raise answer
+            return answer
+
+        assert self._refresh_through(_auth_provider(), upstream) == {
+            "access_token": "new"
+        }
+        assert answers == []
+
+    def test_gives_up_after_the_last_attempt(self):
+        calls = []
+
+        async def upstream(*args, **kwargs):
+            calls.append(1)
+            raise self._status_error(502)
+
+        with pytest.raises(httpx.HTTPStatusError):
+            self._refresh_through(_auth_provider(), upstream)
+        assert len(calls) == UPSTREAM_REFRESH_ATTEMPTS
+
+    def test_courtlisteners_own_answer_is_not_retried(self):
+        from authlib.integrations.httpx_client import OAuthError
+
+        calls = []
+
+        async def upstream(*args, **kwargs):
+            calls.append(1)
+            raise OAuthError("invalid_grant")
+
+        with pytest.raises(OAuthError):
+            self._refresh_through(_auth_provider(), upstream)
+        assert len(calls) == 1
+
+    def _exchange(self, cause):
+        from fastmcp.server.auth.oauth_proxy import OAuthProxy
+        from mcp.server.auth.provider import RefreshToken, TokenError
+
+        async def failing(*args, **kwargs):
+            raise TokenError(
+                "invalid_grant", "Upstream refresh failed"
+            ) from cause
+
+        refresh = RefreshToken(token="rt", client_id="c", scopes=["api"])
+        with patch.object(OAuthProxy, "exchange_refresh_token", new=failing):
+            return run(
+                _auth_provider().exchange_refresh_token(
+                    MagicMock(client_id="c"), refresh, ["api"]
+                )
+            )
+
+    def test_an_outage_is_a_503_not_an_invalid_grant(self):
+        from starlette.exceptions import HTTPException
+
+        with pytest.raises(HTTPException) as caught:
+            self._exchange(self._status_error(502))
+        assert caught.value.status_code == 503
+        assert caught.value.headers == {"Retry-After": "5"}
+
+    def test_a_timeout_is_a_503_too(self):
+        from starlette.exceptions import HTTPException
+
+        with pytest.raises(HTTPException):
+            self._exchange(httpx.ReadTimeout("slow"))
+
+    def test_a_real_invalid_grant_passes_through(self):
+        from authlib.integrations.httpx_client import OAuthError
+        from mcp.server.auth.provider import TokenError
+
+        with pytest.raises(TokenError) as caught:
+            self._exchange(OAuthError("invalid_grant"))
+        assert caught.value.error == "invalid_grant"
+
+    def test_the_503_reaches_the_client(self):
+        from fastmcp.server.auth.oauth_proxy import OAuthProxy
+        from mcp.server.auth.provider import RefreshToken, TokenError
+        from starlette.testclient import TestClient
+
+        from courtlistener.mcp.server import create_mcp_server
+
+        proxy = _auth_provider()
+        public_client = OAuthClientInformationFull(
+            client_id="c",
+            redirect_uris=[AnyUrl("http://localhost/cb")],
+            grant_types=["authorization_code", "refresh_token"],
+            token_endpoint_auth_method="none",
+        )
+
+        async def failing(*args, **kwargs):
+            raise TokenError("invalid_grant", "x") from self._status_error(502)
+
+        with (
+            patch.object(
+                proxy, "get_client", new=AsyncMock(return_value=public_client)
+            ),
+            patch.object(
+                proxy,
+                "load_refresh_token",
+                new=AsyncMock(
+                    return_value=RefreshToken(
+                        token="rt", client_id="c", scopes=["api"]
+                    )
+                ),
+            ),
+            patch.object(OAuthProxy, "exchange_refresh_token", new=failing),
+            TestClient(
+                create_mcp_server(auth=proxy).http_app(path="/")
+            ) as http,
+        ):
+            r = http.post(
+                "/token",
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": "rt",
+                    "client_id": "c",
+                },
+            )
+        assert r.status_code == 503
+        assert r.headers["Retry-After"] == "5"
 
 
 def _auth_provider():
