@@ -13,6 +13,10 @@ GIT_SHA = os.getenv("GIT_SHA", "unknown")
 # Redis connection URL. In-memory storage is used when unset.
 REDIS_URL = os.getenv("REDIS_URL")
 
+# Per-operation socket timeouts for the Redis session client.
+REDIS_SOCKET_TIMEOUT_SECONDS = 5
+REDIS_CONNECT_TIMEOUT_SECONDS = 5
+
 # Postgres for the OAuth token store.
 POSTGRES_CONFIGURED = bool(os.getenv("PGHOST"))
 PGHOST = os.getenv("PGHOST") or "localhost"

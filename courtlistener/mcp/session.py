@@ -20,6 +20,8 @@ from courtlistener.mcp.settings import (
     ACTIVE_USERS_TTL_SECONDS,
     DOCUMENT_TTL_SECONDS,
     MCP_SECRET_BYTES,
+    REDIS_CONNECT_TIMEOUT_SECONDS,
+    REDIS_SOCKET_TIMEOUT_SECONDS,
     SESSION_TTL_SECONDS,
     TOKEN_CACHE_TTL_SECONDS,
 )
@@ -181,7 +183,7 @@ class Session:
 
 @contextmanager
 def degrade_on_connection_error(op: str) -> Iterator[None]:
-    """Treat redis connection errors as cache misses."""
+    """Treat redis connection errors and timeouts as cache misses."""
     try:
         yield
     except (redis.ConnectionError, redis.TimeoutError) as exc:
@@ -199,7 +201,11 @@ class RedisSession(Session):
     def client(self) -> redis.Redis:
         if self._client is None:
             self._client = redis.from_url(
-                self._url, decode_responses=True, protocol=3
+                self._url,
+                decode_responses=True,
+                protocol=3,
+                socket_timeout=REDIS_SOCKET_TIMEOUT_SECONDS,
+                socket_connect_timeout=REDIS_CONNECT_TIMEOUT_SECONDS,
             )
         return self._client
 
