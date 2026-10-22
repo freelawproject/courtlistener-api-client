@@ -996,6 +996,32 @@ class TestUpstreamRefreshOutage:
             self._refresh_through(_auth_provider(), upstream)
         assert len(calls) == UPSTREAM_REFRESH_ATTEMPTS
 
+    def test_a_timeout_is_not_retried(self):
+        calls = []
+
+        async def upstream(*args, **kwargs):
+            calls.append(1)
+            raise httpx.ReadTimeout("slow")
+
+        with pytest.raises(httpx.ReadTimeout):
+            self._refresh_through(_auth_provider(), upstream)
+        assert len(calls) == 1
+
+    def test_a_500_is_courtlisteners_answer_not_an_outage(self):
+        from mcp.server.auth.provider import TokenError
+
+        calls = []
+
+        async def upstream(*args, **kwargs):
+            calls.append(1)
+            raise self._status_error(500)
+
+        with pytest.raises(httpx.HTTPStatusError):
+            self._refresh_through(_auth_provider(), upstream)
+        assert len(calls) == 1
+        with pytest.raises(TokenError):
+            self._exchange(self._status_error(500))
+
     def test_courtlisteners_own_answer_is_not_retried(self):
         from authlib.integrations.httpx_client import OAuthError
 

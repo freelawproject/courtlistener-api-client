@@ -53,6 +53,7 @@ LEGACY_CLIENT_ID = re.compile(r"[A-Za-z0-9]{40}")
 
 UPSTREAM_REFRESH_ATTEMPTS = 3
 UPSTREAM_REFRESH_RETRY_SECONDS = 1
+GATEWAY_ERROR_STATUSES = (502, 503, 504)
 
 
 class CourtListenerOAuthProxy(OAuthProxy):
@@ -143,16 +144,17 @@ class CourtListenerOAuthProxy(OAuthProxy):
 
 def is_transient(error: BaseException | None) -> bool:
     """Whether an upstream failure is CourtListener being unreachable or
-    answering 5xx, rather than an answer about the grant."""
+    behind a gateway error, rather than an answer about the grant."""
     if isinstance(error, httpx.HTTPStatusError):
-        return error.response.status_code >= 500
+        return error.response.status_code in GATEWAY_ERROR_STATUSES
     return isinstance(error, httpx.TransportError)
 
 
 def retry_on_transient_error(
     refresh: Callable[..., Awaitable[dict[str, Any]]],
 ) -> Callable[..., Awaitable[dict[str, Any]]]:
-    """*refresh*, tried again when CourtListener was briefly unavailable."""
+    """*refresh*, tried again when CourtListener was briefly unavailable,
+    except after a timeout, which has already waited long enough."""
 
     @wraps(refresh)
     async def attempt(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -160,7 +162,9 @@ def retry_on_transient_error(
             try:
                 return await refresh(*args, **kwargs)
             except Exception as error:
-                if not is_transient(error):
+                if isinstance(
+                    error, httpx.TimeoutException
+                ) or not is_transient(error):
                     raise
             await anyio.sleep(UPSTREAM_REFRESH_RETRY_SECONDS)
         return await refresh(*args, **kwargs)
