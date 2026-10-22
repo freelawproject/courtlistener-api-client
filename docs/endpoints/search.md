@@ -36,6 +36,8 @@ Choices (6):
 
 string | array of string
 
+Court ID or space-separated list of IDs. State intermediate appellate courts use a single statewide ID (`texapp`, `fladistctapp`, `lactapp`, `calctapp`); never append district numbers.
+
 <details><summary>Choices (470)</summary>
 
 | Value | Label |

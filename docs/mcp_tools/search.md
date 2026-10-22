@@ -5,7 +5,7 @@
 **Search**
 
 - **Source:** `courtlistener/mcp/tools/search_tool.py`
-- **Estimated definition size:** ~3328 tokens (description ~46, input schema ~3208; cl100k_base)
+- **Estimated definition size:** ~3375 tokens (description ~46, input schema ~3255; cl100k_base)
 - **Parameters:** 46 (0 required)
 - **Raw input schema:** [`search.inputs.json`](./search.inputs.json)
 
@@ -80,6 +80,8 @@ Valid choices:
 ### `court`
 
 string | array of string | null · optional
+
+Court ID or space-separated list of IDs. State intermediate appellate courts use a single statewide ID (`texapp`, `fladistctapp`, `lactapp`, `calctapp`); never append district numbers.
 
 Valid when type in: ['o', 'r', 'rd', 'd', 'p', 'oa']
 

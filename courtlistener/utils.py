@@ -184,6 +184,29 @@ def filter_only_hint(model: type["Endpoint"], names: Iterable[Any]) -> str:
     )
 
 
+def numbered_suffix_hint(
+    part: Any, choice_dict: dict[str, str] | dict[int, str]
+) -> str:
+    """Explain a value that is a valid choice plus a trailing number."""
+    if not isinstance(part, str):
+        return ""
+    base = part.rstrip("0123456789")
+    if not base or base == part:
+        return ""
+    by_key = {str(k): v for k, v in choice_dict.items()}
+    name = by_key.get(base)
+    if name is None:
+        return ""
+    # Only claim there are no numbered IDs when there really are none.
+    if any(k != base and k.rstrip("0123456789") == base for k in by_key):
+        return ""
+    return (
+        f" `{part}` is not an ID: CourtListener has no numbered "
+        f"subdivisions of `{base}` ({name}); that single ID covers all "
+        "of them."
+    )
+
+
 def invalid_choice_error(
     field_name: str | None,
     invalid_parts: list[Any],
@@ -197,7 +220,9 @@ def invalid_choice_error(
     candidates = list(choice_dict) + list(choice_dict.values())
     # Fuzzy matching is O(candidates) per part; bound it for long lists.
     suggestions = "".join(
-        did_you_mean(part, candidates) for part in invalid_parts[:5]
+        did_you_mean(part, candidates)
+        + numbered_suffix_hint(part, choice_dict)
+        for part in invalid_parts[:5]
     )
     noun = "value" if len(invalid_parts) == 1 else "values"
     named = ", ".join(f"'{part}'" for part in invalid_parts)
