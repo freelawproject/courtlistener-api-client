@@ -298,3 +298,62 @@ class TestInvalidChoiceNaming:
         with pytest.raises(ValidationError) as exc_info:
             court_of(court=[f"scotus{i}" for i in range(500)])
         assert str(exc_info.value).count("Did you mean") <= 5
+
+
+class TestNumberedSuffixHint:
+    """A valid court ID plus a trailing number stays an error, and the
+    message says the bare ID has no numbered subdivisions (#266)."""
+
+    def error_for(self, court):
+        with pytest.raises(ValidationError) as exc_info:
+            court_of(court=court)
+        return str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        "bad,base,name",
+        [
+            ("texapp1", "texapp", "Court of Appeals of Texas"),
+            ("texapp14", "texapp", "Court of Appeals of Texas"),
+            ("fladistctapp3", "fladistctapp", "District Court of Appeal"),
+            ("lactapp5", "lactapp", "Louisiana Court of Appeal"),
+        ],
+    )
+    def test_names_the_statewide_id(self, bad, base, name):
+        msg = self.error_for(bad)
+        assert f"`{bad}` is not an ID" in msg
+        assert f"no numbered subdivisions of `{base}` ({name}" in msg
+
+    def test_value_is_still_rejected(self):
+        with pytest.raises(ValidationError):
+            court_of(court="texapp1")
+
+    @pytest.mark.parametrize("real", ["ca1", "ca11", "bap10"])
+    def test_real_digit_suffixed_ids_validate(self, real):
+        assert court_of(court=real) == real
+
+    def test_list_with_one_bad_token(self):
+        msg = self.error_for("tex texapp1")
+        assert "'texapp1'" in msg and "'tex'" not in msg
+        assert "no numbered subdivisions of `texapp`" in msg
+
+    def test_no_hint_when_bare_form_is_not_a_court(self):
+        msg = self.error_for("ca12")
+        assert "numbered subdivisions" not in msg
+
+    def test_no_hint_without_a_trailing_number(self):
+        msg = self.error_for("calsupct")
+        assert "numbered subdivisions" not in msg
+        assert "Did you mean" in msg
+
+    def test_bare_digits_get_no_hint(self):
+        msg = self.error_for("123")
+        assert "numbered subdivisions" not in msg
+
+    def test_no_claim_when_the_court_has_numbered_ids(self):
+        from courtlistener.utils import numbered_suffix_hint
+
+        choices = {"ca": "Circuit", "ca1": "First", "ca2": "Second"}
+        assert numbered_suffix_hint("ca9", choices) == ""
+        assert "no numbered subdivisions" in numbered_suffix_hint(
+            "texapp1", {"texapp": "Court of Appeals of Texas"}
+        )
