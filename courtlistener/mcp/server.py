@@ -14,7 +14,7 @@ from starlette.responses import (
     Response,
 )
 
-from courtlistener.mcp.auth import CourtListenerOAuthProxy
+from courtlistener.mcp.auth import CourtListenerOAuthProxy, admit_token_scheme
 from courtlistener.mcp.metrics import render_metrics
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.session import RedisSession, get_session
@@ -63,12 +63,12 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         icons=[
             Icon(
                 src=f"data:image/svg+xml;base64,{favicon_b64}",
-                mimeType="image/svg+xml",
+                mime_type="image/svg+xml",
                 sizes=["16x16", "32x32"],
             ),
             Icon(
                 src=f"data:image/png;base64,{apple_touch_b64}",
-                mimeType="image/png",
+                mime_type="image/png",
                 sizes=["180x180"],
             ),
         ],
@@ -195,13 +195,17 @@ def create_http_app():
             allow_headers=[
                 "mcp-protocol-version",
                 "mcp-session-id",
+                "mcp-method",
+                "mcp-name",
                 "Authorization",
                 "Content-Type",
             ],
             expose_headers=["mcp-session-id"],
         )
     ]
-    return mcp.http_app(path="/", stateless_http=True, middleware=middleware)
+    app = mcp.http_app(path="/", stateless_http=True, middleware=middleware)
+    admit_token_scheme(app)
+    return app
 
 
 def main():

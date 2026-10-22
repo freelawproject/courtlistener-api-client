@@ -18,10 +18,10 @@ class WithdrawPrayerTool(MCPTool):
     name: str = "withdraw_prayer"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Withdraw Prayer",
-        readOnlyHint=False,
-        destructiveHint=True,
-        idempotentHint=True,
-        openWorldHint=True,
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=True,
+        open_world_hint=True,
     )
 
     def get_input_schema(self) -> dict:

@@ -16,10 +16,10 @@ class GetCountsTool(MCPTool):
     name: str = "get_counts"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Get Result Count",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
     def get_input_schema(self) -> dict:

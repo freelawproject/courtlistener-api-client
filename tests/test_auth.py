@@ -909,6 +909,7 @@ class TestCourtListenerOAuthProxy:
         assert {
             "/.well-known/oauth-protected-resource",
             "/.well-known/oauth-authorization-server",
+            "/.well-known/openid-configuration",
             "/register",
             "/authorize",
             "/token",
@@ -941,6 +942,63 @@ class TestCourtListenerOAuthProxy:
             assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
         check.assert_not_awaited()
 
+    def test_registers_a_legacy_client_on_first_use(self):
+        from courtlistener.mcp.metrics import oauth_registrations_total
+
+        counter = oauth_registrations_total.labels(source="legacy")
+        before = counter._value.get()
+        proxy = _auth_provider()
+        client = run(proxy.get_client("kzzpskQh6z" * 4))
+        assert client is not None
+        assert client.client_id == "kzzpskQh6z" * 4
+        assert counter._value.get() == before + 1
+        # The stored registration serves later loads without re-counting.
+        assert run(proxy.get_client("kzzpskQh6z" * 4)) is not None
+        assert counter._value.get() == before + 1
+
+    def test_a_legacy_client_may_use_its_real_redirect_uri(self):
+        """The placeholder registration must not pin a legacy client to
+        ``http://localhost``: its real redirect URI is known only to
+        CourtListener, so the proxy accepts the one it presents."""
+        from pydantic import AnyUrl
+
+        proxy = _auth_provider()
+        run(proxy.get_client("kzzpskQh6z" * 4))
+        # A fresh load from the store, as the authorize request sees it.
+        client = run(proxy.get_client("kzzpskQh6z" * 4))
+        for uri in (
+            "http://127.0.0.1:33418/oauth/callback",
+            "https://claude.ai/api/mcp/auth_callback",
+        ):
+            assert client.validate_redirect_uri(AnyUrl(uri)) == AnyUrl(uri)
+
+    def test_a_dcr_client_is_held_to_its_registered_redirect_uris(self):
+        from mcp.shared.auth import (
+            InvalidRedirectUriError,
+            OAuthClientInformationFull,
+        )
+        from pydantic import AnyUrl
+
+        proxy = _auth_provider()
+        run(
+            proxy.register_client(
+                OAuthClientInformationFull(
+                    client_id="0b35e9ac-8714-4b1b-a438-91b355174b58",
+                    redirect_uris=[AnyUrl("https://example.test/callback")],
+                    token_endpoint_auth_method="none",
+                )
+            )
+        )
+        client = run(proxy.get_client("0b35e9ac-8714-4b1b-a438-91b355174b58"))
+        assert client.validate_redirect_uri(
+            AnyUrl("https://example.test/callback")
+        ) == AnyUrl("https://example.test/callback")
+        with pytest.raises(InvalidRedirectUriError):
+            client.validate_redirect_uri(AnyUrl("https://evil.test/callback"))
+
+    def test_an_unknown_non_legacy_client_stays_unknown(self):
+        assert run(_auth_provider().get_client("not-a-legacy-id")) is None
+
 
 def _auth_provider():
     """The proxy create_http_app attaches, built for tests."""
@@ -972,11 +1030,14 @@ class TestAuthOverHttp:
     def _app(self):
         from starlette.testclient import TestClient
 
+        from courtlistener.mcp.auth import admit_token_scheme
         from courtlistener.mcp.server import create_mcp_server
 
         # Mirrors create_http_app's wiring, minus the Redis store.
         mcp = create_mcp_server(auth=_auth_provider())
-        return TestClient(mcp.http_app(path="/"))
+        app = mcp.http_app(path="/")
+        admit_token_scheme(app)
+        return TestClient(app)
 
     def _initialize(self, headers):
         with self._app() as http_client:

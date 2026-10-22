@@ -7,19 +7,27 @@ from typing import Any, cast
 
 import httpx
 from fastmcp.server.auth.auth import AccessToken, TokenVerifier
+from fastmcp.server.auth.middleware import RequireAuthMiddleware
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
+from fastmcp.server.auth.oauth_proxy.models import ProxyDCRClient
 from mcp.server.auth.middleware.auth_context import AuthContextMiddleware
 from mcp.server.auth.middleware.bearer_auth import (
     AuthenticatedUser,
     BearerAuthBackend,
 )
+from mcp.server.auth.middleware.bearer_auth import (
+    RequireAuthMiddleware as SDKRequireAuthMiddleware,
+)
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
+from starlette.applications import Starlette
 from starlette.authentication import AuthCredentials
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.requests import HTTPConnection
+from starlette.routing import Route
+from starlette.types import Receive, Scope, Send
 
 from courtlistener.mcp.auth_types import TokenInfo, TokenKind
 from courtlistener.mcp.metrics import (
@@ -80,26 +88,53 @@ class CourtListenerOAuthProxy(OAuthProxy):
         await super().register_client(client_info)
         oauth_registrations_total.labels(source="dcr").inc()
 
+    def get_routes(self, mcp_path: str | None = None) -> list[Route]:
+        """FastMCP 4 registers the OIDC discovery alias only through
+        ``get_well_known_routes``, which ``http_app`` never calls; serve
+        it here for clients that discover via OpenID Connect."""
+        routes = super().get_routes(mcp_path)
+        alias = [
+            Route(
+                "/.well-known/openid-configuration",
+                endpoint=route.endpoint,
+                methods=route.methods,
+            )
+            for route in routes
+            if isinstance(route, Route)
+            and route.path == "/.well-known/oauth-authorization-server"
+        ]
+        return routes + alias
+
     async def get_client(
         self, client_id: str
     ) -> OAuthClientInformationFull | None:
         """Registered clients, plus clients registered with CourtListener
         before this server became the authorization server, which are
         registered here the first time they show up."""
-        if (client := await super().get_client(client_id)) is not None:
-            return client
-        if not LEGACY_CLIENT_ID.fullmatch(client_id):
-            return None
-        await super().register_client(
-            OAuthClientInformationFull(
-                client_id=client_id,
-                redirect_uris=[AnyUrl("http://localhost")],
-                grant_types=["authorization_code", "refresh_token"],
-                token_endpoint_auth_method="none",
+        client = await super().get_client(client_id)
+        if client is None:
+            if not LEGACY_CLIENT_ID.fullmatch(client_id):
+                return None
+            await super().register_client(
+                OAuthClientInformationFull(
+                    client_id=client_id,
+                    redirect_uris=[AnyUrl("http://localhost")],
+                    grant_types=["authorization_code", "refresh_token"],
+                    token_endpoint_auth_method="none",
+                )
             )
-        )
-        oauth_registrations_total.labels(source="legacy").inc()
-        return await super().get_client(client_id)
+            oauth_registrations_total.labels(source="legacy").inc()
+            client = await super().get_client(client_id)
+        if (
+            client is not None
+            and LEGACY_CLIENT_ID.fullmatch(client_id)
+            and isinstance(client, ProxyDCRClient)
+        ):
+            # Registered on first use with a placeholder redirect URI; the
+            # real one is known only to CourtListener, so accept what the
+            # client presents, as DCR would have let it register anyway.
+            client.allow_unregistered_redirect_uris = True
+        return client
 
 
 class CourtListenerAuthBackend(BearerAuthBackend):
@@ -149,6 +184,39 @@ class CourtListenerAuthBackend(BearerAuthBackend):
             scheme=kind.scheme, issuer="courtlistener"
         ).inc()
         return None
+
+
+class DualSchemeAuthGate:
+    """Admit an authenticated user whatever scheme it arrived under.
+
+    FastMCP's route gate 401s any request without a ``Bearer`` header
+    before looking at the user the auth backend authenticated, which
+    would lock out the ``Token`` scheme; skip the header check once the
+    backend has authenticated, keeping the SDK's scope enforcement."""
+
+    def __init__(self, gate: RequireAuthMiddleware) -> None:
+        self.gate = gate
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        if scope["type"] == "http" and isinstance(
+            scope.get("user"), AuthenticatedUser
+        ):
+            await SDKRequireAuthMiddleware.__call__(
+                self.gate, scope, receive, send
+            )
+            return
+        await self.gate(scope, receive, send)
+
+
+def admit_token_scheme(app: Starlette) -> None:
+    """Wrap FastMCP's auth gates in *app* so the ``Token`` scheme passes."""
+    for route in app.routes:
+        if isinstance(route, Route) and isinstance(
+            route.app, RequireAuthMiddleware
+        ):
+            route.app = DualSchemeAuthGate(route.app)
 
 
 def token_issuer(credential: str) -> str:

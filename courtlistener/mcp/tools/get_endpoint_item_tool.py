@@ -14,10 +14,10 @@ class GetEndpointItemTool(MCPTool):
     name: str = "get_endpoint_item"
     annotations: ToolAnnotations = ToolAnnotations(
         title="Get Item by ID",
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
     def get_input_schema(self) -> dict:

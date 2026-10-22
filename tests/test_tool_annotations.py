@@ -94,50 +94,50 @@ class TestToolAnnotations:
         """All read-only tools must have readOnlyHint=True."""
         for name in READ_ONLY_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.readOnlyHint is True, name
+            assert t.annotations.read_only_hint is True, name
 
     def test_write_tools(self):
         """All write tools must have readOnlyHint=False."""
         for name in WRITE_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.readOnlyHint is False, name
+            assert t.annotations.read_only_hint is False, name
 
     def test_destructive_tools(self):
         """Delete tools must have destructiveHint=True."""
         for name in DESTRUCTIVE_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.destructiveHint is True, name
+            assert t.annotations.destructive_hint is True, name
 
     def test_non_destructive_write_tools(self):
         """Create tools must have destructiveHint=False."""
         for name in WRITE_TOOLS - DESTRUCTIVE_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.destructiveHint is False, name
+            assert t.annotations.destructive_hint is False, name
 
     def test_non_idempotent_tools(self):
         """Create and cursor-advancing tools must have idempotentHint=False."""
         for name in NON_IDEMPOTENT_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.idempotentHint is False, name
+            assert t.annotations.idempotent_hint is False, name
 
     def test_idempotent_tools(self):
         """All other tools must have idempotentHint=True."""
         for name in set(MCP_TOOLS.keys()) - NON_IDEMPOTENT_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.idempotentHint is True, name
+            assert t.annotations.idempotent_hint is True, name
 
     def test_open_world_tools(self):
         """Alert tools must have openWorldHint=True."""
         for name in OPEN_WORLD_TOOLS:
             t = MCP_TOOLS[name]
-            assert t.annotations.openWorldHint is True, name
+            assert t.annotations.open_world_hint is True, name
 
     def test_closed_world_tools(self):
         """All other tools must have openWorldHint=False."""
         closed_world_tools = set(MCP_TOOLS.keys()) - OPEN_WORLD_TOOLS
         for name in closed_world_tools:
             t = MCP_TOOLS[name]
-            assert t.annotations.openWorldHint is False, name
+            assert t.annotations.open_world_hint is False, name
 
 
 class TestToolTitles:
