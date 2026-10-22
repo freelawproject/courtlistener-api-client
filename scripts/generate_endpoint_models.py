@@ -748,8 +748,8 @@ def get_endpoint_data(use_cache: bool = True) -> dict[str, Any]:
                 "literal_value": filter.get("literal_value"),
                 "default": filter.get("default"),
             }
-        name = options.get("name") or endpoint_id.replace("-", " ").title()
-        description = options.get("description") or f"{name} Endpoint"
+        name = endpoint_id.replace("-", " ").title()
+        description = f"{name} Endpoint"
         attr_name = endpoint_id.replace("-", "_").replace("/", "_")
         endpoint = endpoint_options.get("endpoint", f"/{endpoint_id}/")
         endpoints[endpoint_id] = {
