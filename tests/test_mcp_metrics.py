@@ -51,9 +51,11 @@ def _validation_error() -> ValidationError:
     raise AssertionError("expected a ValidationError")
 
 
-def _count(tool: str, outcome: str) -> float:
+def _count(tool: str, outcome: str, credential: str = "api_token") -> float:
+    """Counter sample; with no token the stdio ``api_token`` label applies."""
     value = REGISTRY.get_sample_value(
-        "mcp_tool_calls_total", {"tool": tool, "outcome": outcome}
+        "mcp_tool_calls_total",
+        {"tool": tool, "outcome": outcome, "credential": credential},
     )
     return value or 0.0
 
@@ -168,10 +170,57 @@ class TestToolCallCounter:
             assert _count("no_such_tool", outcome) == 0
 
 
+class TestToolCallCredentialLabel:
+    @pytest.fixture(autouse=True)
+    def session(self, monkeypatch):
+        session = MagicMock(mark_active=AsyncMock(return_value=True))
+        monkeypatch.setattr(metrics_mod, "get_session", lambda: session)
+        monkeypatch.setattr(
+            metrics_mod, "active_user_marker", ActiveUserMarker()
+        )
+        return session
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("kind", ["oauth", "api_token"])
+    async def test_labels_by_token_kind(self, monkeypatch, kind):
+        monkeypatch.setattr(
+            metrics_mod, "get_access_token", lambda: _access_token("u", kind)
+        )
+        other = "api_token" if kind == "oauth" else "oauth"
+        tool = f"metrics_cred_{kind}_tool"
+        before = _count(tool, "ok", kind)
+        await _call_tool(tool, lambda: {"a": 1})
+        assert _count(tool, "ok", kind) == before + 1
+        assert _count(tool, "ok", other) == 0
+
+    @pytest.mark.asyncio
+    async def test_no_access_token_labels_api_token(self, monkeypatch):
+        monkeypatch.setattr(metrics_mod, "get_access_token", lambda: None)
+        before = _count("metrics_stdio_tool", "ok", "api_token")
+        await _call_tool("metrics_stdio_tool", lambda: {"a": 1})
+        assert _count("metrics_stdio_tool", "ok", "api_token") == before + 1
+        assert _count("metrics_stdio_tool", "ok", "oauth") == 0
+
+    @pytest.mark.asyncio
+    async def test_label_matches_active_users_credential(
+        self, monkeypatch, session
+    ):
+        monkeypatch.setattr(
+            metrics_mod,
+            "get_access_token",
+            lambda: _access_token("u", "oauth"),
+        )
+        await _call_tool("metrics_cred_match_tool", lambda: {"a": 1})
+        assert _count("metrics_cred_match_tool", "ok", "oauth") == 1
+        session.mark_active.assert_awaited_once_with("u", "oauth", utc_today())
+
+
 class TestMetricsRoute:
     @pytest.mark.asyncio
     async def test_render_metrics_exposes_counter(self):
-        tool_calls_total.labels(tool="metrics_render_tool", outcome="ok")
+        tool_calls_total.labels(
+            tool="metrics_render_tool", outcome="ok", credential="oauth"
+        )
         body, content_type = await render_metrics()
         assert content_type.startswith("text/plain")
         assert b"mcp_tool_calls_total" in body
