@@ -2,6 +2,7 @@ import os
 from collections.abc import Iterable, Mapping
 from datetime import date
 
+from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.dependencies import get_access_token
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -32,16 +33,19 @@ from courtlistener.mcp.session import (
 
 tool_calls_total = Counter(
     "mcp_tool_calls_total",
-    "MCP tool calls by tool and outcome",
-    ["tool", "outcome"],
+    "MCP tool calls by tool, outcome, and credential",
+    ["tool", "outcome", "credential"],
 )
 """
 Usage:
-    tool_calls_total.labels(tool="search", outcome="ok").inc()
+    tool_calls_total.labels(
+        tool="search", outcome="ok", credential="oauth"
+    ).inc()
 
 Labels:
     tool: a registered tool name (see MCP_TOOLS)
     outcome: one of OUTCOMES
+    credential: a TokenKind value, as in mcp_active_users
 """
 
 oauth_registrations_total = Counter(
@@ -136,6 +140,13 @@ async def active_user_counts(
     return counts
 
 
+def credential_label(access_token: AccessToken | None) -> str:
+    """A request's ``credential`` label; stdio (no token) uses an API token."""
+    if access_token is None:
+        return TokenKind.API.value
+    return str(access_token.claims.get("token_kind", TokenKind.OAUTH))
+
+
 class ActiveUserMarker:
     """Marks the request's user active once per UTC day per process."""
 
@@ -143,12 +154,11 @@ class ActiveUserMarker:
         self._day: date | None = None
         self._marked: set[tuple[date, str, str]] = set()
 
-    async def mark(self) -> None:
+    async def mark(self, access_token: AccessToken | None) -> None:
         """Mark the verified user active today; a no-op without a token."""
-        access_token = get_access_token()
         if access_token is None:
             return
-        credential = access_token.claims.get("token_kind", TokenKind.OAUTH)
+        credential = credential_label(access_token)
         user_hash = token_user_key(access_token)
         today = utc_today()
         if today != self._day:
@@ -165,8 +175,11 @@ active_user_marker = ActiveUserMarker()
 
 async def record_tool_call(tool: str, outcome: str) -> None:
     """Count a completed tool call and mark its user active."""
-    tool_calls_total.labels(tool=tool, outcome=outcome).inc()
-    await active_user_marker.mark()
+    access_token = get_access_token()
+    tool_calls_total.labels(
+        tool=tool, outcome=outcome, credential=credential_label(access_token)
+    ).inc()
+    await active_user_marker.mark(access_token)
 
 
 async def render_metrics() -> tuple[bytes, str]:

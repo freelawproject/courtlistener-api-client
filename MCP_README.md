@@ -210,7 +210,7 @@ These tools also modify your CourtListener account state, so the same confirmati
 - **Prayer limits.** Prayers count against a per-user daily limit set by CourtListener, so only pray for filings you actually want. `pray_for_document` refuses to spend one on a document that is already available.
 - **Field filtering.** Most read tools accept a `fields` parameter to return only the columns you need, which keeps tool output compact and helps the model focus on what matters.
 - **Health check.** `https://mcp.courtlistener.com/health` returns JSON with server status and the deployed Git SHA — useful for incident reports.
-- **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome, and distinct active users over the trailing 1, 7, and 30 days per credential type). On the hosted deployment this path is not reachable from the public internet.
+- **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome and credential type, and distinct active users over the trailing 1, 7, and 30 days per credential type). On the hosted deployment this path is not reachable from the public internet.
 
 ---
 
