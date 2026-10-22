@@ -43,7 +43,7 @@ A few example prompts once the server is connected:
 - *"What dissents has Judge Sotomayor written on Fourth Amendment cases?"*
 - *"Set up a daily alert for new filings mentioning 'algorithmic discrimination'."*
 
-Under the hood the server exposes a small set of focused tools (search, citation analysis, alert management) plus a generic API-call escape hatch that covers every other CourtListener REST endpoint. See [Available tools](#available-tools).
+Under the hood the server exposes a small set of focused tools (search, document reading, citation analysis, alert management, Pray and Pay) plus a generic API-call escape hatch that covers every other CourtListener REST endpoint. See [Available tools](#available-tools).
 
 ---
 
@@ -133,7 +133,7 @@ The server is a thin proxy: it never stores your CourtListener credentials, and 
 
 ## Available tools
 
-All search and read tools are available to any signed-in user. Alert and subscription tools require a CourtListener account (which you already have if you've signed in).
+All search and read tools are available to any signed-in user. Alert, subscription, and Pray and Pay tools require a CourtListener account (which you already have if you've signed in).
 
 ### Search and retrieval
 
@@ -143,6 +143,13 @@ All search and read tools are available to any signed-in user. Alert and subscri
 | `get_endpoint_item` | Fetch a single item (opinion, docket, judge, etc.) by its CourtListener ID. |
 | `get_more_results` | Page through additional results from a previous `search` or `call_endpoint` call. |
 | `get_counts` | Get the total result count for a previous query (some queries compute counts lazily). |
+
+### Document reading
+
+| Tool | What it does |
+| --- | --- |
+| `read_document` | Read the full text of an opinion or RECAP document by `opinion_id`, `recap_document_id`, or `cluster_id` (exactly one). Returns the whole text, or one or more chunks when `chunk_index` is set. Cluster mode reads the case's main opinion and lists every opinion in the cluster, with type and author, in `cluster_opinions`. |
+| `search_document` | Case-insensitive literal search (like grep) inside one or more opinions or RECAP documents. Returns matching snippets with surrounding context and each match's character `position`, so you can find a phrase without reading the whole document. |
 
 ### Generic API access
 
@@ -179,6 +186,17 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 
 These tools modify your CourtListener account state. Your client should prompt you for confirmation before calling them; if it doesn't, you can manage alerts at [courtlistener.com/profile/alerts/](https://www.courtlistener.com/profile/alerts/).
 
+### Pray and Pay
+
+[Pray and Pay](https://www.courtlistener.com/help/pray-and-pay/) lets you request a PACER filing that isn't on CourtListener yet. Prayers are pooled: when anyone buys the document, it is added to CourtListener for free and everyone praying for it is emailed. Nothing is charged to you, but fulfillment isn't immediate or guaranteed.
+
+| Tool | What it does |
+| --- | --- |
+| `pray_for_document` | Pray for a RECAP document by its ID. Checks `is_available` first and, if the PDF is already on CourtListener, tells you to use `read_document` instead of recording a prayer. |
+| `withdraw_prayer` | Withdraw your pending prayer for a RECAP document, looked up by document ID (no prayer ID needed). |
+
+These tools also modify your CourtListener account state, so the same confirmation advice applies. To list your pending prayers, use `call_endpoint` with `endpoint_id` `prayers`.
+
 ---
 
 ## Usage notes and limits
@@ -186,6 +204,10 @@ These tools modify your CourtListener account state. Your client should prompt y
 - **Rate limits.** Usage is bounded by CourtListener's API rate limits; see [the API docs](https://www.courtlistener.com/help/api/rest/) for current values.
 - **Result size.** Search and list tools return up to 100 items per call (default 20). Use `get_more_results` to page through larger result sets.
 - **Citation analysis batching.** `analyze_citations` verifies up to ~250 unique citations per call to stay under request budgets. Anything larger returns a `job_id`; call `resume_citation_analysis` to continue.
+- **Document chunking.** `read_document` returns the whole document unless `chunk_index` is set, in which case it returns windows of `chunk_size` characters (default 8,000; the response includes `total_chunks`). A list of indexes fetches up to 10 chunks, contiguous or not, in one call.
+- **Documents per call.** `search_document` accepts up to 10 opinion or RECAP document IDs per call and returns up to 20 matches per document, each with 300 characters of context on either side by default (`snippet_size`).
+- **Document cache.** Text fetched by `read_document` and `search_document` is cached on the server for 24 hours, keyed by document ID and shared across users, so re-reading or re-searching the same document doesn't spend another API request.
+- **Prayer limits.** Prayers count against a per-user daily limit set by CourtListener, so only pray for filings you actually want. `pray_for_document` refuses to spend one on a document that is already available.
 - **Field filtering.** Most read tools accept a `fields` parameter to return only the columns you need, which keeps tool output compact and helps the model focus on what matters.
 - **Health check.** `https://mcp.courtlistener.com/health` returns JSON with server status and the deployed Git SHA — useful for incident reports.
 - **Metrics.** The server exposes Prometheus metrics at `/metrics` (per-tool call counts by outcome, and distinct active users over the trailing 1, 7, and 30 days per credential type). On the hosted deployment this path is not reachable from the public internet.
@@ -222,7 +244,7 @@ Check `https://mcp.courtlistener.com/health` for server status. If it returns `h
 
 - **Account data.** The server reads and writes only what's necessary to run the tools you call. Search and read tools are pure proxies; alert tools modify your CourtListener alert preferences.
 - **Tokens.** Access tokens are forwarded to CourtListener on each request and cached for up to 10 minutes against an HMAC of the token (the raw token is never stored). When you revoke access from your CourtListener profile, the cache is invalidated on the next request.
-- **Session state.** The server stores short-lived per-user state in Redis — pagination cursors and citation-analysis jobs — keyed by an HMAC of the OIDC `sub` claim. This state expires after one hour of inactivity. No tool inputs or outputs are persisted.
+- **Session state.** The server stores short-lived per-user state in Redis — pagination cursors and citation-analysis jobs — keyed by an HMAC of the OIDC `sub` claim. This state expires after one hour of inactivity. Document text fetched by `read_document` and `search_document` is cached for 24 hours, keyed by document ID rather than user. No other tool inputs or outputs are persisted.
 - **Logs.** Standard request logs (timestamps, IPs, response codes) are retained for operational debugging and are not used for any other purpose.
 
 For the full data policy that governs the underlying CourtListener service, see the [CourtListener privacy policy](https://www.courtlistener.com/terms/#privacy).
