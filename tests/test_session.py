@@ -27,6 +27,10 @@ from courtlistener.mcp.session import (
     set_session,
     token_info_key,
 )
+from courtlistener.mcp.settings import (
+    REDIS_CONNECT_TIMEOUT_SECONDS,
+    REDIS_SOCKET_TIMEOUT_SECONDS,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -240,7 +244,9 @@ class TestGetSessionFallback:
 
     def test_redis_session_builds_client_lazily(self):
         """Constructing the session must not connect; the client is
-        created on first use with decoded responses."""
+        created on first use with decoded responses and socket timeouts
+        so a hung socket surfaces as ``TimeoutError`` instead of
+        stalling."""
         session = RedisSession("redis://example.test:6379")
         assert session._client is None
         with patch(
@@ -250,7 +256,11 @@ class TestGetSessionFallback:
             _ = session.client
             _ = session.client
         from_url.assert_called_once_with(
-            "redis://example.test:6379", decode_responses=True, protocol=3
+            "redis://example.test:6379",
+            decode_responses=True,
+            protocol=3,
+            socket_timeout=REDIS_SOCKET_TIMEOUT_SECONDS,
+            socket_connect_timeout=REDIS_CONNECT_TIMEOUT_SECONDS,
         )
 
 
@@ -328,8 +338,12 @@ class TestRedisSessionPing:
     def test_reports_a_reachable_server(self):
         assert run(self._session(return_value=True).ping()) is True
 
-    def test_connection_failure_reads_as_unhealthy(self):
-        session = self._session(side_effect=RedisConnectionError("dns"))
+    @pytest.mark.parametrize(
+        "exc",
+        [RedisConnectionError("dns"), RedisTimeoutError("socket timeout")],
+    )
+    def test_connection_failure_reads_as_unhealthy(self, exc):
+        session = self._session(side_effect=exc)
         assert run(session.ping()) is False
 
 
@@ -406,8 +420,11 @@ class TestRedisActiveUsers:
             "mcp:active:api_token:2026-09-28",
         )
 
-    def test_connection_errors_degrade(self):
-        exc = RedisConnectionError("dns")
+    @pytest.mark.parametrize(
+        "exc",
+        [RedisConnectionError("dns"), RedisTimeoutError("socket timeout")],
+    )
+    def test_connection_errors_degrade(self, exc):
         session = self._session(
             execute=AsyncMock(side_effect=exc),
             pfcount=AsyncMock(side_effect=exc),
