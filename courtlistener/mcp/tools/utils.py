@@ -225,27 +225,29 @@ def make_id() -> str:
 
 
 async def fetch_document_text(
-    doc_type: str, doc_id: int, client: AsyncCourtListener
+    document_type: str, document_id: int, client: AsyncCourtListener
 ) -> str | None:
     """Return full document text, fetching from the API on cache miss."""
-    doc_types = {
+    document_types = {
         "opinion": ("opinions", "html_with_citations"),
         "recap_document": ("recap_documents", "plain_text"),
     }
-    if doc_type not in doc_types:
-        raise ValueError(f"Unknown doc_type: {doc_type!r}")
+    if document_type not in document_types:
+        raise ValueError(f"Unknown document_type: {document_type!r}")
 
     session = get_session()
-    cached = await session.get_document(doc_type, doc_id)
+    cached = await session.get_document(document_type, document_id)
     if cached is not None:
         return cached
 
-    resource_name, field = doc_types[doc_type]
-    item = await getattr(client, resource_name).get(doc_id, fields=[field])
+    resource_name, field = document_types[document_type]
+    item = await getattr(client, resource_name).get(
+        document_id, fields=[field]
+    )
     text = item.get(field) or ""
 
     if text:
-        await session.store_document(doc_type, doc_id, text)
+        await session.store_document(document_type, document_id, text)
 
     return text or None
 

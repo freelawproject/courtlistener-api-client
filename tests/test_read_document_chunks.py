@@ -24,7 +24,7 @@ def read(**arguments):
     client.__aenter__.return_value = client
     client.__aexit__.return_value = False
 
-    async def opinions_get(doc_id, fields=None):
+    async def opinions_get(document_id, fields=None):
         return {"html_with_citations": TEXT}
 
     client.opinions.get.side_effect = opinions_get

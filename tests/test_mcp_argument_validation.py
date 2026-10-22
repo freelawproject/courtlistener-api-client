@@ -533,8 +533,8 @@ class TestIntegralFloatArguments:
     async def test_read_document_slices_float_chunk_indexes(self):
         tool = ReadDocumentTool()
 
-        async def fake_fetch(doc_type, doc_id, client):
-            assert doc_id == 217512 and type(doc_id) is int
+        async def fake_fetch(document_type, document_id, client):
+            assert document_id == 217512 and type(document_id) is int
             return "a" * 100 + "b" * 100 + "c" * 50
 
         client = MagicMock()

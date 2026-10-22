@@ -131,16 +131,19 @@ class SearchDocumentTool(MCPTool):
 
     async def _search_one(
         self,
-        doc_type: str,
-        doc_id: int,
+        document_type: str,
+        document_id: int,
         query: str,
         snippet_size: int,
         client,
     ) -> dict:
-        result: dict = {"doc_type": doc_type, "doc_id": doc_id, "query": query}
+        # "opinion" -> "opinion_id", "recap_document" -> "recap_document_id"
+        result: dict = {f"{document_type}_id": document_id, "query": query}
 
         try:
-            text = await fetch_document_text(doc_type, doc_id, client)
+            text = await fetch_document_text(
+                document_type, document_id, client
+            )
         except Exception as exc:
             result["error"] = str(exc)
             return result
@@ -190,30 +193,31 @@ class SearchDocumentTool(MCPTool):
 
         async with self.get_client() as client:
             if cluster_id is not None:
-                doc_type = "opinion"
+                document_type = "opinion"
                 cluster_opinions = await resolve_cluster_opinions(
                     cluster_id, client
                 )
-                doc_ids = [cluster_opinions[0]["id"]]
+                document_ids = [cluster_opinions[0]["id"]]
             else:
                 if opinion_id is not None:
-                    doc_type, raw = "opinion", opinion_id
+                    document_type, raw = "opinion", opinion_id
                 else:
-                    doc_type, raw = "recap_document", recap_document_id
+                    document_type, raw = "recap_document", recap_document_id
                 multi = isinstance(raw, list)
-                doc_ids = raw if isinstance(raw, list) else [raw]
+                document_ids = raw if isinstance(raw, list) else [raw]
 
             results = [
                 await self._search_one(
-                    doc_type, doc_id, query, snippet_size, client
+                    document_type, document_id, query, snippet_size, client
                 )
-                for doc_id in doc_ids
+                for document_id in document_ids
             ]
 
         if multi:
             return {"results": results}
 
         result = results[0]
-        if cluster_opinions:
+        if cluster_id is not None:
+            result = {"cluster_id": cluster_id, **result}
             result["cluster_opinions"] = cluster_opinions
         return result

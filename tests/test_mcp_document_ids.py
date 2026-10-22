@@ -95,8 +95,10 @@ def make_client(
     client.__aenter__.return_value = client
     client.__aexit__.return_value = False
 
-    async def opinions_get(doc_id, fields=None):
-        return {"html_with_citations": (opinion_texts or {}).get(doc_id, "")}
+    async def opinions_get(document_id, fields=None):
+        return {
+            "html_with_citations": (opinion_texts or {}).get(document_id, "")
+        }
 
     def opinions_list(cluster=None, fields=None):
         opinions = (cluster_opinions or {}).get(cluster, [])
@@ -435,7 +437,8 @@ class TestReadDocumentClusterId:
         )
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(tool.call({"cluster_id": 8695893}))
-        assert result["doc_id"] == 8678997
+        assert result["cluster_id"] == 8695893
+        assert result["opinion_id"] == 8678997
         assert result["cluster_opinions"] == [
             {"id": 8678997},
             {"id": 9000001},
@@ -455,7 +458,8 @@ class TestReadDocumentClusterId:
         client.opinions.get.side_effect = RuntimeError("HTTP 404: not found")
         with patch.object(ReadDocumentTool, "get_client", return_value=client):
             result = run(tool.call({"cluster_id": 5}))
-        assert result["doc_id"] == 10
+        assert result["cluster_id"] == 5
+        assert result["opinion_id"] == 10
         assert result["error"] == "HTTP 404: not found"
         assert ids(result["cluster_opinions"]) == [10, 11]
 
@@ -474,7 +478,8 @@ class TestSearchDocumentClusterId:
             SearchDocumentTool, "get_client", return_value=client
         ):
             result = run(tool.call({"cluster_id": 5, "query": "alpha"}))
-        assert result["doc_id"] == 10
+        assert result["cluster_id"] == 5
+        assert result["opinion_id"] == 10
         assert result["match_count"] == 1
         assert ids(result["cluster_opinions"]) == [10, 11]
         assert "results" not in result  # single result, not a list
@@ -489,7 +494,7 @@ class TestSearchDocumentClusterId:
             SearchDocumentTool, "get_client", return_value=client
         ):
             result = run(tool.call({"cluster_id": 5, "query": "alpha"}))
-        assert result["doc_id"] == 10
+        assert result["opinion_id"] == 10
         assert result["cluster_opinions"] == [{"id": 10}]
 
     def test_empty_cluster_raises(self):
@@ -522,7 +527,7 @@ class TestSearchDocumentClusterId:
             SearchDocumentTool, "get_client", return_value=client
         ):
             result = run(tool.call({"opinion_id": [10, 11], "query": "alpha"}))
-        assert [r["doc_id"] for r in result["results"]] == [10, 11]
+        assert [r["opinion_id"] for r in result["results"]] == [10, 11]
 
     def test_rejects_multiple_id_kinds(self):
         with pytest.raises(ToolArgumentValidationError, match="exactly one"):
@@ -531,6 +536,109 @@ class TestSearchDocumentClusterId:
                     {"opinion_id": 1, "cluster_id": 2, "query": "x"}
                 )
             )
+
+
+class TestDocumentToolOutputKeys:
+    """Output ID keys echo the input parameter names (issue #274)."""
+
+    @staticmethod
+    def recap_client(texts: dict[int, str]):
+        client = make_client()
+
+        async def recap_get(document_id, fields=None):
+            return {"plain_text": texts.get(document_id, "")}
+
+        client.recap_documents.get.side_effect = recap_get
+        return client
+
+    def test_read_document_opinion_id(self):
+        client = make_client(opinion_texts={10: "text"})
+        with patch.object(ReadDocumentTool, "get_client", return_value=client):
+            result = run(ReadDocumentTool().call({"opinion_id": 10}))
+        assert list(result) == ["opinion_id", "total_chars", "text"]
+        assert result["opinion_id"] == 10
+
+    def test_read_document_recap_document_id(self):
+        client = self.recap_client({20: "text"})
+        with patch.object(ReadDocumentTool, "get_client", return_value=client):
+            result = run(ReadDocumentTool().call({"recap_document_id": 20}))
+        assert list(result) == ["recap_document_id", "total_chars", "text"]
+        assert result["recap_document_id"] == 20
+
+    def test_read_document_cluster_id(self):
+        client = make_client(
+            opinion_texts={10: "text"}, cluster_opinions={5: [10, 11]}
+        )
+        with patch.object(ReadDocumentTool, "get_client", return_value=client):
+            result = run(ReadDocumentTool().call({"cluster_id": 5}))
+        assert list(result) == [
+            "cluster_id",
+            "opinion_id",
+            "cluster_opinions",
+            "total_chars",
+            "text",
+        ]
+        assert result["cluster_id"] == 5
+        assert result["opinion_id"] == 10
+
+    def test_search_document_opinion_id(self):
+        client = make_client(opinion_texts={10: "alpha"})
+        with patch.object(
+            SearchDocumentTool, "get_client", return_value=client
+        ):
+            result = run(
+                SearchDocumentTool().call({"opinion_id": 10, "query": "alpha"})
+            )
+        assert list(result)[:2] == ["opinion_id", "query"]
+        assert result["opinion_id"] == 10
+
+    def test_search_document_recap_document_id(self):
+        client = self.recap_client({20: "alpha"})
+        with patch.object(
+            SearchDocumentTool, "get_client", return_value=client
+        ):
+            result = run(
+                SearchDocumentTool().call(
+                    {"recap_document_id": 20, "query": "alpha"}
+                )
+            )
+        assert list(result)[:2] == ["recap_document_id", "query"]
+        assert result["recap_document_id"] == 20
+
+    def test_search_document_cluster_id(self):
+        client = make_client(
+            opinion_texts={10: "alpha"}, cluster_opinions={5: [10, 11]}
+        )
+        with patch.object(
+            SearchDocumentTool, "get_client", return_value=client
+        ):
+            result = run(
+                SearchDocumentTool().call({"cluster_id": 5, "query": "alpha"})
+            )
+        assert list(result)[:3] == ["cluster_id", "opinion_id", "query"]
+        assert result["cluster_id"] == 5
+        assert result["opinion_id"] == 10
+        assert ids(result["cluster_opinions"]) == [10, 11]
+
+    def test_no_legacy_keys(self):
+        client = make_client(opinion_texts={10: "alpha"})
+        with (
+            patch.object(ReadDocumentTool, "get_client", return_value=client),
+            patch.object(
+                SearchDocumentTool, "get_client", return_value=client
+            ),
+        ):
+            read = run(ReadDocumentTool().call({"opinion_id": 10}))
+            search = run(
+                SearchDocumentTool().call({"opinion_id": 10, "query": "a"})
+            )
+        for result in (read, search):
+            assert not {
+                "doc_type",
+                "doc_id",
+                "document_type",
+                "document_id",
+            } & set(result)
 
 
 class TestAnalyzeCitationsClusterId:
