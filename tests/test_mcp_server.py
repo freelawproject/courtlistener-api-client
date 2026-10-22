@@ -49,7 +49,7 @@ class TestListTools:
         assert [tool.name for tool in listed] == list(MCP_TOOLS)
         for tool in listed:
             registered = MCP_TOOLS[tool.name]
-            assert tool.inputSchema == registered.get_input_schema()
+            assert tool.input_schema == registered.get_input_schema()
             assert tool.description == type(registered).__doc__
             assert tool.annotations == registered.annotations
             assert tool.title == registered.annotations.title
@@ -144,9 +144,12 @@ class TestHttpApp:
         assert "resource_metadata=" in response.headers["www-authenticate"]
 
     async def test_serves_tools_to_an_api_token_client(self, app):
+        # FastMCP's transport runs on httpx2, so the factory must build one.
+        import httpx2
+
         def factory(headers=None, timeout=None, auth=None, **kwargs):
-            return httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
+            return httpx2.AsyncClient(
+                transport=httpx2.ASGITransport(app=app),
                 base_url="http://testserver",
                 headers=headers,
                 timeout=timeout,
