@@ -174,6 +174,56 @@ class TestHttpApp:
         assert [tool.name for tool in listed] == list(MCP_TOOLS)
         assert "id" in json.loads(result.content[0].text)["properties"]
 
+    async def test_mcp_path_aliases_route_to_the_endpoint(self, app):
+        """/mcp and /mcp/ reach the MCP endpoint instead of 404ing.
+
+        Microsoft Copilot Studio sends MCP requests to <origin>/mcp no
+        matter what server URL it was given, so the aliases must behave
+        exactly like /: here, an unauthenticated request draws the 401
+        challenge rather than a 404. A neighbouring path stays a 404.
+        """
+        payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+        headers = {"Accept": "application/json, text/event-stream"}
+        async with app.router.lifespan_context(app), self._http(app) as http:
+            for path in ("/mcp", "/mcp/"):
+                response = await http.post(path, json=payload, headers=headers)
+                assert response.status_code == 401, path
+                assert (
+                    "resource_metadata="
+                    in response.headers["www-authenticate"]
+                )
+
+            other = await http.post("/mcpx", json=payload, headers=headers)
+
+        assert other.status_code == 404
+
+    async def test_serves_tools_at_the_mcp_alias(self, app):
+        # FastMCP's transport runs on httpx2, so the factory must build one.
+        import httpx2
+
+        def factory(headers=None, timeout=None, auth=None, **kwargs):
+            return httpx2.AsyncClient(
+                transport=httpx2.ASGITransport(app=app),
+                base_url="http://testserver",
+                headers=headers,
+                timeout=timeout,
+                auth=auth,
+                follow_redirects=True,
+            )
+
+        transport = StreamableHttpTransport(
+            "http://testserver/mcp",
+            headers={"Authorization": "Token cl-api-token"},
+            httpx_client_factory=factory,
+        )
+        async with (
+            app.router.lifespan_context(app),
+            Client(transport) as client,
+        ):
+            listed = await client.list_tools()
+
+        assert [tool.name for tool in listed] == list(MCP_TOOLS)
+
     async def test_health_reports_the_session_store(self, app):
         session = RedisSession("redis://example.test:6379")
         session._client = MagicMock(ping=AsyncMock(return_value=True))
