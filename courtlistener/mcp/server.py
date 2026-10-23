@@ -13,6 +13,7 @@ from starlette.responses import (
     PlainTextResponse,
     Response,
 )
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from courtlistener.mcp.auth import CourtListenerOAuthProxy, admit_token_scheme
 from courtlistener.mcp.metrics import render_metrics
@@ -183,11 +184,26 @@ def create_auth_provider() -> CourtListenerOAuthProxy:
     )
 
 
+class McpPathAlias:
+    """Serve the MCP endpoint at /mcp and /mcp/ as aliases of /."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        if scope["type"] == "http" and scope["path"] in ("/mcp", "/mcp/"):
+            scope = {**scope, "path": "/", "raw_path": b"/"}
+        await self.app(scope, receive, send)
+
+
 def create_http_app():
     if REDIS_URL is None:
         raise ValueError("REDIS_URL is required for HTTP mode")
     mcp = create_mcp_server(auth=create_auth_provider())
     middleware = [
+        Middleware(McpPathAlias),
         Middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -201,7 +217,7 @@ def create_http_app():
                 "Content-Type",
             ],
             expose_headers=["mcp-session-id"],
-        )
+        ),
     ]
     app = mcp.http_app(path="/", stateless_http=True, middleware=middleware)
     admit_token_scheme(app)
