@@ -77,6 +77,9 @@ OAUTH_SCOPES = os.getenv(
     "COURTLISTENER_OAUTH_SCOPES", "openid api wiki email profile"
 ).split()
 
+# The Free Law Project wiki the wiki tools read.
+WIKI_BASE_URL = os.getenv("WIKI_BASE_URL", "https://wiki.free.law").rstrip("/")
+
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None
 SENTRY_TRACES_SAMPLE_RATE = float(
