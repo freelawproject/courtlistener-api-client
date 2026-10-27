@@ -31,7 +31,7 @@ from courtlistener.mcp.session import (
     hmac_hex,
     set_session,
 )
-from courtlistener.mcp.settings import OAUTH_INTROSPECTION_URL
+from courtlistener.mcp.settings import OAUTH_INTROSPECTION_URL, OAUTH_SCOPES
 from courtlistener.settings import get_api_base_url
 
 
@@ -559,14 +559,14 @@ class TestCachedTokenVerifier:
         assert token.claims["user_hash"] == "uh"
         assert token.claims["cached"] is False
 
-    def test_requires_only_the_api_scope(self):
-        """``api`` is what CL's REST API expects downstream, and the
-        middleware 403s a token without it. Introspection needs no
-        particular scope, and ``scopes_supported`` is advertised by the
-        proxy separately.
+    def test_requires_every_configured_scope(self):
+        """The tools need the whole set (``api`` for CL's REST API,
+        ``wiki`` for the wiki, ``openid email`` for identity), and the
+        middleware 403s a token missing any of them, which also makes the
+        401 challenge ask clients for all of them up front.
         """
-        assert OAuthTokenVerifier().required_scopes == ["api"]
-        assert ApiTokenVerifier().required_scopes == ["api"]
+        assert OAuthTokenVerifier().required_scopes == OAUTH_SCOPES
+        assert ApiTokenVerifier().required_scopes == OAUTH_SCOPES
 
     def test_carries_introspected_scopes_and_expiry(self):
         """The middleware checks ``required_scopes`` against the
@@ -612,7 +612,7 @@ class TestCachedTokenVerifier:
         ):
             token = run(ApiTokenVerifier().verify_token("tok"))
         assert token is not None
-        assert token.scopes == ["api"]
+        assert token.scopes == OAUTH_SCOPES
         assert token.expires_at is None
 
 
@@ -1063,7 +1063,7 @@ class TestAuthOverHttp:
         bearer = AccessToken(
             token="oauth-jwt",
             client_id="c",
-            scopes=["api"],
+            scopes=OAUTH_SCOPES,
             claims={"user_hash": "uh", "token_kind": "oauth", "cached": False},
         )
         return (

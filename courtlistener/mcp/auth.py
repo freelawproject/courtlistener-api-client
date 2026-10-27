@@ -39,6 +39,7 @@ from courtlistener.mcp.settings import (
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
     OAUTH_INTROSPECTION_URL,
+    OAUTH_SCOPES,
     TOKEN_CACHE_TTL_SECONDS,
     VERIFICATION_TIMEOUT_SECONDS,
 )
@@ -231,7 +232,7 @@ class CachedTokenVerifier(TokenVerifier):
     kind: TokenKind
 
     def __init__(self) -> None:
-        super().__init__(required_scopes=["api"])
+        super().__init__(required_scopes=OAUTH_SCOPES)
 
     async def check(self, token: str) -> TokenInfo | None:
         """Ask CourtListener about *token*; ``None`` when it is not valid."""
