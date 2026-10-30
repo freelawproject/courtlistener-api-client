@@ -28,6 +28,7 @@ services:
       COURTLISTENER_OAUTH_ISSUER: ${COURTLISTENER_OAUTH_ISSUER:-https://www.courtlistener.com}
       COURTLISTENER_OAUTH_CLIENT_ID: ${COURTLISTENER_OAUTH_CLIENT_ID:-}
       COURTLISTENER_OAUTH_CLIENT_SECRET: ${COURTLISTENER_OAUTH_CLIENT_SECRET:-}
+      WIKI_BASE_URL: ${WIKI_BASE_URL:-https://wiki.free.law}
     healthcheck:
       test: [
         "CMD", "python", "-c",

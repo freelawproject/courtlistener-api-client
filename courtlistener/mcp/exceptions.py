@@ -50,6 +50,26 @@ class UpstreamCourtListenerError(ToolError):
         self.status = status
 
 
+class WikiAPIError(Exception):
+    """The wiki's API answered with an error, or could not be reached.
+
+    ``status`` is the HTTP status, or ``"connection"``.
+    """
+
+    def __init__(self, message: str, status: str) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+class WikiToolError(ToolError):
+    """A tool's wiki request failed; see ``WikiAPIError.status``."""
+
+    def __init__(self, message: str, tool_name: str, status: str) -> None:
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.status = status
+
+
 def validation_error_fields(exc: ValidationError) -> list[str]:
     """Top-level field names that failed validation."""
     return sorted(
@@ -69,6 +89,7 @@ def before_send(event, hint):
     - ValidationErrors tagged by model and fields.
     - UnauthorizedToolErrors tagged by tool.
     - UpstreamCourtListenerErrors keyed by status, tagged by tool and status.
+    - WikiToolErrors likewise.
     - SessionDataNotFoundErrors tagged by tool and field.
     """
     # Message-only: always a duplicate of an exception event grouped below.
@@ -97,6 +118,14 @@ def before_send(event, hint):
         event.setdefault("tags", {}).update({"tool": exc.tool_name})
     elif isinstance(exc, UpstreamCourtListenerError):
         event["fingerprint"] = ["courtlistener-upstream", exc.status]
+        event.setdefault("tags", {}).update(
+            {
+                "tool": exc.tool_name,
+                "upstream_status": exc.status,
+            }
+        )
+    elif isinstance(exc, WikiToolError):
+        event["fingerprint"] = ["wiki", exc.status]
         event.setdefault("tags", {}).update(
             {
                 "tool": exc.tool_name,

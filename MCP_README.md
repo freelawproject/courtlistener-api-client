@@ -288,6 +288,7 @@ This launches the MCP server on `http://localhost:8080` with Redis and Postgres.
 | `COURTLISTENER_OAUTH_ISSUER` | no | OAuth issuer; defaults to `https://www.courtlistener.com`. |
 | `COURTLISTENER_OAUTH_SCOPES` | no | Scopes the server requests from CourtListener on the user's behalf; defaults to `openid api wiki email profile`. |
 | `COURTLISTENER_API_BASE_URL` | no | Override for the upstream CourtListener API (useful when pointing at a staging instance). |
+| `WIKI_BASE_URL` | no | The Free Law Project wiki the wiki tools read; defaults to `https://wiki.free.law`. |
 | `MCP_TOKEN_CACHE_TTL` | no | Token-to-user-hash cache TTL in seconds; defaults to `600`. |
 | `PROMETHEUS_MULTIPROC_DIR` | no | Directory for per-worker Prometheus metric files, merged by `/metrics`. The Docker entrypoint sets it; needed whenever more than one worker process serves the app. |
 

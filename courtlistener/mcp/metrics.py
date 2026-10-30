@@ -23,6 +23,7 @@ from courtlistener.mcp.exceptions import (
     ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
+    WikiToolError,
 )
 from courtlistener.mcp.session import (
     Session,
@@ -85,6 +86,12 @@ def error_outcome(exc: BaseException) -> str:
     if isinstance(exc, UnauthorizedToolError):
         return "unauthorized"
     if isinstance(exc, UpstreamCourtListenerError):
+        return "upstream_error"
+    if isinstance(exc, WikiToolError):
+        if exc.status == "401":
+            return "unauthorized"
+        if exc.status.isdigit() and int(exc.status) < 500:
+            return "api_error"
         return "upstream_error"
     cause = exc.__cause__
     if isinstance(cause, CourtListenerAPIError):
