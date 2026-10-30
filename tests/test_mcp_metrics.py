@@ -19,6 +19,7 @@ from courtlistener.mcp.exceptions import (
     ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
+    WikiToolError,
 )
 from courtlistener.mcp.metrics import (
     OUTCOMES,
@@ -111,6 +112,18 @@ class TestOutcomeFor:
         exc = ToolError("wrapped")
         exc.__cause__ = _api_error(status)
         assert error_outcome(exc) == expected
+
+    @pytest.mark.parametrize(
+        ("status", "expected"),
+        [
+            ("401", "unauthorized"),
+            ("404", "api_error"),
+            ("503", "upstream_error"),
+            ("connection", "upstream_error"),
+        ],
+    )
+    def test_classifies_wiki_errors_by_status(self, status, expected):
+        assert error_outcome(WikiToolError("m", "t", status)) == expected
 
     def test_unknown_exception_is_error(self):
         assert error_outcome(RuntimeError("boom")) == "error"

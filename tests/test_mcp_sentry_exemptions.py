@@ -21,6 +21,8 @@ from courtlistener.mcp.exceptions import (
     SentryExemptToolError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
+    WikiAPIError,
+    WikiToolError,
     before_send,
 )
 from courtlistener.mcp.tools.mcp_tool import MCPTool
@@ -149,6 +151,15 @@ class TestRunErrorClassification:
         assert excinfo.value.status == "connection"
 
     @pytest.mark.asyncio
+    async def test_wiki_error_raises_typed_error(self, monkeypatch):
+        error = WikiAPIError("The wiki has no page you can read.", "404")
+        with pytest.raises(WikiToolError) as excinfo:
+            await _run_tool_raising(error)
+        assert str(excinfo.value) == str(error)
+        assert excinfo.value.tool_name == "fake_tool"
+        assert excinfo.value.status == "404"
+
+    @pytest.mark.asyncio
     async def test_invalid_fields_maps_to_argument_validation(
         self, monkeypatch
     ):
@@ -190,6 +201,16 @@ class TestBeforeSend:
         event = {"event_id": "abc"}
         hint = self._hint_for(ToolError("CourtListener API error"))
         assert before_send(event, hint) is event
+
+    def test_wiki_errors_grouped_by_status(self):
+        event = {"event_id": "abc"}
+        hint = self._hint_for(WikiToolError("m", "wiki_read_page", "404"))
+        assert before_send(event, hint) is event
+        assert event["fingerprint"] == ["wiki", "404"]
+        assert event["tags"] == {
+            "tool": "wiki_read_page",
+            "upstream_status": "404",
+        }
 
     def test_keeps_events_without_exc_info(self):
         event = {"event_id": "abc"}

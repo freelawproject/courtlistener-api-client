@@ -2,10 +2,10 @@
 
 import httpx
 import pytest
-from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.auth import AccessToken
 
 from courtlistener.mcp.auth_types import TokenKind
+from courtlistener.mcp.exceptions import WikiAPIError
 from courtlistener.mcp.tools import utils
 from courtlistener.mcp.tools.utils import wiki_get
 
@@ -67,8 +67,9 @@ async def test_passes_query_parameters(monkeypatch):
 
 async def test_names_a_missing_page(monkeypatch):
     serve(monkeypatch, lambda request: httpx.Response(404))
-    with pytest.raises(ToolError, match="'eng/nope'"):
+    with pytest.raises(WikiAPIError, match="'eng/nope'") as excinfo:
         await wiki_get("pages/eng/nope")
+    assert excinfo.value.status == "404"
 
 
 async def test_rejected_token_says_to_reconnect(monkeypatch):
@@ -77,11 +78,23 @@ async def test_rejected_token_says_to_reconnect(monkeypatch):
         lambda request: httpx.Response(401),
         access_token(TokenKind.OAUTH),
     )
-    with pytest.raises(ToolError, match="reconnect"):
+    with pytest.raises(WikiAPIError, match="reconnect") as excinfo:
         await wiki_get("pages/")
+    assert excinfo.value.status == "401"
 
 
 async def test_other_errors_report_the_status(monkeypatch):
     serve(monkeypatch, lambda request: httpx.Response(503))
-    with pytest.raises(ToolError, match="HTTP 503"):
+    with pytest.raises(WikiAPIError, match="HTTP 503") as excinfo:
         await wiki_get("pages/")
+    assert excinfo.value.status == "503"
+
+
+async def test_unreachable_wiki_is_a_connection_error(monkeypatch):
+    def handler(request):
+        raise httpx.ConnectError("Connection refused")
+
+    serve(monkeypatch, handler)
+    with pytest.raises(WikiAPIError, match="could not be reached") as excinfo:
+        await wiki_get("pages/")
+    assert excinfo.value.status == "connection"

@@ -22,6 +22,8 @@ from courtlistener.mcp.exceptions import (
     ToolArgumentValidationError,
     UnauthorizedToolError,
     UpstreamCourtListenerError,
+    WikiAPIError,
+    WikiToolError,
 )
 from courtlistener.mcp.metrics import error_outcome, record_tool_call
 from courtlistener.mcp.session import get_session, json_default
@@ -245,6 +247,10 @@ class MCPTool(Tool):
         except CourtListenerAPIError as exc:
             error = await self.translate_api_error(exc)
             raise error from exc
+        except WikiAPIError as exc:
+            raise WikiToolError(
+                str(exc), tool_name=self.name, status=exc.status
+            ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamCourtListenerError(
                 f"Upstream CourtListener request failed: {exc}",

@@ -5,12 +5,12 @@ import uuid
 from typing import Any, cast
 
 import httpx
-from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_access_token
 
 from courtlistener import AsyncCourtListener
 from courtlistener.async_client.resource import AsyncResourceIterator
 from courtlistener.mcp.auth_types import TokenKind
+from courtlistener.mcp.exceptions import WikiAPIError
 from courtlistener.mcp.session import get_session
 from courtlistener.mcp.settings import DEFAULT_NUM_RESULTS, WIKI_BASE_URL
 from courtlistener.models import ENDPOINTS
@@ -371,18 +371,29 @@ async def wiki_get(path: str, **params: Any) -> dict:
     token = get_access_token()
     if token is not None and token.claims.get("token_kind") != TokenKind.API:
         headers["Authorization"] = f"Bearer {token.token}"
-    async with httpx.AsyncClient(base_url=WIKI_BASE_URL, timeout=30) as http:
-        resp = await http.get(
-            f"/api/v1/{path}", params=params, headers=headers
-        )
+    try:
+        async with httpx.AsyncClient(
+            base_url=WIKI_BASE_URL, timeout=30
+        ) as http:
+            resp = await http.get(
+                f"/api/v1/{path}", params=params, headers=headers
+            )
+    except httpx.HTTPError as exc:
+        raise WikiAPIError(
+            f"The wiki could not be reached: {exc}", "connection"
+        ) from exc
+    status = str(resp.status_code)
     if resp.status_code == 401:
-        raise ToolError(
+        raise WikiAPIError(
             "The wiki did not accept your CourtListener sign-in; "
-            "reconnect this server to grant it wiki access."
+            "reconnect this server to grant it wiki access.",
+            status,
         )
     if resp.status_code == 404:
         page = path.removeprefix("pages/")
-        raise ToolError(f"The wiki has no page you can read at {page!r}.")
+        raise WikiAPIError(
+            f"The wiki has no page you can read at {page!r}.", status
+        )
     if not resp.is_success:
-        raise ToolError(f"The wiki returned HTTP {resp.status_code}.")
+        raise WikiAPIError(f"The wiki returned HTTP {status}.", status)
     return resp.json()
