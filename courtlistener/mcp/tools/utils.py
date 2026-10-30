@@ -373,7 +373,7 @@ async def wiki_get(path: str, **params: Any) -> dict:
         headers["Authorization"] = f"Bearer {token.token}"
     try:
         async with httpx.AsyncClient(
-            base_url=WIKI_BASE_URL, timeout=30
+            base_url=WIKI_BASE_URL, timeout=30, follow_redirects=True
         ) as http:
             resp = await http.get(
                 f"/api/v1/{path}", params=params, headers=headers

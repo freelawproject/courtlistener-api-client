@@ -56,6 +56,18 @@ async def test_reads_as_the_public_without_an_oauth_token(monkeypatch, token):
     await wiki_get("pages/")
 
 
+async def test_follows_redirects(monkeypatch):
+    def handler(request):
+        if request.url.path == "/api/v1/pages/old":
+            return httpx.Response(
+                301, headers={"Location": "/api/v1/pages/new"}
+            )
+        return httpx.Response(200, json={"path": "new"})
+
+    serve(monkeypatch, handler)
+    assert await wiki_get("pages/old") == {"path": "new"}
+
+
 async def test_passes_query_parameters(monkeypatch):
     def handler(request):
         assert request.url.params["q"] == "deploy"
