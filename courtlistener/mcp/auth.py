@@ -39,6 +39,7 @@ from courtlistener.mcp.settings import (
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
     OAUTH_INTROSPECTION_URL,
+    OAUTH_SCOPES,
     TOKEN_CACHE_TTL_SECONDS,
     VERIFICATION_TIMEOUT_SECONDS,
 )
@@ -87,6 +88,12 @@ class CourtListenerOAuthProxy(OAuthProxy):
     ) -> None:
         await super().register_client(client_info)
         oauth_registrations_total.labels(source="dcr").inc()
+
+    def get_challenge_scopes(
+        self, required_scopes: list[str] | None = None
+    ) -> list[str]:
+        """Advertise preferred scopes in the WWW-Authenticate challenge."""
+        return list(OAUTH_SCOPES)
 
     def get_routes(self, mcp_path: str | None = None) -> list[Route]:
         """FastMCP 4 registers the OIDC discovery alias only through
