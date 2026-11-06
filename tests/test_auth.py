@@ -31,7 +31,7 @@ from courtlistener.mcp.session import (
     hmac_hex,
     set_session,
 )
-from courtlistener.mcp.settings import OAUTH_INTROSPECTION_URL, OAUTH_SCOPES
+from courtlistener.mcp.settings import OAUTH_INTROSPECTION_URL
 from courtlistener.settings import get_api_base_url
 
 
@@ -1126,14 +1126,13 @@ class TestAuthOverHttp:
     def test_the_challenge_asks_for_every_configured_scope(self):
         """Clients request exactly the scopes the 401 challenge names,
         and the proxy forwards them to CourtListener verbatim, so the
-        challenge asks for the whole configured set up front or new
-        connections get tokens without ``wiki``. The gate itself still
-        requires only ``api``, so tokens issued before the wider ask
-        keep working."""
+        challenge asks for the proxy's whole ``valid_scopes`` (the set
+        the metadata advertises) up front, or new connections get
+        tokens without ``wiki``. The gate itself still requires only
+        ``api``, so tokens issued before the wider ask keep working."""
         resp = self._initialize({})
         assert resp.status_code == 401
-        scope = " ".join(OAUTH_SCOPES)
-        assert f'scope="{scope}"' in resp.headers["www-authenticate"]
+        assert 'scope="openid api"' in resp.headers["www-authenticate"]
         assert _auth_provider().required_scopes == ["api"]
 
 

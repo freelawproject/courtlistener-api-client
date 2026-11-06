@@ -19,6 +19,7 @@ from mcp.server.auth.middleware.bearer_auth import (
     RequireAuthMiddleware as SDKRequireAuthMiddleware,
 )
 from mcp.server.auth.provider import TokenVerifier as TokenVerifierProtocol
+from mcp.server.auth.settings import ClientRegistrationOptions
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl
 from starlette.applications import Starlette
@@ -39,7 +40,6 @@ from courtlistener.mcp.settings import (
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
     OAUTH_INTROSPECTION_URL,
-    OAUTH_SCOPES,
     TOKEN_CACHE_TTL_SECONDS,
     VERIFICATION_TIMEOUT_SECONDS,
 )
@@ -93,7 +93,10 @@ class CourtListenerOAuthProxy(OAuthProxy):
         self, required_scopes: list[str] | None = None
     ) -> list[str]:
         """Advertise preferred scopes in the WWW-Authenticate challenge."""
-        return list(OAUTH_SCOPES)
+        options = cast(
+            ClientRegistrationOptions, self.client_registration_options
+        )
+        return list(cast("list[str]", options.valid_scopes))
 
     def get_routes(self, mcp_path: str | None = None) -> list[Route]:
         """FastMCP 4 registers the OIDC discovery alias only through
