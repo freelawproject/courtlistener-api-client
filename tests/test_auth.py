@@ -1123,6 +1123,18 @@ class TestAuthOverHttp:
         assert resp.status_code == 401
         assert resp.headers["www-authenticate"].startswith("Bearer")
 
+    def test_the_challenge_asks_for_every_configured_scope(self):
+        """Clients request exactly the scopes the 401 challenge names,
+        and the proxy forwards them to CourtListener verbatim, so the
+        challenge asks for the proxy's whole ``valid_scopes`` (the set
+        the metadata advertises) up front, or new connections get
+        tokens without ``wiki``. The gate itself still requires only
+        ``api``, so tokens issued before the wider ask keep working."""
+        resp = self._initialize({})
+        assert resp.status_code == 401
+        assert 'scope="openid api"' in resp.headers["www-authenticate"]
+        assert _auth_provider().required_scopes == ["api"]
+
 
 class TestHealthEndpoint:
     """``/health`` must stay unauthenticated so uptime checks keep
