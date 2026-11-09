@@ -21,3 +21,4 @@
 - [`pray_for_document`](./pray_for_document.md)
 - [`withdraw_prayer`](./withdraw_prayer.md)
 - [`get_api_usage`](./get_api_usage.md)
+- [`wiki_search`](./wiki_search.md)
