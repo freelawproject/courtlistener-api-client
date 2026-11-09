@@ -1,0 +1,21 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "courtlistener",
+  "displayName": "CourtListener",
+  "description": "Search U.S. case law, federal dockets, judges and oral arguments from CourtListener, and verify legal citations, from inside your agent.",
+  "version": "1.0.0",
+  "logo": "assets/logo.svg",
+  "author": {
+    "name": "Free Law Project",
+    "url": "https://free.law"
+  },
+  "homepage": "https://github.com/freelawproject/courtlistener-api-client/blob/main/MCP_README.md",
+  "repository": "https://github.com/freelawproject/courtlistener-api-client",
+  "license": "BSD-2-Clause",
+  "keywords": ["legal", "case-law", "courts", "citations", "dockets", "pacer", "recap"],
+  "suggestedPrompts": [
+    "Find recent federal appellate opinions on qualified immunity for excessive force",
+    "Check whether the citations in this brief are real",
+    "Show me the docket and latest filings in a federal case"
+  ]
+}
