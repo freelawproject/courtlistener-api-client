@@ -17,6 +17,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from courtlistener.mcp.auth import CourtListenerOAuthProxy, admit_token_scheme
 from courtlistener.mcp.metrics import render_metrics
+from courtlistener.mcp.middleware import WikiToolAccess
 from courtlistener.mcp.prompts import GLOBAL_INSTRUCTIONS
 from courtlistener.mcp.session import RedisSession, get_session
 from courtlistener.mcp.settings import (
@@ -33,6 +34,7 @@ from courtlistener.mcp.settings import (
     OPENAI_APPS_CHALLENGE_TOKEN,
     POSTGRES_CONFIGURED,
     REDIS_URL,
+    WIKI_TOOLS_EXCLUDED_CLIENTS,
 )
 from courtlistener.mcp.storage import (
     get_oauth_store,
@@ -75,6 +77,7 @@ def create_mcp_server(auth: AuthProvider | None = None) -> FastMCP:
         ],
         tools=list(MCP_TOOLS.values()),
         auth=auth,
+        middleware=[WikiToolAccess(WIKI_TOOLS_EXCLUDED_CLIENTS)],
         # Tools validate their own arguments; see MCPTool.validate_arguments.
         strict_input_validation=False,
     )
