@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "courtlistener",
   "displayName": "CourtListener",
-  "description": "Search U.S. case law, federal dockets, judges and oral arguments from CourtListener, and verify legal citations, from inside your agent.",
+  "description": "Search U.S. case law, federal dockets and filings, judges and oral arguments from CourtListener, and verify legal citations.",
   "version": "1.0.0",
   "logo": "assets/logo.svg",
   "author": {
