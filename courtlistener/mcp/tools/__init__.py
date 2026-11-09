@@ -33,6 +33,7 @@ from courtlistener.mcp.tools.subscribe_to_docket_alert_tool import (
 from courtlistener.mcp.tools.unsubscribe_from_docket_alert_tool import (
     UnsubscribeFromDocketAlertTool,
 )
+from courtlistener.mcp.tools.wiki_search_tool import WikiSearchTool
 from courtlistener.mcp.tools.withdraw_prayer_tool import WithdrawPrayerTool
 
 MCP_TOOLS: dict[str, MCPTool] = {
@@ -57,5 +58,6 @@ MCP_TOOLS: dict[str, MCPTool] = {
         PrayForDocumentTool(),
         WithdrawPrayerTool(),
         GetApiUsageTool(),
+        WikiSearchTool(),
     ]
 }

@@ -80,6 +80,9 @@ OAUTH_SCOPES = os.getenv(
 # The Free Law Project wiki the wiki tools read.
 WIKI_BASE_URL = os.getenv("WIKI_BASE_URL", "https://wiki.free.law").rstrip("/")
 
+# The scopes a sign-in needs before the wiki tools will call the wiki.
+WIKI_SCOPES = ("wiki", "profile", "email")
+
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None
 SENTRY_TRACES_SAMPLE_RATE = float(
