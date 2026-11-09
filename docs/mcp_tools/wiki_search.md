@@ -5,7 +5,7 @@
 **Search Wiki**
 
 - **Source:** `courtlistener/mcp/tools/wiki_search_tool.py`
-- **Estimated definition size:** ~267 tokens (description ~119, input schema ~70; cl100k_base)
+- **Estimated definition size:** ~285 tokens (description ~136, input schema ~70; cl100k_base)
 - **Parameters:** 2 (1 required)
 - **Raw input schema:** [`wiki_search.inputs.json`](./wiki_search.inputs.json)
 
@@ -16,10 +16,10 @@ Search the Free Law Project wiki pages you can read.
 Full-text search over page titles and content. The query supports
 quoted phrases, `-word` to exclude a word, `title:word`, and
 `in:<directory path>` to search one directory. Each result carries
-the page's title, description, a snippet of the matching text and a
-`url` to open it. Results come 20 to a page, best first; the response
-gives the `total` and, when there are more, the `next_page` to pass
-as `page`.
+the page's `path` (pass it to `wiki_read_page`), title, description,
+`updated_at`, a `snippet` of the matching text and a `url` to open
+it. Results come 20 to a page, best first; the response gives the
+`total` and, when there are more, the `next_page` to pass as `page`.
 
 ## Annotations
 

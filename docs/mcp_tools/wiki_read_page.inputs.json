@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The page's path, e.g. `engineering/deploys`, its wiki URL, or a link from page content (`#...` or `/c/...`)."
+    }
+  },
+  "required": [
+    "path"
+  ],
+  "additionalProperties": false
+}

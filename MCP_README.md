@@ -179,9 +179,13 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 
 | Tool | What it does |
 | --- | --- |
-| `wiki_search` | Full-text search of the [Free Law Project wiki](https://wiki.free.law) pages you can read, 20 results to a page, each with a link. Supports quoted phrases, `-word`, `title:word`, and `in:<directory>`. |
+| `wiki_list_pages` | List the pages of the [Free Law Project wiki](https://wiki.free.law) you can read, with their paths, descriptions and links, 50 to a page. |
+| `wiki_search` | Full-text search of those pages, 20 results to a page, each with a snippet and a link. Supports quoted phrases, `-word`, `title:word`, and `in:<directory>`. |
+| `wiki_read_page` | Read one page as Markdown, by its path or its link. |
 
-Signed in with OAuth, you see the pages your CourtListener account's email can see on the wiki, which needs the `wiki`, `profile` and `email` scopes. A sign-in without them gets a message asking you to reconnect the connector instead of results. API-token sessions see public pages.
+The two listing tools take a `page` argument and report the `total` and the `next_page`.
+
+Everyone can read the wiki's public pages. Signed in with OAuth, you also see the pages your CourtListener account's email can see on the wiki (FLP staff content for `@free.law` addresses, plus anything shared with you). That needs the `wiki`, `profile` and `email` scopes; a sign-in without them gets a message asking you to reconnect the connector instead of results. API-token sessions read as the public. A few legacy clients that can't request those scopes don't see the wiki tools at all.
 
 ### Alerts and subscriptions
 
