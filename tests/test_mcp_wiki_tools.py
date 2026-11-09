@@ -142,6 +142,13 @@ def test_the_listing_tools_take_a_positive_page(tool):
         # A bare path under a directory named `c` is left alone.
         ("c/eng", "pages/c/eng"),
         ("eng/a page", "pages/eng/a%20page"),
+        # Copied URLs and links are already percent-encoded: decoded
+        # first, so they aren't encoded twice.
+        (f"{WIKI_BASE_URL}/c/eng/a%20page", "pages/eng/a%20page"),
+        ("/c/eng/a%20page/", "pages/eng/a%20page"),
+        ("#eng/a%20page", "pages/eng/a%20page"),
+        # A plain path is taken literally.
+        ("eng/100%25", "pages/eng/100%2525"),
     ],
 )
 async def test_read_page_accepts_a_path_or_a_page_url(

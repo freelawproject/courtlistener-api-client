@@ -1,4 +1,4 @@
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 from mcp.types import ToolAnnotations
 
@@ -53,8 +53,12 @@ class WikiReadPageTool(WikiTool):
         """The wiki content path *value* names: a path, a page URL, or a
         link from page content (the wiki's ``#path`` syntax, or a site
         link ``/c/...``), less any query or ``#anchor``. A bare ``c/...``
-        is a path, under a directory ``c``."""
-        value = value.strip().removeprefix("#")
+        is a path, under a directory ``c``. URLs and links arrive
+        percent-encoded and are decoded, so the path isn't encoded twice
+        on its way to the API; a plain path is taken literally."""
+        value = value.strip()
+        is_link = value.startswith(("#", "/c/"))
+        value = value.removeprefix("#")
         url = urlsplit(value)
         is_url = bool(url.scheme or url.netloc)
         if is_url and (
@@ -62,7 +66,7 @@ class WikiReadPageTool(WikiTool):
             or not url.path.startswith("/c/")
         ):
             raise self.invalid_path(f"{value!r} is not a wiki page URL.")
-        path = url.path
+        path = unquote(url.path) if is_url or is_link else url.path
         if path.startswith("/c/"):
             path = path.removeprefix("/c/")
         path = path.strip("/")
