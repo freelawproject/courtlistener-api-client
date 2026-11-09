@@ -15,6 +15,6 @@ You sign in with your CourtListener account the first time the agent uses a Cour
 
 ## Learn more
 
-- [CourtListener MCP server documentation](https://github.com/freelawproject/courtlistener-api-client/blob/main/MCP_README.md)
+- [CourtListener MCP documentation](https://wiki.free.law/c/courtlistener/help/api/mcp)
 - [Free Law Project](https://free.law)
 - Questions or problems: [open an issue](https://github.com/freelawproject/courtlistener-api-client/issues)
