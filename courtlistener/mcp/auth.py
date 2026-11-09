@@ -30,7 +30,12 @@ from starlette.requests import HTTPConnection
 from starlette.routing import Route
 from starlette.types import Receive, Scope, Send
 
-from courtlistener.mcp.auth_types import TokenInfo, TokenKind
+from courtlistener.mcp.auth_types import (
+    NO_CLIENT_ID,
+    UNKNOWN_CLIENT_ID,
+    TokenInfo,
+    TokenKind,
+)
 from courtlistener.mcp.metrics import (
     auth_rejections_total,
     oauth_registrations_total,
@@ -69,10 +74,26 @@ class CourtListenerOAuthProxy(OAuthProxy):
         """Tokens this server issued, plus, until CourtListener stops issuing
         to clients directly, CourtListener tokens presented as bearers."""
         if (access := await super().load_access_token(token)) is not None:
-            return cast(AccessToken, access)
+            return self.with_mcp_client(token, cast(AccessToken, access))
         if token_issuer(token) == "mcp":
             return None
         return await self.courtlistener_verifier.verify_token(token)
+
+    def with_mcp_client(self, token: str, access: AccessToken) -> AccessToken:
+        """Put the MCP client that holds *token* back on *access*.
+
+        For a token it issued, the proxy returns the upstream verification,
+        whose client is this server's own CourtListener application; the
+        client the token was issued to is only in the JWT. If that can't
+        be read, the client is ``UNKNOWN_CLIENT_ID``."""
+        client_id = None
+        try:
+            client_id = self.jwt_issuer.verify_token(token).get("client_id")
+        except Exception as exc:
+            logger.warning("could not re-read an issued token: %s", exc)
+        return access.model_copy(
+            update={"client_id": str(client_id or UNKNOWN_CLIENT_ID)}
+        )
 
     def get_middleware(self) -> list:
         return [
@@ -263,7 +284,7 @@ class CachedTokenVerifier(TokenVerifier):
             )
         return AccessToken(
             token=token,
-            client_id="courtlistener-mcp",
+            client_id=self.client_id(info),
             # API tokens have no scopes of their own; echo the required set.
             scopes=(
                 info["scopes"]
@@ -277,6 +298,13 @@ class CachedTokenVerifier(TokenVerifier):
                 "cached": cached,
             },
         )
+
+    def client_id(self, info: TokenInfo) -> str:
+        """The OAuth client *info* belongs to. API tokens have none; an
+        OAuth token cached before client ids were recorded is unknown."""
+        if self.kind == TokenKind.API:
+            return NO_CLIENT_ID
+        return info.get("client_id") or UNKNOWN_CLIENT_ID
 
 
 class OAuthTokenVerifier(CachedTokenVerifier):
@@ -323,6 +351,7 @@ class OAuthTokenVerifier(CachedTokenVerifier):
         exp = data.get("exp")
         return TokenInfo(
             user_hash=hmac_hex(str(sub)),
+            client_id=data.get("client_id"),
             scopes=str(data.get("scope") or "").split(),
             expires_at=int(exp) if exp else None,
         )
