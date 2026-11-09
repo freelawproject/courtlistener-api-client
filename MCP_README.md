@@ -175,6 +175,14 @@ For endpoints that don't have a dedicated tool — financial disclosures, opinio
 | --- | --- |
 | `get_api_usage` | Check your API usage and rate limits: remaining requests in the main `user` quota, daily request counts for the last 14 days, and membership status. Has its own throttle scope, so it works even when you are rate limited. |
 
+### Free Law Project wiki
+
+| Tool | What it does |
+| --- | --- |
+| `wiki_search` | Full-text search of the [Free Law Project wiki](https://wiki.free.law) pages you can read, 20 results to a page, each with a link. Supports quoted phrases, `-word`, `title:word`, and `in:<directory>`. |
+
+Signed in with OAuth, you see the pages your CourtListener account's email can see on the wiki, which needs the `wiki`, `profile` and `email` scopes. A sign-in without them gets a message asking you to reconnect the connector instead of results. API-token sessions see public pages.
+
 ### Alerts and subscriptions
 
 | Tool | What it does |

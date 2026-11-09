@@ -31,9 +31,17 @@ TOKEN_KIND_SCHEMES = {
 }
 
 
+# The client id of a session with no OAuth client (API token sessions).
+NO_CLIENT_ID = "courtlistener-mcp"
+
+# The client id of an OAuth session whose client could not be determined.
+UNKNOWN_CLIENT_ID = "unknown-oauth-client"
+
+
 class TokenInfo(TypedDict):
     """A verified credential, as persisted in the session store."""
 
     user_hash: str
+    client_id: NotRequired[str | None]
     scopes: NotRequired[list[str]]
     expires_at: NotRequired[int | None]

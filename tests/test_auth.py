@@ -23,7 +23,11 @@ from courtlistener.mcp.auth import (
     OAuthTokenVerifier,
     cache_ttl,
 )
-from courtlistener.mcp.auth_types import TokenKind
+from courtlistener.mcp.auth_types import (
+    NO_CLIENT_ID,
+    UNKNOWN_CLIENT_ID,
+    TokenKind,
+)
 from courtlistener.mcp.session import (
     InMemorySession,
     RedisSession,
@@ -212,6 +216,7 @@ class TestVerifyOauthToken:
             info = run(OAuthTokenVerifier().check("tok"))
         assert info == {
             "user_hash": hmac_hex("42"),
+            "client_id": "some-client",
             "scopes": ["openid", "api"],
             "expires_at": 1_900_000_000,
         }
@@ -567,6 +572,25 @@ class TestCachedTokenVerifier:
         """
         assert OAuthTokenVerifier().required_scopes == ["api"]
         assert ApiTokenVerifier().required_scopes == ["api"]
+
+    @pytest.mark.parametrize(
+        "verifier, info, client_id",
+        [
+            (OAuthTokenVerifier, {"client_id": "abc"}, "abc"),
+            # Cached before client ids were recorded.
+            (OAuthTokenVerifier, {}, UNKNOWN_CLIENT_ID),
+            (ApiTokenVerifier, {}, NO_CLIENT_ID),
+        ],
+    )
+    def test_names_the_tokens_client(self, verifier, info, client_id):
+        with patch.object(
+            verifier,
+            "check",
+            new=AsyncMock(return_value={"user_hash": "uh", **info}),
+        ):
+            token = run(verifier().verify_token("tok"))
+        assert token is not None
+        assert token.client_id == client_id
 
     def test_carries_introspected_scopes_and_expiry(self):
         """The middleware checks ``required_scopes`` against the
@@ -941,6 +965,64 @@ class TestCourtListenerOAuthProxy:
         ):
             assert run(proxy.load_access_token("aaa.bbb.ccc")) is None
         check.assert_not_awaited()
+
+    def test_a_token_it_issued_names_the_client_it_was_issued_to(self):
+        """For its own tokens the proxy returns the upstream verification,
+        whose client id is this server's CourtListener application; the
+        MCP client the token was issued to (here a Client ID Metadata
+        Document URL) comes back from the JWT, so the wiki exclusion and
+        anything else keyed by client can see it."""
+        proxy = _auth_provider()
+        proxy.get_routes(mcp_path="/")  # builds the JWT issuer
+        upstream = AccessToken(
+            token="cl-token",
+            client_id="mcp-upstream-app",
+            scopes=["api", "wiki"],
+            claims={"user_hash": "uh", "token_kind": "oauth", "cached": False},
+        )
+        with (
+            patch(
+                "fastmcp.server.auth.oauth_proxy.OAuthProxy.load_access_token",
+                new=AsyncMock(return_value=upstream),
+            ),
+            patch.object(
+                type(proxy.jwt_issuer),
+                "verify_token",
+                return_value={
+                    "jti": "j",
+                    "client_id": "https://chatgpt.com/oauth/client.json",
+                },
+            ),
+        ):
+            access = run(proxy.load_access_token("aaa.bbb.ccc"))
+        assert access is not None
+        assert access.client_id == "https://chatgpt.com/oauth/client.json"
+        assert access.scopes == ["api", "wiki"]
+        assert access.claims["user_hash"] == "uh"
+
+    def test_an_issued_token_it_cannot_reread_has_an_unknown_client(self):
+        proxy = _auth_provider()
+        proxy.get_routes(mcp_path="/")  # builds the JWT issuer
+        upstream = AccessToken(
+            token="cl-token",
+            client_id="mcp-upstream-app",
+            scopes=["api"],
+            claims={"user_hash": "uh", "token_kind": "oauth", "cached": False},
+        )
+        with (
+            patch(
+                "fastmcp.server.auth.oauth_proxy.OAuthProxy.load_access_token",
+                new=AsyncMock(return_value=upstream),
+            ),
+            patch.object(
+                type(proxy.jwt_issuer),
+                "verify_token",
+                side_effect=ValueError("expired"),
+            ),
+        ):
+            access = run(proxy.load_access_token("aaa.bbb.ccc"))
+        assert access is not None
+        assert access.client_id == UNKNOWN_CLIENT_ID
 
     def test_registers_a_legacy_client_on_first_use(self):
         from courtlistener.mcp.metrics import oauth_registrations_total

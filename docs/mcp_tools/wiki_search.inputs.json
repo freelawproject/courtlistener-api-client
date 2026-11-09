@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "q": {
+      "type": "string",
+      "description": "The search query."
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Page of results to return (default 1)."
+    }
+  },
+  "required": [
+    "q"
+  ],
+  "additionalProperties": false
+}

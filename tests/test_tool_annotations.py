@@ -18,6 +18,7 @@ READ_ONLY_TOOLS = {
     "analyze_citations",
     "resume_citation_analysis",
     "get_api_usage",
+    "wiki_search",
 }
 
 WRITE_TOOLS = {
@@ -76,6 +77,7 @@ EXPECTED_TITLES = {
     "pray_for_document": "Pray for Document",
     "withdraw_prayer": "Withdraw Prayer",
     "get_api_usage": "Get API Usage",
+    "wiki_search": "Search Wiki",
 }
 
 

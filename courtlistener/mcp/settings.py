@@ -80,6 +80,17 @@ OAUTH_SCOPES = os.getenv(
 # The Free Law Project wiki the wiki tools read.
 WIKI_BASE_URL = os.getenv("WIKI_BASE_URL", "https://wiki.free.law").rstrip("/")
 
+# The scopes a sign-in needs before the wiki tools will call the wiki.
+WIKI_SCOPES = ("wiki", "profile", "email")
+
+# Legacy MCP clients that are unable to request the needed wiki scopes.
+WIKI_TOOLS_EXCLUDED_CLIENTS: frozenset[str] = frozenset(
+    {
+        "hYpWm7HA64HnqF3LimQSw22VwT7ZgnbIepfjInbe",  # Legacy ChatGPT
+        "rmfqZfHRXRKia9dA4JDXKjkCXLviRpmtNPWUNifz",  # Legacy Gemini Enterprise
+    }
+)
+
 # Sentry config
 SENTRY_DSN = os.getenv("SENTRY_DSN") or None
 SENTRY_TRACES_SAMPLE_RATE = float(
