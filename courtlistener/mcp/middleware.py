@@ -6,8 +6,12 @@ from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
 from courtlistener.mcp.auth_types import UNKNOWN_CLIENT_ID, TokenKind
+from courtlistener.mcp.tools import MCP_TOOLS
+from courtlistener.mcp.tools.wiki_tool import WikiTool
 
-WIKI_TOOL_NAMES = frozenset({"wiki_search"})
+WIKI_TOOL_NAMES = frozenset(
+    name for name, tool in MCP_TOOLS.items() if isinstance(tool, WikiTool)
+)
 
 
 class WikiToolAccess(Middleware):
