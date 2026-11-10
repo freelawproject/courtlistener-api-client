@@ -202,9 +202,10 @@ async def test_a_sign_in_without_the_wiki_scopes_is_told_to_reconnect(
     wiki_get.assert_not_awaited()
 
 
-def test_the_reconnect_message_names_the_scopes_and_the_fixes():
-    for word in ("`wiki`", "`profile`", "`email`", "disconnect", "uninstall"):
-        assert word in MISSING_WIKI_SCOPES_MESSAGE
+def test_the_reconnect_message_just_says_to_reconnect():
+    assert "disconnect and reconnect" in MISSING_WIKI_SCOPES_MESSAGE
+    for scope in ("`wiki`", "`profile`", "`email`"):
+        assert scope not in MISSING_WIKI_SCOPES_MESSAGE
 
 
 @pytest.mark.asyncio
