@@ -5,12 +5,8 @@ from courtlistener.mcp.settings import WIKI_BASE_URL, WIKI_SCOPES
 from courtlistener.mcp.tools.mcp_tool import MCPTool
 
 MISSING_WIKI_SCOPES_MESSAGE = (
-    "This connection can't read the Free Law Project wiki yet. The wiki "
-    "needs three permissions your CourtListener sign-in hasn't granted: "
-    "`wiki`, `profile` and `email`. To get them, disconnect this "
-    "CourtListener connector and connect it again, then approve the "
-    "permissions CourtListener asks for. In some apps that isn't enough, "
-    "and you'll need to fully uninstall the connector and reinstall it."
+    "Please disconnect and reconnect the CourtListener connector to access "
+    "the wiki."
 )
 
 # The `page` argument of the wiki's paginated list and search endpoints.
