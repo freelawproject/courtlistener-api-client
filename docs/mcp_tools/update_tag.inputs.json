@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "tag_id": {
+      "type": "integer",
+      "description": "ID of one of the user's tags (the `id` from `create_tag`, or from `call_endpoint` with endpoint_id \"tags\")."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[-a-zA-Z0-9_]+$",
+      "maxLength": 50,
+      "description": "Short name, unique among the user's tags: letters, numbers, hyphens and underscores only, e.g. `patent-cases`. It appears in the tag's URL."
+    },
+    "title": {
+      "type": "string",
+      "description": "A longer, readable title."
+    },
+    "description": {
+      "type": "string",
+      "description": "What the tag collects, in Markdown."
+    },
+    "published": {
+      "type": "boolean",
+      "description": "Whether anyone can see the tag and its dockets. Tags are private unless published."
+    }
+  },
+  "required": [
+    "tag_id"
+  ],
+  "additionalProperties": false
+}

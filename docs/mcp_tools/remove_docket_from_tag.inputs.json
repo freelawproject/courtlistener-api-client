@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "tag_id": {
+      "type": "integer",
+      "description": "ID of one of the user's tags (the `id` from `create_tag`, or from `call_endpoint` with endpoint_id \"tags\")."
+    },
+    "docket_id": {
+      "type": "integer",
+      "description": "ID of the docket."
+    }
+  },
+  "required": [
+    "tag_id",
+    "docket_id"
+  ],
+  "additionalProperties": false
+}

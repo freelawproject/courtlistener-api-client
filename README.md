@@ -98,6 +98,7 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 | `docket_alerts` | Docket alerts |
 | `prayers` | Pray and Pay requests |
 | `tags` | User-created tags |
+| `docket_tags` | Dockets in tags |
 | `visualizations` | Visualization data |
 | `schools` | Schools |
 | `educations` | Judge education records |
@@ -106,6 +107,22 @@ Access any endpoint as an attribute on the client. Each endpoint supports `.get(
 | `fjc_integrated_database` | FJC integrated database |
 
 See the [CourtListener API docs](https://www.courtlistener.com/api/rest-info/) for the full list and available filters.
+
+## Tags
+
+`client.tags` and `client.docket_tags` write as well as read: create a tag,
+add dockets to it, and take them out again. Tag names are slugs, unique among
+your tags. Listing tags returns your own and every user's published ones.
+
+```python
+tag = client.tags.create(name="patent-cases", title="Patent cases")
+client.tags.update(tag["id"], published=True)
+
+client.docket_tags.add(tag["id"], 68571705)  # no-op if already tagged
+client.docket_tags.remove(tag["id"], 68571705)
+
+client.tags.delete(tag["id"])
+```
 
 ## API usage and rate limits
 

@@ -43,7 +43,7 @@ A few example prompts once the server is connected:
 - *"What dissents has Judge Sotomayor written on Fourth Amendment cases?"*
 - *"Set up a daily alert for new filings mentioning 'algorithmic discrimination'."*
 
-Under the hood the server exposes a small set of focused tools (search, document reading, citation analysis, alert management, Pray and Pay) plus a generic API-call escape hatch that covers every other CourtListener REST endpoint. See [Available tools](#available-tools).
+Under the hood the server exposes a small set of focused tools (search, document reading, citation analysis, alert management, Pray and Pay, tags) plus a generic API-call escape hatch that covers every other CourtListener REST endpoint. See [Available tools](#available-tools).
 
 ---
 
@@ -133,7 +133,7 @@ The server is a thin proxy: it never stores your CourtListener credentials, and 
 
 ## Available tools
 
-All search and read tools are available to any signed-in user. Alert, subscription, and Pray and Pay tools require a CourtListener account (which you already have if you've signed in).
+All search and read tools are available to any signed-in user. Alert, subscription, Pray and Pay, and tag tools require a CourtListener account (which you already have if you've signed in).
 
 ### Search and retrieval
 
@@ -208,6 +208,20 @@ These tools modify your CourtListener account state. Your client should prompt y
 | `withdraw_prayer` | Withdraw your pending prayer for a RECAP document, looked up by document ID (no prayer ID needed). |
 
 These tools also modify your CourtListener account state, so the same confirmation advice applies. To list your pending prayers, use `call_endpoint` with `endpoint_id` `prayers`.
+
+### Tags
+
+[Tags](https://www.courtlistener.com/help/tags-notes/) are named collections of dockets you keep on CourtListener, private unless you publish them.
+
+| Tool | What it does |
+| --- | --- |
+| `create_tag` | Create a tag, optionally with a title, a Markdown description, and published. Names are slugs, unique among your tags. |
+| `update_tag` | Rename, retitle, or redescribe one of your tags, or publish or unpublish it. Only the fields you pass change. |
+| `delete_tag` | Delete one of your tags, which removes it from every docket in it. |
+| `add_docket_to_tag` | Add a docket to one of your tags; does nothing if it's already there. |
+| `remove_docket_from_tag` | Remove a docket from one of your tags, looked up by docket ID (no docket-tag ID needed). |
+
+The tools take tag IDs. To list tags, use `call_endpoint` with `endpoint_id` `tags`, and `docket-tags` to see which dockets are in them. Both lists include other users' published tags, which you can read but not change; `published=false` lists only your private tags. These tools modify your account state too, so the same confirmation advice applies.
 
 ---
 
