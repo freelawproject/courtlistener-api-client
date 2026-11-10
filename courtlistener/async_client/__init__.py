@@ -10,14 +10,17 @@ from courtlistener.async_client.resource import (
     AsyncResource,
     AsyncResourceIterator,
 )
+from courtlistener.async_client.tags import AsyncDocketTags, AsyncTags
 
 __all__ = [
     "AsyncApiUsage",
     "AsyncCitationLookup",
     "AsyncCourtListener",
     "AsyncDocketAlerts",
+    "AsyncDocketTags",
     "AsyncPrayers",
     "AsyncResource",
     "AsyncResourceIterator",
     "AsyncSearchAlerts",
+    "AsyncTags",
 ]

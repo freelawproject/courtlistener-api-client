@@ -16,14 +16,17 @@ from courtlistener.sync_client.resource import (
     Resource,
     ResourceIterator,
 )
+from courtlistener.sync_client.tags import DocketTags, Tags
 
 __all__ = [
     "ApiUsage",
     "CitationLookup",
     "CourtListener",
     "DocketAlerts",
+    "DocketTags",
     "Prayers",
     "Resource",
     "ResourceIterator",
     "SearchAlerts",
+    "Tags",
 ]

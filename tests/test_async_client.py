@@ -16,11 +16,13 @@ from courtlistener.async_client.resource import (
     AsyncResource,
     AsyncResourceIterator,
 )
+from courtlistener.async_client.tags import AsyncDocketTags, AsyncTags
 from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
 from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource, ResourceIterator
+from courtlistener.sync_client.tags import DocketTags, Tags
 
 # Sync members that are intentionally renamed in the async API. Both
 # clients expose ``get_*`` methods for the lazy accessors; the sync
@@ -44,6 +46,8 @@ PAIRS = [
     (SearchAlerts, AsyncSearchAlerts),
     (DocketAlerts, AsyncDocketAlerts),
     (Prayers, AsyncPrayers),
+    (Tags, AsyncTags),
+    (DocketTags, AsyncDocketTags),
     (CitationLookup, AsyncCitationLookup),
     (ApiUsage, AsyncApiUsage),
 ]
@@ -129,6 +133,8 @@ class TestSyncAsyncParity:
             AsyncSearchAlerts.create,
             AsyncDocketAlerts.subscribe,
             AsyncPrayers.create,
+            AsyncTags.create,
+            AsyncDocketTags.add,
             AsyncCitationLookup.lookup_text,
             AsyncApiUsage.get,
         ):
@@ -249,6 +255,8 @@ class TestAsyncClientConstruction:
         assert isinstance(cl.alerts, AsyncSearchAlerts)
         assert isinstance(cl.docket_alerts, AsyncDocketAlerts)
         assert isinstance(cl.prayers, AsyncPrayers)
+        assert isinstance(cl.tags, AsyncTags)
+        assert isinstance(cl.docket_tags, AsyncDocketTags)
         assert isinstance(cl.citation_lookup, AsyncCitationLookup)
         assert isinstance(cl.api_usage, AsyncApiUsage)
 
