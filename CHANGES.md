@@ -5,6 +5,17 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+-
+
+Changes:
+-
+
+Fixes:
+-
+
+### 1.3.0 - 2026-11-10
+
+Features:
 - Add the `wiki_list_pages` and `wiki_read_page` MCP tools alongside `wiki_search`. `wiki_list_pages` lists the wiki pages the user can read, 50 to a page (`page` for more); `wiki_read_page` returns one page as Markdown by its path, its `url`, or a link from page content, in the wiki's `#path` syntax or as `/c/...` (anchors ignored), and points a missing path at an `in:` search in case it's a directory. Every page they return carries a `url`, text comes back with plain `\n` line endings, and a `page` past the end of the list or search results comes back empty instead of repeating the last page. All three share a `WikiTool` base, so each gives the same reconnect message to a sign-in without the wiki scopes, and `WikiToolAccess` hides all of them from excluded clients without keeping its own list of tool names.
 - Add a `wiki_search` MCP tool: full-text search of the Free Law Project wiki pages the user can read, 20 results to a page (`page` for more), each with a `url`. An OAuth sign-in without the `wiki`, `profile` and `email` scopes gets a message asking the user to reconnect the connector instead of a wiki call; API-token and stdio sessions search as the public. A new `WikiToolAccess` middleware (in the new `courtlistener/mcp/middleware.py`) hides the wiki tools from, and refuses their calls for, the legacy clients in `WIKI_TOOLS_EXCLUDED_CLIENTS` (ChatGPT and Gemini Enterprise, which can't request those scopes) and from OAuth sessions whose client can't be identified, so a blocked client never caches a tool list containing them. To support this, access tokens now carry the real MCP client id: from the JWT for tokens this server issued, and from introspection for CourtListener tokens.
 - Add `wiki_get` to the MCP tool helpers: one GET to the Free Law Project wiki's JSON API as the current user. It forwards the user's CourtListener OAuth token as the bearer (API-token callers and stdio mode read as the public) and turns the wiki's 401 and 404 into readable tool errors. `WIKI_BASE_URL` sets the wiki's origin, defaulting to `https://wiki.free.law`. Nothing calls the helper yet; the wiki tools follow in a later release.
