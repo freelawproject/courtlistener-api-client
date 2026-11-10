@@ -1,7 +1,7 @@
 ---
 name: version-bump
 description: Bump the package version in a PR, then tag the merge commit so the PyPI workflow publishes the release. Optional argument - the version to release (e.g. 1.3.0); defaults to the next patch version.
-argument-hint: [X.Y.Z]
+argument-hint: "[X.Y.Z]"
 ---
 
 # Version bump
