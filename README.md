@@ -39,7 +39,7 @@ client = CourtListener()
 opinion = client.opinions.get(1)
 
 # Search for opinions
-response = client.opinions.list(cluster__case_name="Miranda")
+response = client.opinions.list(cluster__date_filed__gte="2020-01-01")
 
 # Access results from the current page
 for opinion in response.get_results():
@@ -74,38 +74,20 @@ if results.has_next():
     print(results.get_results())  # next page results
 ```
 
+### Lookups
+
+A field's lookups are the comparisons you can filter it by, beyond an exact match. The endpoint pages list them after each field, as in `date_filed: string (date) (lookups: gt, gte, lt, lte, range, …)`. Add one to a field name with a double underscore, or pass a dict of lookups:
+
+```python
+client.clusters.list(date_filed__gte="2020-01-01")
+client.clusters.list(date_filed={"gte": "2020-01-01", "lt": "2021-01-01"})
+```
+
+Fields that point at another endpoint take filters on that endpoint the same way, such as `client.opinions.list(cluster__date_filed__gte="2020-01-01")`.
+
 ## Available Endpoints
 
-Access any endpoint as an attribute on the client. Each endpoint supports `.get(id)` and `.list(**filters)`.
-
-| Endpoint | Description |
-| --- | --- |
-| `search` | Search opinions, RECAP, judges, and oral arguments |
-| `dockets` | Court dockets |
-| `docket_entries` | Docket entries |
-| `recap_documents` | RECAP documents |
-| `opinions` | Court opinions |
-| `opinions_cited` | Citation relationships |
-| `clusters` | Opinion clusters |
-| `courts` | Court information |
-| `audio` | Oral argument audio |
-| `people` | Judges and other persons |
-| `positions` | Judge positions |
-| `parties` | Case parties |
-| `attorneys` | Attorneys |
-| `financial_disclosures` | Financial disclosures |
-| `alerts` | User alerts |
-| `docket_alerts` | Docket alerts |
-| `prayers` | Pray and Pay requests |
-| `tags` | User-created tags |
-| `visualizations` | Visualization data |
-| `schools` | Schools |
-| `educations` | Judge education records |
-| `political_affiliations` | Political affiliations |
-| `aba_ratings` | ABA ratings |
-| `fjc_integrated_database` | FJC integrated database |
-
-See the [CourtListener API docs](https://www.courtlistener.com/api/rest-info/) for the full list and available filters.
+For the full list of endpoints and details about their operations, see the [documentation](docs/README.md).
 
 ## API usage and rate limits
 
