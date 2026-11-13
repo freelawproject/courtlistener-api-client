@@ -8,6 +8,17 @@ Features:
 -
 
 Changes:
+-
+
+Fixes:
+-
+
+### 2.0.0 - 2026-11-13
+
+Features:
+- Add `courtlistener.utils.inline_refs`, which replaces JSON-Schema `$ref` pointers with their definitions (moved from the MCP server, where the endpoint docs script used it).
+
+Changes:
 - The generated endpoint docs (`docs/endpoints/`) are more concise. Each page is headed by the endpoint path, followed by its description and a GET section that shows `client.<endpoint>.get(item_id)` and `client.<endpoint>.list(**kwargs)`, then lists the fields one per line as name, type and lookups, with any choices in a collapsed panel. Pages are now named after the endpoint ID (`docket-entries.md`, not `docket_entries.md`; `visualizations/json` becomes `visualizations-json.md`). Each page links to the endpoint's model. Handwritten docs for every other client operation live in `docs/.src/endpoint-operations/`, named `<endpoint ID>.<operation>.md`, with front matter giving the HTTP `method` and optionally the Pydantic `model`. They're added to the endpoint's page under a section per method (POST, PATCH, DELETE), each linking to its model or client method. The generator fails if those files and the client's operations don't match. Add docs for `alerts.update`/`delete`, `docket_alerts.update`/`delete`/`unsubscribe` and `prayers.delete`.
 - Move the generated models into `courtlistener/models/generated/`: endpoint models from `courtlistener.models.endpoints` to `courtlistener.models.generated.endpoints`, and filter models from `courtlistener.models.filters` to `courtlistener.models.generated.filters`. Code importing those modules directly needs the new paths; `courtlistener.models.ENDPOINTS` and `FILTERS` are unchanged. The handwritten request models (`courtlistener.models.alerts`, `courtlistener.models.prayers`) stay where they are.
 - Endpoint pages list fields in tables (field, type, lookups, choices, description), and drop the generated "<Name> Endpoint" descriptions that only repeated the heading. A field's choices cell shows how many there are and links to a Choices section at the end of the page, where each list is collapsed; handwritten operation docs use `(choices)` to link to them. The search page has a field table per search type (`o`, `r`, `rd`, `d`, `p`, `oa`), each from its per-type model, instead of one merged list that mixed fields from every type; choice lists that every type agrees on, such as `court`, appear once. Search shows only `list`, since search results have no detail view. The endpoint table in `docs/README.md` is sorted by endpoint.
@@ -16,16 +27,6 @@ Changes:
 - Move the cached HTTP OPTIONS dump from `docs/http_options.json` to `docs/.src/http_options.json`, alongside the other doc sources.
 - `docs/README.md` is now a short "CourtListener API Client Documentation" page that links the quickstart and the developer docs, followed by a generated table of every endpoint: its page, its client attribute and its operations (`get`, `list` and any POST operations), built from `docs/.src/README.md`. It replaces `docs/endpoints/README.md`. The developer notes that were in `docs/README.md` move to `docs/DEVELOPER.md`, which now also covers getting started, adding generated and custom endpoints, updating the client (the sync client is generated from the async one) and generating the docs.
 - The main README's Available Endpoints section now just links to the documentation instead of listing endpoints. It also explains field lookups (`date_filed__gte=...` or `date_filed={"gte": ...}`) under Pagination.
-
-Fixes:
--
-
-### 1.4.0 - 2026-11-13
-
-Features:
-- Add `courtlistener.utils.inline_refs`, which replaces JSON-Schema `$ref` pointers with their definitions (moved from the MCP server, where the endpoint docs script used it).
-
-Changes:
 - The `PyPI` workflow publishes with PyPI trusted publishing (the job's OIDC token) instead of the `pypi_token` secret, matching courtlistener-mcp.
 - Remove the MCP server, which now lives in [freelawproject/courtlistener-mcp](https://github.com/freelawproject/courtlistener-mcp). This drops the `mcp` extra and its dependencies, the Docker and Compose files, `MCP_README.md`, the Antigravity plugin, the MCP tool docs and their generator, and the MCP tests. The `courtlistener-mcp` command is gone too, so it no longer clashes with the one the new package installs. `courtlistener.mcp` remains only as a stub: importing it raises `ImportError` with a pointer to the new repo.
 
