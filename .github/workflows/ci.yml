@@ -44,7 +44,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra mcp
+        run: uv sync --extra dev
 
       - name: Run mypy
         run: uv run mypy
@@ -65,11 +65,10 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra mcp
+        run: uv sync --extra dev
 
       - name: Regenerate docs
         run: |
-          uv run python scripts/generate_mcp_tool_docs.py
           uv run python scripts/generate_endpoint_docs.py
 
       - name: Check docs are up to date
@@ -77,7 +76,7 @@ jobs:
           git add -A docs
           if ! git diff --cached --quiet -- docs; then
             git --no-pager diff --cached --stat -- docs
-            echo "::error::Generated docs are stale. Run 'uv run python scripts/generate_mcp_tool_docs.py' and 'uv run python scripts/generate_endpoint_docs.py', then commit the changes."
+            echo "::error::Generated docs are stale. Run 'uv run python scripts/generate_endpoint_docs.py', then commit the changes."
             exit 1
           fi
 
@@ -97,7 +96,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra mcp
+        run: uv sync --extra dev
 
       - name: Regenerate sync client
         run: uv run python scripts/generate_sync_client.py

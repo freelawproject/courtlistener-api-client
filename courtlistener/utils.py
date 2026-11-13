@@ -404,3 +404,28 @@ def search_model_validator(data):
     endpoint_model = ENDPOINTS[endpoint_types[endpoint_type]]
     data = {k: v for k, v in data.items() if v is not None}
     return endpoint_model(**data).model_dump(by_alias=True)
+
+
+def inline_refs(node, defs, seen=None):
+    """Recursively replace JSON-Schema ``$ref`` pointers with their definitions."""
+    if isinstance(node, list):
+        return [inline_refs(item, defs, seen) for item in node]
+    if not isinstance(node, dict):
+        return node
+
+    ref = node.get("$ref")
+    if ref is not None:
+        name = ref.rsplit("/", 1)[-1]
+        nodes_seen = seen or frozenset()
+        if name in nodes_seen:
+            return {"type": "object"}
+        target = defs.get(name, {})
+        resolved = inline_refs(target, defs, nodes_seen | {name})
+        siblings = {
+            key: inline_refs(value, defs, seen)
+            for key, value in node.items()
+            if key != "$ref"
+        }
+        return {**resolved, **siblings}
+
+    return {key: inline_refs(value, defs, seen) for key, value in node.items()}
