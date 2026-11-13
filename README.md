@@ -83,7 +83,7 @@ client.clusters.list(date_filed__gte="2020-01-01")
 client.clusters.list(date_filed={"gte": "2020-01-01", "lt": "2021-01-01"})
 ```
 
-Fields that point at another endpoint take filters on that endpoint the same way, such as `client.opinions.list(cluster__case_name="Miranda")`.
+Fields that point at another endpoint take filters on that endpoint the same way, such as `client.opinions.list(cluster__date_filed__gte="2020-01-01")`.
 
 ## Available Endpoints
 

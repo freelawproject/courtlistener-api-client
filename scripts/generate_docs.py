@@ -163,10 +163,13 @@ def render_choices_section(
 
 def check_anchors(doc: str, lines: list[str]) -> None:
     """Fail if an in-page link's anchor is missing or used by two headings."""
+    text = "\n".join(lines)
     anchors = [
-        slug(line.lstrip("#")) for line in lines if re.match(r"#{1,6} ", line)
+        slug(line.lstrip("#"))
+        for line in text.splitlines()
+        if re.match(r"#{1,6} ", line)
     ]
-    links = set(re.findall(r"\]\(#([^)]+)\)", "\n".join(lines)))
+    links = set(re.findall(r"\]\(#([^)]+)\)", text))
     repeated = sorted(a for a in links if anchors.count(a) > 1)
     missing = sorted(links - set(anchors))
     if repeated or missing:
