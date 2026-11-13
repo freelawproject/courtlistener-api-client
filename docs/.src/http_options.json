@@ -21997,7 +21997,7 @@
   },
   "visualizations/json": {
     "name": "Json List",
-    "description": "Read-only: JSONVersions are only ever created server-side, by\nbuild_visualization() (GHSA-cvh7-rv7v-wx2j).",
+    "description": "Read-only: JSONVersions are only ever created server-side, by build_visualization() (GHSA-cvh7-rv7v-wx2j).",
     "renders": [
       "application/json",
       "text/html",
