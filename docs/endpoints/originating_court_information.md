@@ -6,7 +6,7 @@
 
 - **Path:** `/originating-court-information/`
 - **Endpoint ID:** `originating-court-information`
-- **Source:** `courtlistener/models/endpoints/originating_court_information.py`
+- **Source:** `courtlistener/models/generated/endpoints/originating_court_information.py`
 - **Fields:** 1
 
 ## Description

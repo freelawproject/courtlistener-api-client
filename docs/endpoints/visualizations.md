@@ -6,7 +6,7 @@
 
 - **Path:** `/visualizations/`
 - **Endpoint ID:** `visualizations`
-- **Source:** `courtlistener/models/endpoints/visualizations.py`
+- **Source:** `courtlistener/models/generated/endpoints/visualizations.py`
 - **Fields:** 1
 
 ## Description

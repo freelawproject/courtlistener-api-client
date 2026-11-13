@@ -12,8 +12,7 @@ from courtlistener.utils import (
 )
 
 RateType = Literal["rt", "dly", "wly", "mly", "off"]
-SearchAlertType = Literal["o", "r", "d", "oa"]
-DocketAlertType = Literal[0, 1]
+AlertsType = Literal["o", "r", "d", "oa"]
 
 
 def normalize_search_query(query: str | dict[str, Any] | None) -> str | None:
@@ -35,7 +34,7 @@ def normalize_search_query(query: str | dict[str, Any] | None) -> str | None:
     return urlencode(flat, doseq=True)
 
 
-class SearchAlertCreate(BaseModel):
+class AlertsCreate(BaseModel):
     """Validation model for creating a search alert."""
 
     model_config = ConfigDict(extra="forbid")
@@ -46,10 +45,10 @@ class SearchAlertCreate(BaseModel):
         BeforeValidator(normalize_search_query),
     ]
     rate: RateType
-    alert_type: SearchAlertType | None = None
+    alert_type: AlertsType | None = None
 
 
-class SearchAlertUpdate(BaseModel):
+class AlertsUpdate(BaseModel):
     """Validation model for updating a search alert."""
 
     model_config = ConfigDict(extra="forbid")
@@ -60,21 +59,4 @@ class SearchAlertUpdate(BaseModel):
         BeforeValidator(normalize_search_query),
     ] = None
     rate: RateType | None = None
-    alert_type: SearchAlertType | None = None
-
-
-class DocketAlertCreate(BaseModel):
-    """Validation model for creating a docket alert."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    docket: int
-    alert_type: DocketAlertType = 1
-
-
-class DocketAlertUpdate(BaseModel):
-    """Validation model for updating a docket alert."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    alert_type: DocketAlertType | None = None
+    alert_type: AlertsType | None = None

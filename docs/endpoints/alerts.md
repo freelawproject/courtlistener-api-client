@@ -6,7 +6,7 @@
 
 - **Path:** `/alerts/`
 - **Endpoint ID:** `alerts`
-- **Source:** `courtlistener/models/endpoints/alerts.py`
+- **Source:** `courtlistener/models/generated/endpoints/alerts.py`
 - **Fields:** 6
 
 ## Description

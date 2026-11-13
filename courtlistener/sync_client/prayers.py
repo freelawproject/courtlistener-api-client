@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from courtlistener.models.endpoints.prayers import PrayersEndpoint
-from courtlistener.models.prayers import PrayerCreate
+from courtlistener.models.generated.endpoints.prayers import PrayersEndpoint
+from courtlistener.models.prayers import PrayersCreate
 from courtlistener.sync_client.resource import Resource
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ class Prayers(Resource):
 
     def create(self, recap_document: int) -> dict[str, Any]:
         """Create a new prayer for a RECAP document."""
-        validated = PrayerCreate(recap_document=recap_document)
+        validated = PrayersCreate(recap_document=recap_document)
         return cast(
             dict[str, Any],
             self._client._request(

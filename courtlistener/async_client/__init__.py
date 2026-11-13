@@ -1,10 +1,8 @@
-from courtlistener.async_client.alerts import (
-    AsyncDocketAlerts,
-    AsyncSearchAlerts,
-)
+from courtlistener.async_client.alerts import AsyncAlerts
 from courtlistener.async_client.api_usage import AsyncApiUsage
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
 from courtlistener.async_client.client import AsyncCourtListener
+from courtlistener.async_client.docket_alerts import AsyncDocketAlerts
 from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import (
     AsyncResource,
@@ -19,5 +17,5 @@ __all__ = [
     "AsyncPrayers",
     "AsyncResource",
     "AsyncResourceIterator",
-    "AsyncSearchAlerts",
+    "AsyncAlerts",
 ]

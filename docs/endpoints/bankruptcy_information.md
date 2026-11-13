@@ -6,7 +6,7 @@
 
 - **Path:** `/bankruptcy-information/`
 - **Endpoint ID:** `bankruptcy-information`
-- **Source:** `courtlistener/models/endpoints/bankruptcy_information.py`
+- **Source:** `courtlistener/models/generated/endpoints/bankruptcy_information.py`
 - **Fields:** 1
 
 ## Description

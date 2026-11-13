@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from courtlistener.async_client.resource import AsyncResource
-from courtlistener.models.endpoints.prayers import PrayersEndpoint
-from courtlistener.models.prayers import PrayerCreate
+from courtlistener.models.generated.endpoints.prayers import PrayersEndpoint
+from courtlistener.models.prayers import PrayersCreate
 
 if TYPE_CHECKING:
     from courtlistener.async_client.client import AsyncCourtListener
@@ -18,7 +18,7 @@ class AsyncPrayers(AsyncResource):
 
     async def create(self, recap_document: int) -> dict[str, Any]:
         """Create a new prayer for a RECAP document."""
-        validated = PrayerCreate(recap_document=recap_document)
+        validated = PrayersCreate(recap_document=recap_document)
         return cast(
             dict[str, Any],
             await self._client._request(

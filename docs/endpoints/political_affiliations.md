@@ -6,7 +6,7 @@
 
 - **Path:** `/political-affiliations/`
 - **Endpoint ID:** `political-affiliations`
-- **Source:** `courtlistener/models/endpoints/political_affiliations.py`
+- **Source:** `courtlistener/models/generated/endpoints/political_affiliations.py`
 - **Fields:** 10
 
 ## Description

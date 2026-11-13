@@ -8,7 +8,8 @@ Features:
 -
 
 Changes:
--
+- Move the generated models into `courtlistener/models/generated/`: endpoint models from `courtlistener.models.endpoints` to `courtlistener.models.generated.endpoints`, and filter models from `courtlistener.models.filters` to `courtlistener.models.generated.filters`. Code importing those modules directly needs the new paths; `courtlistener.models.ENDPOINTS` and `FILTERS` are unchanged. The handwritten request models (`courtlistener.models.alerts`, `courtlistener.models.prayers`) stay where they are.
+- Rename the handwritten models and client classes to match their endpoints, and give docket alerts their own modules. `courtlistener.models.alerts` keeps `AlertsCreate`, `AlertsUpdate` and `AlertsType` (were `SearchAlertCreate`, `SearchAlertUpdate` and `SearchAlertType`); `courtlistener.models.docket_alerts` has `DocketAlertsCreate`, `DocketAlertsUpdate` and `DocketAlertsType` (were `DocketAlertCreate`, `DocketAlertUpdate` and `DocketAlertType` in `courtlistener.models.alerts`); `PrayerCreate` is now `PrayersCreate`. The client's `SearchAlerts` and `AsyncSearchAlerts` are now `Alerts` and `AsyncAlerts`, and `DocketAlerts` and `AsyncDocketAlerts` move to `courtlistener.sync_client.docket_alerts` and `courtlistener.async_client.docket_alerts`.
 
 Fixes:
 -

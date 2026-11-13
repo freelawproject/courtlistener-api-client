@@ -6,7 +6,7 @@
 
 - **Path:** `/audio/`
 - **Endpoint ID:** `audio`
-- **Source:** `courtlistener/models/endpoints/audio.py`
+- **Source:** `courtlistener/models/generated/endpoints/audio.py`
 - **Fields:** 12
 
 ## Description

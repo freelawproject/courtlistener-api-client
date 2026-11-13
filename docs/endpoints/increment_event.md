@@ -6,7 +6,7 @@
 
 - **Path:** `/increment-event/`
 - **Endpoint ID:** `increment-event`
-- **Source:** `courtlistener/models/endpoints/increment_event.py`
+- **Source:** `courtlistener/models/generated/endpoints/increment_event.py`
 - **Fields:** 1
 
 ## Description

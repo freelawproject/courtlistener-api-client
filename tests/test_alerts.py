@@ -1,4 +1,4 @@
-"""Tests for SearchAlerts and DocketAlerts helpers."""
+"""Tests for Alerts and DocketAlerts helpers."""
 
 from contextlib import suppress
 from unittest.mock import MagicMock
@@ -10,7 +10,8 @@ from pydantic import ValidationError
 
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models.alerts import normalize_search_query
-from courtlistener.sync_client.alerts import DocketAlerts, SearchAlerts
+from courtlistener.sync_client.alerts import Alerts
+from courtlistener.sync_client.docket_alerts import DocketAlerts
 
 # ---------------------------------------------------------------------------
 # Unit tests – normalize_search_query
@@ -52,16 +53,16 @@ class TestNormalizeSearchQuery:
             normalize_search_query({"not_a_real_field": "bad"})
 
     def test_update_with_none_passes_through(self):
-        """SearchAlertUpdate allows None for query."""
+        """AlertsUpdate allows None for query."""
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         # Should not raise – query=None is valid for updates
         alerts.update(1, name="new name")
 
     def test_update_with_dict_query(self):
         mock_client = MagicMock()
         mock_client._request.return_value = {"id": 1, "query": "q=test"}
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         alerts.update(1, query={"q": "test"})
         call_args = mock_client._request.call_args
         body = call_args[1]["json"]
@@ -74,16 +75,16 @@ class TestNormalizeSearchQuery:
 # ---------------------------------------------------------------------------
 
 
-class TestSearchAlertsValidation:
+class TestAlertsValidation:
     def test_invalid_rate_raises(self):
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.create(name="test", query="q=test", rate="invalid")
 
     def test_invalid_alert_type_raises(self):
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.create(
                 name="test",
@@ -94,19 +95,19 @@ class TestSearchAlertsValidation:
 
     def test_update_invalid_rate_raises(self):
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.update(1, rate="bad")
 
     def test_update_invalid_alert_type_raises(self):
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.update(1, alert_type="z")
 
     def test_update_rejects_unknown_fields(self):
         mock_client = MagicMock()
-        alerts = SearchAlerts(mock_client)
+        alerts = Alerts(mock_client)
         with pytest.raises(ValidationError):
             alerts.update(1, unknown_field="value")
 
@@ -221,7 +222,7 @@ class TestDocketAlertsValidation:
 
 
 @pytest.mark.integration
-class TestSearchAlertsIntegration:
+class TestAlertsIntegration:
     NAME_PREFIX = "SDK Test"
 
     def test_search_alert_lifecycle(self, client):

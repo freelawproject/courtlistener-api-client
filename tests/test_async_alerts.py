@@ -1,4 +1,4 @@
-"""Unit tests for AsyncSearchAlerts and AsyncDocketAlerts."""
+"""Unit tests for AsyncAlerts and AsyncDocketAlerts."""
 
 from unittest.mock import AsyncMock, MagicMock
 from urllib.parse import parse_qs
@@ -7,10 +7,8 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from courtlistener.async_client.alerts import (
-    AsyncDocketAlerts,
-    AsyncSearchAlerts,
-)
+from courtlistener.async_client.alerts import AsyncAlerts
+from courtlistener.async_client.docket_alerts import AsyncDocketAlerts
 from courtlistener.exceptions import CourtListenerAPIError
 
 pytestmark = pytest.mark.asyncio
@@ -31,10 +29,10 @@ def _page(results):
     }
 
 
-class TestSearchAlerts:
+class TestAlerts:
     async def test_create_posts_normalized_query(self):
         client = _mock_client({"id": 1})
-        alerts = AsyncSearchAlerts(client)
+        alerts = AsyncAlerts(client)
         await alerts.create(name="test", query={"q": "test"}, rate="dly")
         body = client._request.await_args.kwargs["json"]
         assert parse_qs(body["query"])["q"] == ["test"]
@@ -42,29 +40,29 @@ class TestSearchAlerts:
 
     async def test_update_with_none_passes_through(self):
         client = _mock_client({"id": 1})
-        alerts = AsyncSearchAlerts(client)
+        alerts = AsyncAlerts(client)
         await alerts.update(1, name="new name")
 
     async def test_update_with_dict_query(self):
         client = _mock_client({"id": 1, "query": "q=test"})
-        alerts = AsyncSearchAlerts(client)
+        alerts = AsyncAlerts(client)
         await alerts.update(1, query={"q": "test"})
         body = client._request.await_args.kwargs["json"]
         assert parse_qs(body["query"])["q"] == ["test"]
 
     async def test_invalid_rate_raises(self):
-        alerts = AsyncSearchAlerts(_mock_client())
+        alerts = AsyncAlerts(_mock_client())
         with pytest.raises(ValidationError):
             await alerts.create(name="test", query="q=test", rate="invalid")
 
     async def test_update_rejects_unknown_fields(self):
-        alerts = AsyncSearchAlerts(_mock_client())
+        alerts = AsyncAlerts(_mock_client())
         with pytest.raises(ValidationError):
             await alerts.update(1, unknown_field="value")
 
     async def test_delete(self):
         client = _mock_client({})
-        alerts = AsyncSearchAlerts(client)
+        alerts = AsyncAlerts(client)
         await alerts.delete(3)
         method, path = client._request.await_args.args
         assert method == "DELETE"

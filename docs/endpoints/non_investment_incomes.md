@@ -6,7 +6,7 @@
 
 - **Path:** `/non-investment-incomes/`
 - **Endpoint ID:** `non-investment-incomes`
-- **Source:** `courtlistener/models/endpoints/non_investment_incomes.py`
+- **Source:** `courtlistener/models/generated/endpoints/non_investment_incomes.py`
 - **Fields:** 10
 
 ## Description

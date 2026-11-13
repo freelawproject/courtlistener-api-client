@@ -13,7 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from courtlistener.models import ENDPOINTS
-from courtlistener.models.endpoints.opinion_search import (
+from courtlistener.models.generated.endpoints.opinion_search import (
     OpinionSearchEndpoint,
 )
 from courtlistener.utils import multiple_choice_validator
@@ -120,7 +120,9 @@ class TestIntChoiceFields:
     separated-string and stringified-number tolerance."""
 
     def prayers_status(self, **kwargs):
-        from courtlistener.models.endpoints.prayers import PrayersEndpoint
+        from courtlistener.models.generated.endpoints.prayers import (
+            PrayersEndpoint,
+        )
 
         return PrayersEndpoint(**kwargs).status
 
@@ -157,25 +159,33 @@ class TestRelatedPassthrough:
     """
 
     def test_citations_dict_passes_through(self):
-        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+        from courtlistener.models.generated.endpoints.clusters import (
+            ClustersEndpoint,
+        )
 
         model = ClustersEndpoint(citations={"page": "60", "volume": "662"})
         assert model.citations == {"page": "60", "volume": "662"}
 
     def test_none_subfilters_dropped(self):
-        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+        from courtlistener.models.generated.endpoints.clusters import (
+            ClustersEndpoint,
+        )
 
         model = ClustersEndpoint(citations={"volume": "662", "page": None})
         assert model.citations == {"volume": "662"}
 
     def test_non_dict_still_rejected(self):
-        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+        from courtlistener.models.generated.endpoints.clusters import (
+            ClustersEndpoint,
+        )
 
         with pytest.raises(ValidationError, match="citations"):
             ClustersEndpoint(citations=[1, 2])
 
     def test_validated_related_field_still_validates(self):
-        from courtlistener.models.endpoints.clusters import ClustersEndpoint
+        from courtlistener.models.generated.endpoints.clusters import (
+            ClustersEndpoint,
+        )
 
         # docket resolves to DocketsEndpoint and must keep validating.
         with pytest.raises(ValidationError):
@@ -223,7 +233,7 @@ class TestDidYouMeanErrors:
         assert "get_choices" in self.error_for("njsupct")
 
     def test_single_choice_field_also_compact(self):
-        from courtlistener.models.endpoints.opinion_search import (
+        from courtlistener.models.generated.endpoints.opinion_search import (
             OpinionSearchEndpoint,
         )
 

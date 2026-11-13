@@ -6,7 +6,7 @@
 
 - **Path:** `/disclosure-positions/`
 - **Endpoint ID:** `disclosure-positions`
-- **Source:** `courtlistener/models/endpoints/disclosure_positions.py`
+- **Source:** `courtlistener/models/generated/endpoints/disclosure_positions.py`
 - **Fields:** 9
 
 ## Description

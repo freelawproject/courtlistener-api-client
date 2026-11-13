@@ -6,7 +6,7 @@
 
 - **Path:** `/aba-ratings/`
 - **Endpoint ID:** `aba-ratings`
-- **Source:** `courtlistener/models/endpoints/aba_ratings.py`
+- **Source:** `courtlistener/models/generated/endpoints/aba_ratings.py`
 - **Fields:** 8
 
 ## Description

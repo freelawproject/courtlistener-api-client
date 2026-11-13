@@ -6,7 +6,7 @@
 
 - **Path:** `/retention-events/`
 - **Endpoint ID:** `retention-events`
-- **Source:** `courtlistener/models/endpoints/retention_events.py`
+- **Source:** `courtlistener/models/generated/endpoints/retention_events.py`
 - **Fields:** 12
 
 ## Description

@@ -6,7 +6,7 @@
 
 - **Path:** `/agreements/`
 - **Endpoint ID:** `agreements`
-- **Source:** `courtlistener/models/endpoints/agreements.py`
+- **Source:** `courtlistener/models/generated/endpoints/agreements.py`
 - **Fields:** 9
 
 ## Description

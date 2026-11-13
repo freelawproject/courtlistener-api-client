@@ -6,7 +6,7 @@
 
 - **Path:** `/spouse-incomes/`
 - **Endpoint ID:** `spouse-incomes`
-- **Source:** `courtlistener/models/endpoints/spouse_incomes.py`
+- **Source:** `courtlistener/models/generated/endpoints/spouse_incomes.py`
 - **Fields:** 9
 
 ## Description

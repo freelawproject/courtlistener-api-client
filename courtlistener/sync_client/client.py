@@ -13,12 +13,10 @@ import httpx
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
 from courtlistener.settings import get_api_base_url, get_api_token
-from courtlistener.sync_client.alerts import (
-    DocketAlerts,
-    SearchAlerts,
-)
+from courtlistener.sync_client.alerts import Alerts
 from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
+from courtlistener.sync_client.docket_alerts import DocketAlerts
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource
 
@@ -65,7 +63,7 @@ class CourtListener:
         self._http_client: httpx.Client | None = None
         self._resources: dict[str, Resource] = {}
 
-        self.alerts = SearchAlerts(self)
+        self.alerts = Alerts(self)
         self.docket_alerts = DocketAlerts(self)
         self.prayers = Prayers(self)
         self.citation_lookup = CitationLookup(self)

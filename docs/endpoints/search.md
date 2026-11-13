@@ -6,7 +6,7 @@
 
 - **Path:** `/search/`
 - **Endpoint ID:** `search`
-- **Source:** `courtlistener/models/endpoints/search.py`
+- **Source:** `courtlistener/models/generated/endpoints/search.py`
 - **Fields:** 44
 
 ## Description

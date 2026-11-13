@@ -6,7 +6,7 @@
 
 - **Path:** `/docket-tags/`
 - **Endpoint ID:** `docket-tags`
-- **Source:** `courtlistener/models/endpoints/docket_tags.py`
+- **Source:** `courtlistener/models/generated/endpoints/docket_tags.py`
 - **Fields:** 4
 
 ## Description
