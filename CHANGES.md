@@ -5,6 +5,17 @@
 The following changes are not yet released, but are code complete:
 
 Features:
+-
+
+Changes:
+-
+
+Fixes:
+-
+
+### 1.4.0 - 2026-11-13
+
+Features:
 - Add `courtlistener.utils.inline_refs`, which replaces JSON-Schema `$ref` pointers with their definitions (moved from the MCP server, where the endpoint docs script used it).
 
 Changes:
