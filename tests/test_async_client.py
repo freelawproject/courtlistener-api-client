@@ -9,17 +9,21 @@ from courtlistener.async_client.alerts import AsyncAlerts
 from courtlistener.async_client.api_usage import AsyncApiUsage
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
 from courtlistener.async_client.docket_alerts import AsyncDocketAlerts
+from courtlistener.async_client.docket_tags import AsyncDocketTags
 from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import (
     AsyncResource,
     AsyncResourceIterator,
 )
+from courtlistener.async_client.tags import AsyncTags
 from courtlistener.sync_client.alerts import Alerts
 from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.docket_alerts import DocketAlerts
+from courtlistener.sync_client.docket_tags import DocketTags
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource, ResourceIterator
+from courtlistener.sync_client.tags import Tags
 
 # Sync members that are intentionally renamed in the async API. Both
 # clients expose ``get_*`` methods for the lazy accessors; the sync
@@ -43,6 +47,8 @@ PAIRS = [
     (Alerts, AsyncAlerts),
     (DocketAlerts, AsyncDocketAlerts),
     (Prayers, AsyncPrayers),
+    (Tags, AsyncTags),
+    (DocketTags, AsyncDocketTags),
     (CitationLookup, AsyncCitationLookup),
     (ApiUsage, AsyncApiUsage),
 ]
@@ -128,6 +134,8 @@ class TestSyncAsyncParity:
             AsyncAlerts.create,
             AsyncDocketAlerts.subscribe,
             AsyncPrayers.create,
+            AsyncTags.create,
+            AsyncDocketTags.create,
             AsyncCitationLookup.lookup_text,
             AsyncApiUsage.get,
         ):
@@ -248,6 +256,8 @@ class TestAsyncClientConstruction:
         assert isinstance(cl.alerts, AsyncAlerts)
         assert isinstance(cl.docket_alerts, AsyncDocketAlerts)
         assert isinstance(cl.prayers, AsyncPrayers)
+        assert isinstance(cl.tags, AsyncTags)
+        assert isinstance(cl.docket_tags, AsyncDocketTags)
         assert isinstance(cl.citation_lookup, AsyncCitationLookup)
         assert isinstance(cl.api_usage, AsyncApiUsage)
 
