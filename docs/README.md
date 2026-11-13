@@ -3,7 +3,7 @@
 ## Install
 
 ```sh
-uv sync --extra dev --extra mcp
+uv sync --extra dev
 ```
 
 ## Lint
