@@ -8,8 +8,8 @@ from utils import (
     schema_type_str,
 )
 
-from courtlistener.mcp.tools.utils import inline_refs
 from courtlistener.models import ENDPOINTS
+from courtlistener.utils import inline_refs
 
 ENDPOINTS_DOCS_DIR = DOCS_DIR / "endpoints"
 
