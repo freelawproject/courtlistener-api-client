@@ -6,7 +6,7 @@
 
 - **Path:** `/tags/`
 - **Endpoint ID:** `tags`
-- **Source:** `courtlistener/models/endpoints/tags.py`
+- **Source:** `courtlistener/models/generated/endpoints/tags.py`
 - **Fields:** 6
 
 ## Description

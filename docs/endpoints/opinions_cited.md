@@ -6,7 +6,7 @@
 
 - **Path:** `/opinions-cited/`
 - **Endpoint ID:** `opinions-cited`
-- **Source:** `courtlistener/models/endpoints/opinions_cited.py`
+- **Source:** `courtlistener/models/generated/endpoints/opinions_cited.py`
 - **Fields:** 4
 
 ## Description

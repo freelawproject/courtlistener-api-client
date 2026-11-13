@@ -6,7 +6,7 @@
 
 - **Path:** `/recap-fetch/`
 - **Endpoint ID:** `recap-fetch`
-- **Source:** `courtlistener/models/endpoints/recap_fetch.py`
+- **Source:** `courtlistener/models/generated/endpoints/recap_fetch.py`
 - **Fields:** 9
 
 ## Description

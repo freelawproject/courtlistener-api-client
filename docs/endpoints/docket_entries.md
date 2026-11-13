@@ -6,7 +6,7 @@
 
 - **Path:** `/docket-entries/`
 - **Endpoint ID:** `docket-entries`
-- **Source:** `courtlistener/models/endpoints/docket_entries.py`
+- **Source:** `courtlistener/models/generated/endpoints/docket_entries.py`
 - **Fields:** 11
 
 ## Description

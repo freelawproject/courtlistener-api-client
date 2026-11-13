@@ -6,7 +6,7 @@
 
 - **Path:** `/fjc-integrated-database/`
 - **Endpoint ID:** `fjc-integrated-database`
-- **Source:** `courtlistener/models/endpoints/fjc_integrated_database.py`
+- **Source:** `courtlistener/models/generated/endpoints/fjc_integrated_database.py`
 - **Fields:** 23
 
 ## Description

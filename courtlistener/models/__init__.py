@@ -4,8 +4,8 @@ from courtlistener.models.endpoint import Endpoint
 from courtlistener.models.page import Page
 
 try:
-    from courtlistener.models.endpoints import ENDPOINTS
-    from courtlistener.models.filters import FILTERS
+    from courtlistener.models.generated.endpoints import ENDPOINTS
+    from courtlistener.models.generated.filters import FILTERS
 except Exception as exc:
     logging.warning(
         f"Error importing filters and endpoints: {exc}\n"

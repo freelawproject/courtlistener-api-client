@@ -12,7 +12,7 @@ REPLACEMENTS = {
     "AsyncCourtListener": "CourtListener",
     "AsyncResource": "Resource",
     "AsyncResourceIterator": "ResourceIterator",
-    "AsyncSearchAlerts": "SearchAlerts",
+    "AsyncAlerts": "Alerts",
     "AsyncDocketAlerts": "DocketAlerts",
     "AsyncPrayers": "Prayers",
     "AsyncCitationLookup": "CitationLookup",

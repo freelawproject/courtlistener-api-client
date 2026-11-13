@@ -12,8 +12,10 @@ from utils import BASE_DIR, DOCS_DIR
 from courtlistener import CourtListener
 
 TEMPLATES_DIR = BASE_DIR / "templates"
-ENDPOINTS_DIR = BASE_DIR / "courtlistener" / "models" / "endpoints"
-FILTERS_DIR = BASE_DIR / "courtlistener" / "models" / "filters"
+ENDPOINTS_DIR = (
+    BASE_DIR / "courtlistener" / "models" / "generated" / "endpoints"
+)
+FILTERS_DIR = BASE_DIR / "courtlistener" / "models" / "generated" / "filters"
 HTTP_OPTIONS_PATH = DOCS_DIR / "http_options.json"
 
 RELATED_ENDPOINT_MAP = {

@@ -6,7 +6,7 @@
 
 - **Path:** `/financial-disclosures/`
 - **Endpoint ID:** `financial-disclosures`
-- **Source:** `courtlistener/models/endpoints/financial_disclosures.py`
+- **Source:** `courtlistener/models/generated/endpoints/financial_disclosures.py`
 - **Fields:** 16
 
 ## Description

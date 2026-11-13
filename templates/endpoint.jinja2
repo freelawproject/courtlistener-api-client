@@ -23,7 +23,7 @@ from courtlistener.utils import (
 from courtlistener.models.endpoint import Endpoint
 {% for field in endpoint.fields.values() %}
 {% if field.filter_class %}
-from courtlistener.models.filters import {{ field.filter_class }}
+from courtlistener.models.generated.filters import {{ field.filter_class }}
 {% endif %}
 {% endfor %}
 

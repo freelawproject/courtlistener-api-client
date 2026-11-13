@@ -6,7 +6,7 @@
 
 - **Path:** `/clusters/`
 - **Endpoint ID:** `clusters`
-- **Source:** `courtlistener/models/endpoints/clusters.py`
+- **Source:** `courtlistener/models/generated/endpoints/clusters.py`
 - **Fields:** 20
 
 ## Description

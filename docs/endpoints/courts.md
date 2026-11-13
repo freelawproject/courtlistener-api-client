@@ -6,7 +6,7 @@
 
 - **Path:** `/courts/`
 - **Endpoint ID:** `courts`
-- **Source:** `courtlistener/models/endpoints/courts.py`
+- **Source:** `courtlistener/models/generated/endpoints/courts.py`
 - **Fields:** 16
 
 ## Description

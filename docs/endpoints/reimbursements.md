@@ -6,7 +6,7 @@
 
 - **Path:** `/reimbursements/`
 - **Endpoint ID:** `reimbursements`
-- **Source:** `courtlistener/models/endpoints/reimbursements.py`
+- **Source:** `courtlistener/models/generated/endpoints/reimbursements.py`
 - **Fields:** 12
 
 ## Description

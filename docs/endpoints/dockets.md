@@ -6,7 +6,7 @@
 
 - **Path:** `/dockets/`
 - **Endpoint ID:** `dockets`
-- **Source:** `courtlistener/models/endpoints/dockets.py`
+- **Source:** `courtlistener/models/generated/endpoints/dockets.py`
 - **Fields:** 23
 
 ## Description

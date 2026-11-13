@@ -6,7 +6,7 @@
 
 - **Path:** `/docket-alerts/`
 - **Endpoint ID:** `docket-alerts`
-- **Source:** `courtlistener/models/endpoints/docket_alerts.py`
+- **Source:** `courtlistener/models/generated/endpoints/docket_alerts.py`
 - **Fields:** 5
 
 ## Description
