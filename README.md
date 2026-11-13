@@ -39,7 +39,7 @@ client = CourtListener()
 opinion = client.opinions.get(1)
 
 # Search for opinions
-response = client.opinions.list(cluster__case_name="Miranda")
+response = client.opinions.list(cluster__date_filed__gte="2020-01-01")
 
 # Access results from the current page
 for opinion in response.get_results():
