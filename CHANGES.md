@@ -8,6 +8,7 @@ Features:
 - Add `courtlistener.utils.inline_refs`, which replaces JSON-Schema `$ref` pointers with their definitions (moved from the MCP server, where the endpoint docs script used it).
 
 Changes:
+- The `PyPI` workflow publishes with PyPI trusted publishing (the job's OIDC token) instead of the `pypi_token` secret, matching courtlistener-mcp.
 - Remove the MCP server, which now lives in [freelawproject/courtlistener-mcp](https://github.com/freelawproject/courtlistener-mcp). This drops the `mcp` extra and its dependencies, the Docker and Compose files, `MCP_README.md`, the Antigravity plugin, the MCP tool docs and their generator, and the MCP tests. The `courtlistener-mcp` command is gone too, so it no longer clashes with the one the new package installs. `courtlistener.mcp` remains only as a stub: importing it raises `ImportError` with a pointer to the new repo.
 
 Fixes:
