@@ -5,7 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
--
+- Add writes for tags and docket tags. `client.tags` gains `create(name, title=, description=, published=)`, `update(id, **fields)` and `delete(id)`; names are validated as slugs of at most 50 characters, matching CourtListener's `SlugField`. `client.docket_tags` gains `create(tag, docket)` and `delete(id)`, which add a docket to one of the user's tags and remove it. Request models are `TagsCreate` and `TagsUpdate` in `courtlistener.models.tags` and `DocketTagsCreate` in `courtlistener.models.docket_tags`. Both helpers subclass the resource, so `list()` and `get()` work as before.
 
 Changes:
 -
