@@ -8,7 +8,7 @@ Features:
 -
 
 Changes:
--
+- Build and publish to PyPI in separate jobs, so only the publish job holds the OIDC token. Pin the publish and artifact actions to commit SHAs, disable the uv cache and don't persist checkout credentials.
 
 Fixes:
 -
