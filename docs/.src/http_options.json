@@ -1,7 +1,7 @@
 {
   "search": {
     "name": "Search V4 List",
-    "description": "",
+    "description": "V4 search API endpoint, with semantic search for posted embeddings.",
     "renders": [
       "application/json",
       "text/html",
@@ -16,7 +16,7 @@
   },
   "dockets": {
     "name": "Docket List",
-    "description": "",
+    "description": "API endpoint for dockets.",
     "renders": [
       "application/json",
       "text/html",
@@ -5079,7 +5079,7 @@
   },
   "bankruptcy-information": {
     "name": "Bankruptcy Information List",
-    "description": "",
+    "description": "API endpoint for bankruptcy information.",
     "renders": [
       "application/json",
       "text/html",
@@ -5174,7 +5174,7 @@
   },
   "originating-court-information": {
     "name": "Originating Court Information List",
-    "description": "",
+    "description": "API endpoint for originating court information.",
     "renders": [
       "application/json",
       "text/html",
@@ -5317,7 +5317,7 @@
   },
   "docket-entries": {
     "name": "Docket Entry List",
-    "description": "",
+    "description": "API endpoint for docket entries, with their RECAP documents.",
     "renders": [
       "application/json",
       "text/html",
@@ -5775,7 +5775,7 @@
   },
   "recap-documents": {
     "name": "Recap Document List",
-    "description": "",
+    "description": "API endpoint for RECAP documents.",
     "renders": [
       "application/json",
       "text/html",
@@ -6187,7 +6187,7 @@
   },
   "courts": {
     "name": "Court List",
-    "description": "",
+    "description": "API endpoint for courts other than testing courts, allowing deep pagination.",
     "renders": [
       "application/json",
       "text/html",
@@ -6678,7 +6678,7 @@
   },
   "audio": {
     "name": "Audio List",
-    "description": "",
+    "description": "API endpoint for oral argument audio.",
     "renders": [
       "application/json",
       "text/html",
@@ -7064,7 +7064,7 @@
   },
   "clusters": {
     "name": "Opinion Cluster List",
-    "description": "",
+    "description": "API endpoint for opinion clusters, redirecting deleted clusters.",
     "renders": [
       "application/json",
       "text/html",
@@ -7914,7 +7914,7 @@
   },
   "opinions": {
     "name": "Opinion List",
-    "description": "",
+    "description": "API endpoint for opinions.",
     "renders": [
       "application/json",
       "text/html",
@@ -8336,7 +8336,7 @@
   },
   "opinions-cited": {
     "name": "Opinions Cited List",
-    "description": "",
+    "description": "API endpoint for citations between opinions.",
     "renders": [
       "application/json",
       "text/html",
@@ -8409,7 +8409,7 @@
   },
   "tag": {
     "name": "Tag List",
-    "description": "",
+    "description": "API endpoint for tags.",
     "renders": [
       "application/json",
       "text/html",
@@ -8462,7 +8462,7 @@
   },
   "people": {
     "name": "Person List",
-    "description": "",
+    "description": "API endpoint for people.",
     "renders": [
       "application/json",
       "text/html",
@@ -10556,7 +10556,7 @@
   },
   "positions": {
     "name": "Position List",
-    "description": "",
+    "description": "API endpoint for positions.",
     "renders": [
       "application/json",
       "text/html",
@@ -16586,7 +16586,7 @@
   },
   "retention-events": {
     "name": "Retention Event List",
-    "description": "",
+    "description": "API endpoint for retention events.",
     "renders": [
       "application/json",
       "text/html",
@@ -16854,7 +16854,7 @@
   },
   "educations": {
     "name": "Education List",
-    "description": "",
+    "description": "API endpoint for education records.",
     "renders": [
       "application/json",
       "text/html",
@@ -17167,7 +17167,7 @@
   },
   "schools": {
     "name": "School List",
-    "description": "",
+    "description": "API endpoint for schools.",
     "renders": [
       "application/json",
       "text/html",
@@ -17307,7 +17307,7 @@
   },
   "political-affiliations": {
     "name": "Political Affiliation List",
-    "description": "",
+    "description": "API endpoint for political affiliations.",
     "renders": [
       "application/json",
       "text/html",
@@ -17638,7 +17638,7 @@
   },
   "sources": {
     "name": "Source List",
-    "description": "",
+    "description": "API endpoint for people's sources.",
     "renders": [
       "application/json",
       "text/html",
@@ -17747,7 +17747,7 @@
   },
   "aba-ratings": {
     "name": "Aba Rating List",
-    "description": "",
+    "description": "API endpoint for ABA ratings.",
     "renders": [
       "application/json",
       "text/html",
@@ -17934,7 +17934,7 @@
   },
   "parties": {
     "name": "Party List",
-    "description": "",
+    "description": "API endpoint for parties.",
     "renders": [
       "application/json",
       "text/html",
@@ -18309,7 +18309,7 @@
   },
   "attorneys": {
     "name": "Attorney List",
-    "description": "",
+    "description": "API endpoint for attorneys.",
     "renders": [
       "application/json",
       "text/html",
@@ -18826,7 +18826,7 @@
   },
   "recap-query": {
     "name": "RECAP lookup API List",
-    "description": "",
+    "description": "API endpoint for looking up available RECAP documents.",
     "renders": [
       "application/json",
       "text/html",
@@ -19027,7 +19027,7 @@
   },
   "fjc-integrated-database": {
     "name": "Fjc Integrated Database List",
-    "description": "",
+    "description": "API endpoint for FJC Integrated Database rows.",
     "renders": [
       "application/json",
       "text/html",
@@ -21702,7 +21702,7 @@
   },
   "tags": {
     "name": "User Tag List",
-    "description": "",
+    "description": "API endpoint for tags, readable when published and writable by their owner.",
     "renders": [
       "application/json",
       "text/html",
@@ -21819,7 +21819,7 @@
   },
   "docket-tags": {
     "name": "Docket Tag List",
-    "description": "",
+    "description": "API endpoint for tags applied to dockets.",
     "renders": [
       "application/json",
       "text/html",
@@ -21971,7 +21971,7 @@
   },
   "increment-event": {
     "name": "Event Counter Viewset List",
-    "description": "",
+    "description": "API endpoint that increments counters for view events.",
     "renders": [
       "application/json",
       "text/html",
@@ -22012,7 +22012,7 @@
   },
   "visualizations": {
     "name": "Visualization List",
-    "description": "",
+    "description": "API endpoint for SCOTUS network visualizations.",
     "renders": [
       "application/json",
       "text/html",
@@ -22197,7 +22197,7 @@
   },
   "agreements": {
     "name": "Agreement List",
-    "description": "",
+    "description": "API endpoint for disclosed agreements.",
     "renders": [
       "application/json",
       "text/html",
@@ -22350,7 +22350,7 @@
   },
   "debts": {
     "name": "Debt List",
-    "description": "",
+    "description": "API endpoint for disclosed debts.",
     "renders": [
       "application/json",
       "text/html",
@@ -22608,7 +22608,7 @@
   },
   "financial-disclosures": {
     "name": "Financial Disclosure List",
-    "description": "",
+    "description": "API endpoint for financial disclosures.",
     "renders": [
       "application/json",
       "text/html",
@@ -23792,7 +23792,7 @@
   },
   "gifts": {
     "name": "Gift List",
-    "description": "",
+    "description": "API endpoint for disclosed gifts.",
     "renders": [
       "application/json",
       "text/html",
@@ -23961,7 +23961,7 @@
   },
   "investments": {
     "name": "Investment List",
-    "description": "",
+    "description": "API endpoint for disclosed investments.",
     "renders": [
       "application/json",
       "text/html",
@@ -24556,7 +24556,7 @@
   },
   "non-investment-incomes": {
     "name": "Non Investment Income List",
-    "description": "",
+    "description": "API endpoint for disclosed non-investment income.",
     "renders": [
       "application/json",
       "text/html",
@@ -24725,7 +24725,7 @@
   },
   "disclosure-positions": {
     "name": "Position List",
-    "description": "",
+    "description": "API endpoint for disclosed positions.",
     "renders": [
       "application/json",
       "text/html",
@@ -24878,7 +24878,7 @@
   },
   "reimbursements": {
     "name": "Reimbursement List",
-    "description": "",
+    "description": "API endpoint for disclosed reimbursements.",
     "renders": [
       "application/json",
       "text/html",
@@ -25079,7 +25079,7 @@
   },
   "spouse-incomes": {
     "name": "Spouse Income List",
-    "description": "",
+    "description": "API endpoint for disclosed spouse income.",
     "renders": [
       "application/json",
       "text/html",
