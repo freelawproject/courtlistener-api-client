@@ -20,6 +20,61 @@ client.tags.list(**kwargs)
 | `published` | boolean |  |  | Whether the tag has been shared publicly. |
 | `order_by` | string |  | [8](#order_by) |  |
 
+## POST
+
+### create
+
+Model: [`TagsCreate`](../../courtlistener/models/tags.py#L12)
+
+Create a tag: a named list of dockets.
+
+```python
+client.tags.create(name, title=None, description=None, published=None)
+```
+
+| Field | Type | Choices | Description |
+|---|---|---|---|
+| `name` | string | | A slug (letters, numbers, `-` and `_`), at most 50 characters. Unique among your tags. |
+| `title` | string | | Optional. |
+| `description` | string | | Optional, in Markdown. |
+| `published` | boolean | | Optional. Whether the tag is shared publicly; tags are private by default. |
+
+## PATCH
+
+### update
+
+Model: [`TagsUpdate`](../../courtlistener/models/tags.py#L23)
+
+Update one of your tags. Only the fields you pass change.
+
+```python
+client.tags.update(id, **data)
+```
+
+| Field | Type | Choices | Description |
+|---|---|---|---|
+| `id` | integer | | The tag's ID. |
+| `name` | string | | Optional. Validated like `create`'s `name`. |
+| `title` | string | | Optional. |
+| `description` | string | | Optional, in Markdown. |
+| `published` | boolean | | Optional. |
+
+## DELETE
+
+### delete
+
+Source: [`Tags.delete`](../../courtlistener/sync_client/tags.py#L59)
+
+Delete one of your tags. This removes it from every docket it's on.
+
+```python
+client.tags.delete(id)
+```
+
+| Field | Type | Choices | Description |
+|---|---|---|---|
+| `id` | integer | | The tag's ID. |
+
 ## Choices
 
 ### `fields`

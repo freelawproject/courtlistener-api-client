@@ -8,8 +8,10 @@ from courtlistener.async_client.alerts import AsyncAlerts
 from courtlistener.async_client.api_usage import AsyncApiUsage
 from courtlistener.async_client.citation_lookup import AsyncCitationLookup
 from courtlistener.async_client.docket_alerts import AsyncDocketAlerts
+from courtlistener.async_client.docket_tags import AsyncDocketTags
 from courtlistener.async_client.prayers import AsyncPrayers
 from courtlistener.async_client.resource import AsyncResource
+from courtlistener.async_client.tags import AsyncTags
 from courtlistener.exceptions import CourtListenerAPIError
 from courtlistener.models import ENDPOINTS
 from courtlistener.settings import get_api_base_url, get_api_token
@@ -60,6 +62,8 @@ class AsyncCourtListener:
         self.alerts = AsyncAlerts(self)
         self.docket_alerts = AsyncDocketAlerts(self)
         self.prayers = AsyncPrayers(self)
+        self.tags = AsyncTags(self)
+        self.docket_tags = AsyncDocketTags(self)
         self.citation_lookup = AsyncCitationLookup(self)
         self.api_usage = AsyncApiUsage(self)
 

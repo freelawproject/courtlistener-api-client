@@ -9,19 +9,23 @@ from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.client import CourtListener
 from courtlistener.sync_client.docket_alerts import DocketAlerts
+from courtlistener.sync_client.docket_tags import DocketTags
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import (
     Resource,
     ResourceIterator,
 )
+from courtlistener.sync_client.tags import Tags
 
 __all__ = [
     "ApiUsage",
     "CitationLookup",
     "CourtListener",
     "DocketAlerts",
+    "DocketTags",
     "Prayers",
     "Resource",
     "ResourceIterator",
     "Alerts",
+    "Tags",
 ]

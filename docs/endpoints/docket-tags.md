@@ -18,6 +18,39 @@ client.docket_tags.list(**kwargs)
 | `docket` | integer |  |  |  |
 | `tag` | integer |  |  | Related filter: pass a tags record's id, or a dict of tags sub-filters (sent as tag__<subfilter> lookups). Not an enumerated choice field. |
 
+## POST
+
+### create
+
+Model: [`DocketTagsCreate`](../../courtlistener/models/docket_tags.py#L6)
+
+Add a docket to one of your tags.
+
+```python
+client.docket_tags.create(tag, docket)
+```
+
+| Field | Type | Choices | Description |
+|---|---|---|---|
+| `tag` | integer | | The tag's ID. It must be one of your tags. |
+| `docket` | integer | | The docket's ID. |
+
+## DELETE
+
+### delete
+
+Source: [`DocketTags.delete`](../../courtlistener/sync_client/docket_tags.py#L37)
+
+Remove a docket from a tag. To find a docket tag's ID, list them with `client.docket_tags.list(tag=..., docket=...)`.
+
+```python
+client.docket_tags.delete(id)
+```
+
+| Field | Type | Choices | Description |
+|---|---|---|---|
+| `id` | integer | | The docket tag's ID, not the docket's. |
+
 ## Choices
 
 ### `fields`

@@ -18,7 +18,7 @@ See the [quickstart](../README.md#quickstart) to get started and the [developer 
 | [`disclosure-positions`](./endpoints/disclosure-positions.md) | `client.disclosure_positions` | `get`, `list` |
 | [`docket-alerts`](./endpoints/docket-alerts.md) | `client.docket_alerts` | `get`, `list`, `create`, `subscribe`, `update`, `delete`, `unsubscribe` |
 | [`docket-entries`](./endpoints/docket-entries.md) | `client.docket_entries` | `get`, `list` |
-| [`docket-tags`](./endpoints/docket-tags.md) | `client.docket_tags` | `get`, `list` |
+| [`docket-tags`](./endpoints/docket-tags.md) | `client.docket_tags` | `get`, `list`, `create`, `delete` |
 | [`dockets`](./endpoints/dockets.md) | `client.dockets` | `get`, `list` |
 | [`educations`](./endpoints/educations.md) | `client.educations` | `get`, `list` |
 | [`financial-disclosures`](./endpoints/financial-disclosures.md) | `client.financial_disclosures` | `get`, `list` |
@@ -45,6 +45,6 @@ See the [quickstart](../README.md#quickstart) to get started and the [developer 
 | [`sources`](./endpoints/sources.md) | `client.sources` | `get`, `list` |
 | [`spouse-incomes`](./endpoints/spouse-incomes.md) | `client.spouse_incomes` | `get`, `list` |
 | [`tag`](./endpoints/tag.md) | `client.tag` | `get`, `list` |
-| [`tags`](./endpoints/tags.md) | `client.tags` | `get`, `list` |
+| [`tags`](./endpoints/tags.md) | `client.tags` | `get`, `list`, `create`, `update`, `delete` |
 | [`visualizations`](./endpoints/visualizations.md) | `client.visualizations` | `get`, `list` |
 | [`visualizations/json`](./endpoints/visualizations-json.md) | `client.visualizations_json` | `get`, `list` |

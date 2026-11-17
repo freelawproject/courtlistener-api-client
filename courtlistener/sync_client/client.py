@@ -17,8 +17,10 @@ from courtlistener.sync_client.alerts import Alerts
 from courtlistener.sync_client.api_usage import ApiUsage
 from courtlistener.sync_client.citation_lookup import CitationLookup
 from courtlistener.sync_client.docket_alerts import DocketAlerts
+from courtlistener.sync_client.docket_tags import DocketTags
 from courtlistener.sync_client.prayers import Prayers
 from courtlistener.sync_client.resource import Resource
+from courtlistener.sync_client.tags import Tags
 
 
 class CourtListener:
@@ -66,6 +68,8 @@ class CourtListener:
         self.alerts = Alerts(self)
         self.docket_alerts = DocketAlerts(self)
         self.prayers = Prayers(self)
+        self.tags = Tags(self)
+        self.docket_tags = DocketTags(self)
         self.citation_lookup = CitationLookup(self)
         self.api_usage = ApiUsage(self)
 
