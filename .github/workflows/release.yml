@@ -1,0 +1,58 @@
+name: Release
+
+# When a release PR (branch release/next) merges, tag its merge commit,
+# create the GitHub release and start the PyPI workflow on the tag.
+#
+# A tag pushed with GITHUB_TOKEN doesn't trigger other workflows, so the
+# PyPI workflow's tag trigger won't fire on its own. workflow_dispatch is
+# the exception to that rule, so this dispatches it at the tag instead.
+# The publish still runs in pypi.yml, so its trusted publisher is unchanged.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  release:
+    if: >-
+      github.event.pull_request.merged &&
+      github.event.pull_request.head.ref == 'release/next' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tag and GitHub release
+      actions: write # dispatch the PyPI workflow
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+
+      - name: Read the version
+        id: version
+        run: |
+          version=$(python scripts/release.py version)
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version"; then
+            echo "::error::Tag v$version already exists"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and create the GitHub release
+        run: |
+          python scripts/release.py notes "$VERSION" > notes.md
+          gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" --title "v$VERSION" --notes-file notes.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Publish to PyPI
+        run: |
+          gh workflow run pypi.yml --repo "$GITHUB_REPOSITORY" \
+            --ref "v$VERSION"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
