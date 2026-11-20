@@ -1,0 +1,80 @@
+name: Release PR
+
+# Weekly: if main has commits since the last release tag, open (or update)
+# a release PR that bumps the version and rolls CHANGES.md forward.
+# Merging that PR triggers the Release workflow, which tags and publishes.
+
+on:
+  schedule:
+    - cron: "0 14 * * 1" # Mondays, 14:00 UTC
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version to bump
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: Exact version to release instead (X.Y.Z); overrides bump
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history, to find unreleased commits
+
+      - name: Check for unreleased commits
+        id: unreleased
+        run: |
+          last_tag=$(git describe --tags --abbrev=0 --match 'v*.*.*')
+          count=$(git rev-list --count "$last_tag"..HEAD)
+          echo "Commits since $last_tag: $count"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Install uv
+        if: steps.unreleased.outputs.count != '0'
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Bump version and roll changelog
+        if: steps.unreleased.outputs.count != '0'
+        id: prepare
+        run: |
+          if [ -n "$VERSION" ]; then
+            version=$(python scripts/release.py prepare --version "$VERSION")
+          else
+            version=$(python scripts/release.py prepare --bump "${BUMP:-patch}")
+          fi
+          uv lock
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        env:
+          BUMP: ${{ inputs.bump }}
+          VERSION: ${{ inputs.version }}
+
+      - name: Create or update the release PR
+        if: steps.unreleased.outputs.count != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: release/next
+          delete-branch: true
+          commit-message: "build(package): version bump to ${{ steps.prepare.outputs.version }}"
+          title: "build(package): version bump to ${{ steps.prepare.outputs.version }}"
+          body: |
+            Releases `${{ steps.prepare.outputs.version }}`, with the
+            ${{ steps.unreleased.outputs.count }} commits on main since the
+            last release. The release notes are the new section in
+            `CHANGES.md`.
+
+            Merging this PR tags the merge commit
+            `v${{ steps.prepare.outputs.version }}` and publishes it to
+            PyPI. To release a different version, run the Release PR
+            workflow by hand with another bump or an exact version.
