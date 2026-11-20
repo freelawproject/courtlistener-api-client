@@ -11,7 +11,7 @@ Changes:
 - Automate releases. A weekly Release PR workflow (also runnable by hand with a `patch`, `minor` or `major` bump or an exact version) opens a `release/next` PR whenever `main` has commits since the last release. Scheduled runs leave an open release PR alone, so a version chosen by hand isn't replaced; manual runs rebuild it. The PR bumps the version and moves the Upcoming notes in `CHANGES.md` under it. Merging it runs the Release workflow, which tags the merge commit, creates the GitHub release and starts the PyPI workflow on the tag. The `version-bump` skill is replaced by a `release` skill that runs the Release PR workflow and follows the release through.
 
 Fixes:
--
+- `scripts/release.py prepare --version` normalizes the version it's given, so `01.4.0` becomes `1.4.0`. Before, the leading zero went into `pyproject.toml` and the changelog heading, and the Release workflow couldn't find the release notes. The release skill also says how to start the PyPI run if the Release run tagged the release but didn't start it.
 
 ### 2.0.1 - 2026-11-17
 
