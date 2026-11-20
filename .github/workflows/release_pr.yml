@@ -1,8 +1,9 @@
 name: Release PR
 
-# Weekly: if main has commits since the last release tag, open (or update)
-# a release PR that bumps the version and rolls CHANGES.md forward.
-# Merging that PR triggers the Release workflow, which tags and publishes.
+# Weekly: if main has commits since the last release tag, open a release
+# PR that bumps the version and rolls CHANGES.md forward. A scheduled run
+# leaves an open release PR alone; a manual run rebuilds it. Merging the
+# PR triggers the Release workflow, which tags and publishes.
 
 on:
   schedule:
@@ -29,24 +30,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main # releases are always cut from main
           fetch-depth: 0 # tags and history, to find unreleased commits
 
-      - name: Check for unreleased commits
-        id: unreleased
+      - name: Check whether to release
+        id: check
         run: |
           last_tag=$(git describe --tags --abbrev=0 --match 'v*.*.*')
           count=$(git rev-list --count "$last_tag"..HEAD)
           echo "Commits since $last_tag: $count"
           echo "count=$count" >> "$GITHUB_OUTPUT"
+          open_pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head release/next \
+            --base main --state open --json number --jq 'length')
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$open_pr" != 0 ]; then
+            echo "A release PR is already open; leaving it alone."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif [ "$count" = 0 ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Install uv
-        if: steps.unreleased.outputs.count != '0'
+        if: steps.check.outputs.release == 'true'
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: false
 
       - name: Bump version and roll changelog
-        if: steps.unreleased.outputs.count != '0'
+        if: steps.check.outputs.release == 'true'
         id: prepare
         run: |
           if [ -n "$VERSION" ]; then
@@ -61,16 +75,17 @@ jobs:
           VERSION: ${{ inputs.version }}
 
       - name: Create or update the release PR
-        if: steps.unreleased.outputs.count != '0'
+        if: steps.check.outputs.release == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: release/next
+          base: main
           delete-branch: true
           commit-message: "build(package): version bump to ${{ steps.prepare.outputs.version }}"
           title: "build(package): version bump to ${{ steps.prepare.outputs.version }}"
           body: |
             Releases `${{ steps.prepare.outputs.version }}`, with the
-            ${{ steps.unreleased.outputs.count }} commits on main since the
+            ${{ steps.check.outputs.count }} commits on main since the
             last release. The release notes are the new section in
             `CHANGES.md`.
 

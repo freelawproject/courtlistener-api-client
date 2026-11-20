@@ -21,8 +21,9 @@ along:
 - **Release PR** (`.github/workflows/release_pr.yml`) runs every Monday
   and on demand. If `main` has commits since the last `v*` tag, it bumps
   the version in `pyproject.toml` and `uv.lock`, moves the "Upcoming"
-  lists in `CHANGES.md` under the new version, and opens or updates a PR
-  from `release/next`.
+  lists in `CHANGES.md` under the new version, and opens a PR from
+  `release/next`. A scheduled run leaves an open release PR alone; a
+  manual run rebuilds it from `main` with the bump you give it.
 - **Release** (`.github/workflows/release.yml`) runs when that PR merges.
   It tags the merge commit `vX.Y.Z`, creates the GitHub release from the
   version's `CHANGES.md` section and starts the PyPI workflow on the tag.
