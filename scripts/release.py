@@ -75,7 +75,7 @@ def prepare(part: str, exact: str | None) -> None:
     if exact:
         if parse_version(exact) <= current:
             sys.exit(f"{exact} is not higher than the current version")
-        new_version = exact
+        new_version = "{}.{}.{}".format(*parse_version(exact))
     else:
         new_version = bump(current, part)
     PYPROJECT.write_text(

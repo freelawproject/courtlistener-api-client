@@ -51,4 +51,6 @@ along:
    link `https://pypi.org/project/courtlistener-api-client/X.Y.Z/`. If a
    run fails, report the failure and stop. Don't delete or move the tag
    without the user's go-ahead, since PyPI never accepts the same version
-   twice.
+   twice. If the Release run created the tag but no PyPI run started,
+   start it with `gh workflow run pypi.yml --ref vX.Y.Z`; rerunning
+   Release won't help, since it stops when the tag already exists.
