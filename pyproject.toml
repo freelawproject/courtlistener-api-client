@@ -44,8 +44,8 @@ dependencies = [
 dev = [
     "click>=8.0.0",
     "jinja2>=3.0.0",
-    "mypy>=1.10.0",
     "pre-commit>=4.5.1",
+    "pyrefly>=1.4.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "python-dotenv>=1.0.0",
@@ -61,13 +61,15 @@ include = ["courtlistener*"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.mypy]
-files = ["courtlistener"]
-python_version = "3.10"
-check_untyped_defs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_unused_configs = true
+[tool.pyrefly]
+project-includes = ["courtlistener"]
+python-version = "3.10"
+check-unannotated-defs = true
+
+# Flag ignore comments that no longer suppress anything.
+[tool.pyrefly.errors]
+unused-ignore = true
+unused-type-ignore = true
 
 [tool.ruff]
 line-length = 79
