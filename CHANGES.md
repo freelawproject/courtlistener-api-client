@@ -5,7 +5,7 @@
 The following changes are not yet released, but are code complete:
 
 Features:
--
+- A new workflow monitors PyPi for malicious packages. Incredibly we already have one. This will run nightly to see if any others pop up.
 
 Changes:
 - Automate releases. A weekly Release PR workflow (also runnable by hand with a `patch`, `minor` or `major` bump or an exact version) opens a `release/next` PR whenever `main` has commits since the last release. Scheduled runs leave an open release PR alone, so a version chosen by hand isn't replaced; manual runs rebuild it. The PR bumps the version and moves the Upcoming notes in `CHANGES.md` under it. Merging it runs the Release workflow, which tags the merge commit, creates the GitHub release and starts the PyPI workflow on the tag. The `version-bump` skill is replaced by a `release` skill that runs the Release PR workflow and follows the release through.
@@ -257,4 +257,3 @@ Fixes:
 ### 0.0.1 - 2026-02-20
 
 - Initial release.
-
