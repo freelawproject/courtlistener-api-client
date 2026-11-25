@@ -8,6 +8,7 @@ Features:
 -
 
 Changes:
+- Type-check with Pyrefly instead of mypy, matching CourtListener. Run it with `uv run pyrefly check`; the CI job is now Pyrefly. Fixing what it found: `get(fields=...)` is annotated with the builtin `list` rather than the resource's `list` method, a float id is checked with `float(id).is_integer()`, and a new `json_schema_extra()` helper reads a model field's extra schema only when it's a dict.
 - Automate releases. A weekly Release PR workflow (also runnable by hand with a `patch`, `minor` or `major` bump or an exact version) opens a `release/next` PR whenever `main` has commits since the last release. Scheduled runs leave an open release PR alone, so a version chosen by hand isn't replaced; manual runs rebuild it. The PR bumps the version and moves the Upcoming notes in `CHANGES.md` under it. Merging it runs the Release workflow, which tags the merge commit, creates the GitHub release and starts the PyPI workflow on the tag. The `version-bump` skill is replaced by a `release` skill that runs the Release PR workflow and follows the release through.
 
 Fixes:

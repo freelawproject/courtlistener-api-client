@@ -24,7 +24,7 @@ uv run pre-commit run --all-files
 Type check:
 
 ```sh
-uv run mypy
+uv run pyrefly check
 ```
 
 Test:

@@ -28,8 +28,8 @@ jobs:
 
       - uses: pre-commit/action@v3.0.1
 
-  mypy:
-    name: Mypy
+  pyrefly:
+    name: Pyrefly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,8 +46,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run mypy
-        run: uv run mypy
+      - name: Run pyrefly
+        run: uv run pyrefly check --output-format full-text-with-github
 
   docs:
     name: Documentation Check

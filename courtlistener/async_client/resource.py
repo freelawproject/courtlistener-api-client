@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
@@ -169,10 +170,12 @@ class AsyncResource:
         return filters
 
     async def get(
-        self, id: int | float | str, fields: list[str] | str | None = None
+        self,
+        id: int | float | str,
+        fields: builtins.list[str] | str | None = None,
     ) -> dict[str, Any]:
         """Get a resource by its ID."""
-        if isinstance(id, float) and id.is_integer():
+        if isinstance(id, float) and float(id).is_integer():
             id = int(id)
         params = {}
         if fields:
