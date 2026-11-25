@@ -6,6 +6,7 @@ from datetime import date
 from typing import TYPE_CHECKING, Any
 
 from pydantic import TypeAdapter, ValidationInfo
+from pydantic.fields import FieldInfo
 
 from courtlistener.exceptions import InvalidFieldsError
 
@@ -113,6 +114,13 @@ def get_endpoint_model_from_info(info: ValidationInfo) -> type["Endpoint"]:
     raise ValueError(f"Model for {info.field_name} not found")
 
 
+def json_schema_extra(field: FieldInfo) -> dict[str, Any]:
+    """A model field's ``json_schema_extra``, or an empty dict when it has
+    none. The generated models always set it as a dict, never a callable."""
+    extra = field.json_schema_extra
+    return extra if isinstance(extra, dict) else {}
+
+
 def related_validator(
     value: Any, info: ValidationInfo
 ) -> str | int | dict[str, Any] | None:
@@ -123,7 +131,7 @@ def related_validator(
 
     model = get_endpoint_model_from_info(info)
     field = model.model_fields[str(info.field_name)]
-    extra = getattr(field, "json_schema_extra", None) or {}
+    extra = json_schema_extra(field)
     if not isinstance(value, dict):
         raise ValueError(f"Invalid value '{value}' for {info.field_name}")
     value = {k: v for k, v in value.items() if v is not None}
@@ -147,7 +155,7 @@ def get_choice_dict_from_info(
     """Get the choice dictionary for a field."""
     model = get_endpoint_model_from_info(info)
     field = model.model_fields[str(info.field_name)]
-    extra = getattr(field, "json_schema_extra", None) or {}
+    extra = json_schema_extra(field)
     choices = extra.get("choices", [])
     return {choice["value"]: choice["display_name"] for choice in choices}
 
